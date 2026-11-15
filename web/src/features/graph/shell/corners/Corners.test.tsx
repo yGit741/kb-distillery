@@ -18,7 +18,7 @@ import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
-import { loopFits } from "./PinLoop";
+import { arcPlaces, loopSolid } from "./PinLoop";
 import { useTheme } from "@/theme/theme";
 
 const schema = parseSchema(sampleSnapshot().schema);
@@ -911,18 +911,30 @@ describe("graph-corners: one raised disc per corner, and the theme switch in the
     }));
 });
 
+/** The loop's cards on screen (solid, fading or tilted), front first. */
+const onScreen = () =>
+  [...document.querySelectorAll<HTMLElement>("[data-corners=pin-loop] [data-slot]")]
+    .sort((a, b) => Number(a.dataset.pos) - Number(b.dataset.pos))
+    .map((li) => li.querySelector<HTMLButtonElement>("[data-view]")!);
+
 describe("graph-corners: the pinned views hang from the pin in a loop", () => {
   const many = Array.from({ length: 16 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
-  // the pinned cards only (the graph's own views open the loop as `view:…` cards)
-  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]:not([data-view^='view:'])")];
+  // the pinned cards on screen, front first (the graph's own views open the loop as `view:…` cards)
+  const cards = () => onScreen().filter((b) => !b.dataset.view!.startsWith("view:"));
 
   it("as many cards as fit between the pin and the spark; a short window shows fewer", () => {
-    expect(loopFits(900)).toBeGreaterThan(loopFits(560));
-    expect(loopFits(200)).toBe(1);
+    expect([loopSolid(852), loopSolid(700), loopSolid(560)]).toEqual([5, 4, 3]);
+    // one arc bending left, each card turned a little more; the last solid card's bottom-left corner meets the border
+    const p = arcPlaces(5);
+    expect(p[1]!.deg).toBeGreaterThan(0);
+    expect(p[4]!.deg).toBeGreaterThan(p[1]!.deg);
+    expect(p[4]!.x).toBeLessThan(0);
+    const bottomLeftX = p[4]!.x - 106 * Math.sin((p[4]!.deg * Math.PI) / 180);
+    expect(Math.abs(bottomLeftX + 20)).toBeLessThan(1); // the loop's left edge (EDGE + 4) plus 2px, past the border
   });
 
   it("pressing a card applies its view, and the view on screen has a blue dot and name", () =>
-    withFlag("graph-corners", true, async () => {
+    withFlag("graph-intent", false, () => withFlag("graph-corners", true, async () => {
       const server = fakeServer({ views: [{ id: "a", name: "Alpha" }, { id: "b", name: "Beta" }] });
       mount(server, {}, { kind: "http" });
       await userEvent.click(pins());
@@ -931,7 +943,7 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
       await userEvent.click(cards()[1]!);
       expect(useCorners.getState().activeView).toBe("a");
       await waitFor(() => expect(document.querySelector("[data-view=a]")).toHaveAttribute("aria-current", "true"));
-    }));
+    })));
 
   it("with more views than fit, the faded ends turn the loop and the pin never moves", () =>
     withFlag("graph-intent", false, () => withFlag("graph-corners", true, async () => {
@@ -939,15 +951,14 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
       await userEvent.click(pins());
       await waitFor(() => expect(cards().length).toBeGreaterThan(1));
       const pinAt = pins().getBoundingClientRect().top;
-      const shown = cards().length;
-      expect(shown).toBeLessThan(many.length);
-      const ends = cards().filter((c) => c.dataset.end);
-      expect(ends).toHaveLength(1); // the faded last card; the sheet before the front one is the other end
+      expect(cards().length).toBeLessThan(many.length);
+      // after the solid cards, the next is half there and the one after almost gone; three turned past fade above the pin
+      expect(cards().map((c) => c.dataset.end ?? "solid").filter((e) => e !== "solid").sort()).toEqual(["b1", "b2", "t1", "t2", "t3"]);
       const secondBefore = cards()[1]!.dataset.view;
       const frontBefore = cards()[0]!.dataset.view;
-      await userEvent.click(ends[0]!);
+      await userEvent.click(cards().find((c) => c.dataset.end === "b1")!);
       expect(cards()[0]!.dataset.view).toBe(secondBefore); // turned forward by one
-      await userEvent.click(screen.getByRole("button", { name: /turn the pile back/ }));
+      await userEvent.click(cards().find((c) => c.dataset.end === "t1")!);
       expect(cards()[0]!.dataset.view).toBe(frontBefore); // and back again
       expect(useCorners.getState().activeView).toBeNull(); // a faded end turns, it does not apply
       expect(pins().getBoundingClientRect().top).toBe(pinAt);
@@ -984,7 +995,9 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         expect(options().slice(0, 2).map((o) => o.dataset.view)).toEqual(["view:concepts", "view:sources"]);
         expect(options()[0]).toHaveAttribute("aria-current", "true");
         // the pinned view follows the graph's views in the same loop
-        const all = [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")].map((b) => b.dataset.view);
+        const all = [...document.querySelectorAll<HTMLElement>("[data-corners=pin-loop] [data-pos]")]
+          .sort((a, b) => Number(a.dataset.pos) - Number(b.dataset.pos))
+          .map((li) => li.querySelector<HTMLButtonElement>("[data-view]")!.dataset.view);
         expect(all.indexOf("a")).toBeGreaterThan(all.indexOf("view:sources"));
         await userEvent.click(options()[1]!);
         const drawn = [...useGraphUi.getState().shownTypes!];
@@ -1011,17 +1024,43 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         const many = Array.from({ length: 12 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
         mount(fakeServer({ views: many }), {}, { kind: "http" });
         await userEvent.click(pins());
-        const all = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")];
-        await waitFor(() => expect(all().length).toBeGreaterThan(1));
-        expect(all()[0]!.dataset.view).toBe("view:concepts");
+        await waitFor(() => expect(onScreen().length).toBeGreaterThan(1));
+        expect(onScreen()[0]!.dataset.view).toBe("view:concepts");
         const typesBefore = useGraphUi.getState().shownTypes;
-        const second = all()[1]!.dataset.view;
-        await userEvent.click(all().find((b) => b.dataset.end)!);
-        expect(all()[0]!.dataset.view).toBe(second);
+        const second = onScreen()[1]!.dataset.view;
+        await userEvent.click(onScreen().find((b) => b.dataset.end === "b1")!);
+        expect(onScreen()[0]!.dataset.view).toBe(second);
         expect(useGraphUi.getState().shownTypes).toBe(typesBefore); // turning picks nothing
         expect(useCorners.getState().activeView).toBeNull();
       }),
     ));
+
+  it("on: a pinned view on screen is the only one marked, not the built-in view it looks like", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+        await userEvent.click(pins());
+        await waitFor(() => expect(document.querySelector("[data-view=a]")).not.toBeNull());
+        act(() => useCorners.getState().setActive("a"));
+        await waitFor(() => expect(document.querySelector("[data-view=a]")).toHaveAttribute("aria-current", "true"));
+        expect(document.querySelectorAll("[data-corners=pin-loop] [aria-current=true]")).toHaveLength(1);
+      }),
+    ));
+
+  it("page types: on, a small dark dot inside the card folds it; off, the round minus beside it", async () => {
+    for (const on of [true, false]) {
+      await withFlag("graph-corners", on, async () => {
+        useCorners.setState({ order: ["types"] });
+        const { unmount } = mount(fakeServer(), {}, { kind: "http" });
+        const fold = await screen.findByRole("button", { name: "Hide the page types" });
+        if (on) expect(fold).toHaveAttribute("data-fold", "dot");
+        else expect(fold).not.toHaveAttribute("data-fold");
+        await userEvent.click(fold);
+        expect(useCorners.getState().order).not.toContain("types");
+        unmount();
+      });
+    }
+  });
 
   it("graph-corners off: no views in the pin, and the Concepts / Sources switch stays beside the line", () =>
     withFlag("graph-corners", false, () =>

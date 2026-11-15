@@ -69,9 +69,9 @@ export interface CornersProps {
 const LAYER_ORDER = ["concept", "collection", "source"] as const;
 /** flag graph-corners: the graph's own views, first in the pin's loop */
 const LEAD_VIEWS: readonly LoopCard[] = [
-  { id: "concepts", name: "Concepts", hint: "Concepts and the links between them" },
-  { id: "sources", name: "Sources", hint: "The sources you read, without the concepts" },
-  { id: "citations", name: "Citations", hint: "Papers joined by who cites whom" },
+  { id: "concepts", name: "Concepts", hint: "Concepts and the links between them", thumb: "concepts" },
+  { id: "sources", name: "Sources", hint: "The sources you read, without the concepts", thumb: "sources" },
+  { id: "citations", name: "Citations", hint: "Papers joined by who cites whom", thumb: "citations" },
 ];
 const NO_ROWS: readonly TypeRow[] = [];
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
@@ -407,18 +407,21 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const embedOn = useEmbedView((s) => s.view);
   const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
   const citationsStory = storyById("citations");
+  // one blue mark only: a pinned view on screen is the one marked, not the built-in view it happens to look like
   const currentView: string = embedOn ?? (edgeOn === "citations" ? "citations" : subject === "sources" && shownTypes ? "sources" : "concepts");
+  const markView = activeView ? null : currentView;
   const leadCards = useMemo(
     (): LoopCard[] =>
-      LEAD_VIEWS.filter((v) => v.id !== "citations" || (!!citationsStory && storyOffered(citationsStory))).map((v) => ({ ...v, on: v.id === currentView })),
-    [citationsStory, currentView],
+      LEAD_VIEWS.filter((v) => v.id !== "citations" || (!!citationsStory && storyOffered(citationsStory))).map((v) => ({ ...v, on: v.id === markView })),
+    [citationsStory, markView],
   );
   const tailCards = useMemo(
-    (): LoopCard[] => suggestions.map((sg) => ({ id: sg.view, name: sg.name, hint: sg.hint, meta: "from meaning", suggested: true, on: sg.view === currentView })),
-    [suggestions, currentView],
+    (): LoopCard[] => suggestions.map((sg) => ({ id: sg.view, name: sg.name, hint: sg.hint, meta: "Embedding based", suggested: true, on: sg.view === markView, thumb: sg.view })),
+    [suggestions, markView],
   );
   const pickView = (v: string) => {
     setActive(null);
+    // the built-in view already on screen (under a pinned one): the mark moves to it, nothing is applied again
     if (v === currentView) return;
     if (embedOn) leaveEmbed();
     if (v === "citations") return useGraphUi.getState().applyStory("citations");

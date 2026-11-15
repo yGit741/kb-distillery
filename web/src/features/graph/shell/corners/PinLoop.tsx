@@ -1,43 +1,83 @@
-import { useEffect, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import { cn } from "@/lib/utils";
 import { ago, type PinnedView } from "./api";
 import { BUTTON, EDGE } from "./geometry";
 import { useReducedMotion } from "./motion";
-import { ViewThumb } from "./Thumb";
+import { GraphThumb, type ThumbKind } from "./Thumb";
 
-/** A card of the loop: the picture is 188 x 106; the next card starts this far below the last. */
+/** A card of the loop: the picture is 188 x 106. */
 export const LOOP_W = 188;
 export const LOOP_H = 106;
-export const LOOP_STEP = 54;
 /** the top of the first card, under the pin */
 export const LOOP_TOP = EDGE + BUTTON - 6;
-/** room kept free above the bottom-left spark (its button and a gap), so the pile never runs into the chat list */
-const KEEP_BOTTOM = EDGE + BUTTON + 24;
+/** the loop's left edge, from the graph area's left border */
+const LOOP_LEFT = EDGE + 4;
+/** px between solid cards along the arc; the two fading cards after them sit closer (54, then 36) */
+const STEP = 66;
 
-/** How many cards fit between the pin and the spark: a short window shows fewer, never fewer than one. */
-export function loopFits(areaHeight: number, offset = 0): number {
-  const free = areaHeight - LOOP_TOP - offset - KEEP_BOTTOM - LOOP_H;
-  return Math.max(1, Math.floor(free / LOOP_STEP) + 1);
+/**
+ * How many solid cards the loop shows (the Fan Design mockup): 5 in a tall window, 4 in a medium one, 3 in a short
+ * one. The mockup measured the window (860 and 680px); the graph area is the window less the 48px app bar.
+ */
+export function loopSolid(areaHeight: number): number {
+  return areaHeight >= 812 ? 5 : areaHeight >= 632 ? 4 : 3;
 }
 
-/** A card of the loop that is not a pinned view: a view of the graph (Concepts …) or a view built on meaning. */
+/**
+ * Where each place of the loop sits: one gentle circular arc hanging from the pin and bending left, each card turned
+ * a little more than the one above (rotation about its top-left corner). The bend is the one that brings the
+ * bottom-left corner of the last solid card exactly onto the graph area's left border; the fading places carry on past it.
+ */
+export function arcPlaces(solid: number): { x: number; y: number; deg: number }[] {
+  if (solid < 1) return [];
+  // a single solid card has no last corner to bring to the border: give the arc a small fixed bend
+  if (solid < 2) {
+    const k = 0.06;
+    return [0, 1, 2].map((j) => ({ x: -54 * Math.sin(k * j) * j, y: [0, 54, 90][j]!, deg: (k * j * 180) / Math.PI }));
+  }
+  const steps = [...Array(Math.max(0, solid - 1)).fill(STEP), 54, 36];
+  const geo = (k: number) => {
+    const a = Array.from({ length: solid + 2 }, (_, j) => k * j);
+    const p: [number, number][] = [[0, 0]];
+    for (let j = 0; j < solid + 1; j++) {
+      const m = (a[j]! + a[j + 1]!) / 2;
+      p.push([p[j]![0] - steps[j]! * Math.sin(m), p[j]![1] + steps[j]! * Math.cos(m)]);
+    }
+    return { a, p };
+  };
+  let lo = 0;
+  let hi = 0.2;
+  for (let it = 0; it < 32; it++) {
+    const k = (lo + hi) / 2;
+    const g = geo(k);
+    const last = solid - 1;
+    if (g.p[last]![0] - LOOP_H * Math.sin(g.a[last]!) > -(LOOP_LEFT + 2)) lo = k;
+    else hi = k;
+  }
+  const g = geo((lo + hi) / 2);
+  return g.p.map(([x, y], j) => ({ x, y, deg: (g.a[j]! * 180) / Math.PI }));
+}
+
+/** A card of the loop that is not a pinned view: a view of the graph (Concepts …) or a view built on the embedding. */
 export interface LoopCard {
   id: string;
   name: string;
-  /** the small grey text after the name ("from meaning") */
+  /** the small grey text after the name ("Embedding based") */
   meta?: string;
   hint?: string;
   /** the view on screen */
   on?: boolean;
   /** offered until pinned: a dashed, quieter card */
   suggested?: boolean;
+  /** which picture the card shows */
+  thumb?: ThumbKind;
 }
 
 interface Props {
   open: boolean;
   /** the pinned views, oldest first as the server lists them */
   views: readonly PinnedView[];
-  /** cards before the pinned views (the graph's views) and after them (views built on meaning) */
+  /** cards before the pinned views (the graph's views) and after them (views built on the embedding) */
   lead?: readonly LoopCard[];
   tail?: readonly LoopCard[];
   /** a lead or tail card was pressed */
@@ -48,41 +88,42 @@ interface Props {
   onApply: (id: string) => void;
   /** said when nothing is pinned yet */
   empty: string;
-  /** px the loop starts below the pin's first card place: room for the views above it */
-  offset?: number;
 }
 
-type Item = { key: string; name: string; meta?: string; hint: string; on: boolean; suggested?: boolean; apply: () => void };
+type Item = { key: string; name: string; meta?: string; hint: string; on: boolean; suggested?: boolean; thumb?: ThumbKind; apply: () => void };
+
+/** A place in the loop: a solid card, a fading one below (b1, b2), or one turned past, tilted above the pin (t1–t3). */
+type Slot = { solid: boolean; end?: "b1" | "b2" | "t1" | "t2" | "t3"; x: number; y: number; deg: number; opacity: number; z: number };
 
 /**
- * Flag graph-corners: the pinned views hang from the pin in a vertical loop, partly overlapped and curving gently
- * into the border: the top card is in front, each one below peeks out with its name. The pin holds the pile and
- * never moves; the cards are what moves. Both ends of the pile fade into the border (the card before the front one
- * as a sheet tucked behind it, the last one at the bottom): clicking a faded one, or the wheel, turns the loop. Hover outlines a card and shows its
- * details; the view on screen has a small blue dot and a blue name. Pinning the current view is a command of the
- * search line (/pin), so the pile holds only what was pinned.
+ * Flag graph-corners: the views hang from the pin in a loop, as in the Fan Design mockup (loop, curved, fading ends).
+ * A few solid cards lie on one arc bending left, each partly over the one below; after them the next card is half
+ * there and the one after almost gone; the cards you turned past stay tilted above the pin and fade toward the top
+ * border. The pin never moves; the cards are what moves. A faded card or the wheel turns the loop. Closed, the cards
+ * tuck behind the pin as a small pile. Hover outlines a card; the view on screen has a small blue dot and a blue name.
+ * Pinning the current view is a command of the search line (/pin).
  */
-export function PinLoop({ open, views, lead = [], tail = [], onPick, active, areaHeight, onApply, empty, offset = 0 }: Props) {
+export function PinLoop({ open, views, lead = [], tail = [], onPick, active, areaHeight, onApply, empty }: Props) {
   const still = useReducedMotion();
-  // the graph's views first, then the pinned ones newest first, then the views built on meaning
-  const card = (c: LoopCard): Item => ({ key: `view:${c.id}`, name: c.name, meta: c.meta, hint: c.hint ?? c.name, on: !!c.on, suggested: c.suggested, apply: () => onPick?.(c.id) });
+  // the graph's views first, then the pinned ones newest first, then the views built on the embedding
+  const card = (c: LoopCard): Item => ({ key: `view:${c.id}`, name: c.name, meta: c.meta, hint: c.hint ?? c.name, on: !!c.on, suggested: c.suggested, thumb: c.thumb, apply: () => onPick?.(c.id) });
   const list: Item[] = [
     ...lead.map(card),
     ...[...views].reverse().map((v): Item => ({ key: v.id, name: v.name, meta: ago(v.created), hint: `${v.name}, pinned ${ago(v.created)}`, on: v.id === active, apply: () => onApply(v.id) })),
     ...tail.map(card),
   ];
   const n = list.length;
-  const fits = Math.min(n, loopFits(areaHeight, offset));
-  const looping = n > fits;
+  const solid = Math.min(n, loopSolid(areaHeight));
+  const looping = n > solid;
+  const places = useMemo(() => arcPlaces(solid), [solid]);
   const [turn, setTurn] = useState(0);
   useEffect(() => setTurn(0), [n]);
-  const box = useRef<HTMLDivElement>(null);
   const wheelAt = useRef(0);
   const spin = (d: number) => looping && setTurn((t) => (((t + d) % n) + n) % n);
   const onWheel = (e: WheelEvent) => {
     if (!looping || Math.abs(e.deltaY) < 4) return;
     const now = performance.now();
-    if (now - wheelAt.current < 160) return; // one card per notch, however fast the wheel spins
+    if (now - wheelAt.current < 170) return; // one card per notch, however fast the wheel spins
     wheelAt.current = now;
     spin(e.deltaY > 0 ? 1 : -1);
   };
@@ -92,20 +133,28 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
       <p
         role="status"
         className="pointer-events-auto absolute z-[16] w-[240px] rounded-xl border bg-card px-3 py-2 text-[12.5px] text-muted-foreground shadow-[var(--shadow)]"
-        style={{ left: EDGE + 5, top: LOOP_TOP + offset + 12 }}
+        style={{ left: EDGE + 5, top: LOOP_TOP + 12 }}
       >
         {empty}
       </p>
     ) : null;
 
-  // slot 0 is the front card; with a loop the last slot is faded, and the card before the front one waits as a
-  // faded sheet behind it: both turn the loop when pressed
-  const slots = Array.from({ length: fits }, (_, s) => list[(s + turn) % n]!);
-  const before = looping ? list[(turn - 1 + n) % n]! : null;
-  const mid = (fits - 1) / 2;
+  // the place of the card j steps after the front one (the mockup's layoutPins)
+  const slot = (j: number): Slot | null => {
+    const at = (q: number, opacity: number, z: number, end?: Slot["end"]): Slot => ({ solid: !end, end, ...places[q]!, opacity, z });
+    if (j < solid) return at(j, 1, 40 - j);
+    if (!looping) return null;
+    if (j === solid) return at(solid, 0.55, 30, "b1");
+    if (j === solid + 1 && n >= solid + 5) return at(solid + 1, 0.24, 29, "b2");
+    const tilt = (deg: number, opacity: number, z: number, end: Slot["end"]): Slot => ({ solid: false, end, x: 0, y: 0, deg, opacity, z });
+    if (j === n - 1 && n >= solid + 3) return tilt(-6, 0.72, 33, "t1");
+    if (j === n - 2 && n >= solid + 5) return tilt(-12, 0.46, 32, "t2");
+    if (j === n - 3 && n >= solid + 6) return tilt(-18, 0.22, 31, "t3");
+    return null;
+  };
+  const ease = "cubic-bezier(.32,.72,0,1)";
   return (
     <div
-      ref={box}
       role="list"
       aria-label={lead.length || tail.length ? "Views" : "Pinned views"}
       aria-hidden={!open}
@@ -113,61 +162,60 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
       data-corners="pin-loop"
       onWheel={onWheel}
       className={cn("pointer-events-none absolute z-[16] transition-opacity duration-300 motion-reduce:transition-none", open ? "opacity-100" : "opacity-0")}
-      style={{ left: EDGE + 4, top: LOOP_TOP + offset, width: LOOP_W + 40, height: LOOP_H + (fits - 1) * LOOP_STEP }}
+      style={{ left: LOOP_LEFT, top: LOOP_TOP, width: LOOP_W + 40, height: LOOP_H + (solid + 1) * STEP }}
     >
-      {before && (
-        <button
-          type="button"
-          data-end="before"
-          aria-label={`${before.name}, turn the pile back`}
-          data-before={before.key}
-          title={`Turn the pile back to ${before.name}`}
-          onClick={() => spin(-1)}
-          className="pointer-events-auto absolute left-0 rounded-[11px] border bg-card shadow-[var(--shadow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          style={{ top: -10, width: LOOP_W, height: 40, zIndex: 0, opacity: 0.45, transform: "translateX(-6px) rotate(-5deg)", transformOrigin: "0 0" }}
-        />
-      )}
-      {slots.map((v, s) => {
-        // with a single card on screen it stays the one to press; the sheet behind it and the wheel turn the pile
-        const end = looping && fits > 1 && s === fits - 1;
-        // a gentle curve into the border: the middle card stands furthest out, the ends lean back toward the edge
-        const k = fits > 1 ? (s - mid) / Math.max(1, mid) : 0;
-        const x = Math.round(14 * (1 - k * k));
-        const deg = fits > 1 ? -2.2 * k : 0;
-        const on = v.on;
+      {list.map((v, i) => {
+        const j = (((i - turn) % n) + n) % n;
+        const s = slot(j);
+        // closed, the first few tuck behind the pin as a small pile; the rest wait there unseen
+        const q = Math.min(j, 4);
+        const transform = !open
+          ? `translate(-30px,-40px) rotate(${q * 5}deg) scale(.6)`
+          : s
+            ? `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) rotate(${s.deg.toFixed(2)}deg)`
+            : `translate(${places[Math.min(solid, places.length - 1)]!.x.toFixed(1)}px,${(places[Math.min(solid, places.length - 1)]!.y + 20).toFixed(1)}px)`;
+        const opacity = !open ? (j < 5 ? 1 : 0) : (s?.opacity ?? 0);
+        const end = s?.end;
+        // a faded card below turns the loop forward, one tilted above the pin turns it back
+        const pressTurns = end ? (end.startsWith("b") ? 1 : -1) : 0;
+        const live = open && !!s;
         return (
           <div
             key={v.key}
-            role="listitem"
-            className="absolute left-0"
+            role={live ? "listitem" : undefined}
+            aria-hidden={!live || undefined}
+            inert={!live}
+            data-slot={s ? (end ?? "solid") : undefined}
+            data-pos={j}
+            className="absolute left-0 top-0"
             style={{
-              top: s * LOOP_STEP,
-              // the top card in front: each card below is behind the one above it and shows its name strip
-              zIndex: fits - s + 1,
-              transform: `translateX(${x}px) rotate(${deg}deg)`,
-              transition: still ? undefined : "top .45s cubic-bezier(.32,.72,0,1), transform .45s cubic-bezier(.32,.72,0,1), opacity .28s",
-              opacity: end ? 0.45 : 1,
+              zIndex: s?.z ?? 1,
+              transform,
+              transformOrigin: "0 0",
+              opacity,
+              transition: still ? undefined : `transform .45s ${ease}, opacity .45s`,
             }}
           >
             <button
               type="button"
               data-view={v.key}
-              data-end={end || undefined}
-              aria-current={on || undefined}
-              aria-label={end ? `${v.name}, turn the pile` : v.name}
-              title={end ? `Turn the pile to ${v.name}` : v.hint}
-              onClick={() => (end ? spin(1) : v.apply())}
+              data-end={end}
+              aria-current={v.on || undefined}
+              aria-label={pressTurns ? `${v.name}, turn the pile${pressTurns < 0 ? " back" : ""}` : v.name}
+              title={pressTurns ? `Turn the pile ${pressTurns < 0 ? "back " : ""}to ${v.name}` : v.hint}
+              onClick={() => (pressTurns ? spin(pressTurns) : v.apply())}
               className={cn(
-                "group pointer-events-auto relative block overflow-hidden rounded-[11px] border bg-card text-left shadow-[var(--shadow)] transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
+                "group relative block overflow-hidden rounded-[11px] border bg-card text-left shadow-[0_4px_12px_rgba(0,0,0,.13)] transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
+                live ? "pointer-events-auto" : "pointer-events-none",
                 v.suggested && "border-dashed",
-                "hover:border-primary hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "hover:border-primary hover:ring-1 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               )}
               style={{ width: LOOP_W, height: LOOP_H }}
             >
-              <ViewThumb id={v.key} colour className={cn("absolute inset-0 size-full", v.suggested && "opacity-70")} />
+              <GraphThumb kind={v.thumb} seed={v.key} className={cn("absolute inset-0 size-full", v.suggested && "opacity-75")} />
               <span className="absolute inset-x-0 bottom-0 flex items-baseline gap-2 border-t bg-card px-2.5 py-1.5 text-[12.5px]">
-                {on && <span aria-hidden className="size-1.5 flex-none self-center rounded-full bg-primary" />}
-                <span className={cn("min-w-0 truncate font-semibold", on && "text-primary")}>{v.name}</span>
+                {v.on && <span aria-hidden className="size-1.5 flex-none self-center rounded-full bg-primary" />}
+                <span className={cn("min-w-0 truncate font-semibold", v.on && "text-primary")}>{v.name}</span>
                 {v.meta && (
                   <small className={cn("ml-auto flex-none text-[11px] text-muted-foreground transition-opacity", !v.suggested && "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100")}>{v.meta}</small>
                 )}
