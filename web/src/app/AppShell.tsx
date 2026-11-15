@@ -94,8 +94,8 @@ export function AppShell() {
   const shellOn = useFlag("graph-shell");
   // flag graph-corners: the bar drops the share chip (deploy status stays on the System screen)
   const cornersOn = useFlag("graph-corners");
-  // flag graph-corners: the graph's corner disc says while it is on screen (`elsewhere`), so the bar leaves its own out
-  const themeInPanel = (viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph);
+  // flag graph-corners: the bar keeps its own switch, right of Tours (the graph has no theme corner)
+  const themeInPanel = !cornersOn && ((viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph));
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (

@@ -1,14 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Brain, Moon, Sparkles, Sun } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
+import { useTheme } from "@/theme/theme";
 import { useUi } from "@/app/ui-store";
 import { cn } from "@/lib/utils";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { useKb } from "@/lib/store";
 import { useCapabilities } from "../capabilities";
-import { useTheme } from "@/theme/theme";
 import { colorChannel, COLOR_TITLE } from "../../encoding/channels";
 import type { ToolHost } from "../../hostContext";
 import { layerGroups, type LayerGroup, type TypeRow } from "../../legendModel";
@@ -27,8 +27,6 @@ import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
 import { ActionPill, CornerButton, LinePin, MoreButton, PillAction, PushPin } from "./CornerButton";
-import { IS_SHARE } from "@/share/env";
-import { useFullChat } from "../useFullChat";
 import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
@@ -70,7 +68,7 @@ const LAYER_ORDER = ["concept", "collection", "source"] as const;
 /** flag graph-corners: the graph's own views, first in the pin's loop */
 const LEAD_VIEWS: readonly LoopCard[] = [
   { id: "concepts", name: "Concepts", hint: "Concepts and the links between them", thumb: "concepts" },
-  { id: "sources", name: "Sources", hint: "The sources you read, without the concepts", thumb: "sources" },
+  { id: "sources", name: "Sources", hint: "Your sources: which kinds feed your concepts, and how much of each is digested", thumb: "sources" },
   { id: "citations", name: "Citations", hint: "Papers joined by who cites whom", thumb: "citations" },
   // the embedding view: pages placed by meaning (the meaning map), offered once the kb has an embedding
   { id: "map", name: "Semantics", hint: "Pages placed by meaning, from the embedding", meta: "Embedding based", thumb: "map" },
@@ -94,23 +92,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const ds = useDataSource();
   const qc = useQueryClient();
   const ui = useGraphUi();
-  const theme = useTheme((s) => s.theme);
   // flag graph-corners: four raised discs with line icons, and the graph's one theme switch in the bottom-right corner
   const discs = useFlag("graph-corners");
-  const themeCorner = discs && ds.kind === "http" && !IS_SHARE;
   // flag graph-corners: the legend opens on every page load, whatever an earlier visit folded
   useEffect(() => {
     if (discs) useCorners.getState().openLegendsOnce();
   }, [discs]);
-  // while the disc is on screen the app bar leaves out its own switch: one theme switch, always (the folded full
-  // chat hides this frame, disc and all, so the bar keeps its switch then)
-  const { folded: chatFolded } = useFullChat();
-  const discShown = themeCorner && !chatFolded;
-  useEffect(() => {
-    if (!discShown) return;
-    useTheme.getState().setElsewhere(true);
-    return () => useTheme.getState().setElsewhere(false);
-  }, [discShown]);
   const caps = useCapabilities();
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
@@ -365,7 +352,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
   // ---- the legends (what the old Legend showed, now in the right-edge dots and the bottom card)
   const by = effectiveColorBy(ui.colorBy);
-  const ramp = RAMP_BY.has(by) ? theme : null;
+  const theme = useTheme((s) => s.theme);
+  const ramp = RAMP_BY.has(by) ? theme : null; // the ramp follows the light or dark ground
   const keyPool = useMemo(() => {
     if (!ui.hiddenKeys.size) return visible;
     const keep = predicateFn(ui.predicate);
@@ -413,7 +401,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
   const citationsStory = storyById("citations");
   // one blue mark only: a pinned view on screen is the one marked, not the built-in view it happens to look like
-  const currentView: string = embedOn ?? (edgeOn === "citations" ? "citations" : subject === "sources" && shownTypes ? "sources" : "concepts");
+  // flag knowledge-health: for now the Sources card is the way into Health (the concepts by source support, with
+  // the dial of source kinds); without the flag it is the sources alone
+  const currentView: string = embedOn ?? (edgeOn === "citations" ? "citations" : subject === "health" || (subject === "sources" && shownTypes) ? "sources" : "concepts");
   const markView = activeView ? null : currentView;
   const leadCards = useMemo(
     (): LoopCard[] =>
@@ -431,7 +421,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     if (v === "citations") return useGraphUi.getState().applyStory("citations");
     const embed = SUGGESTED.find((sg) => sg.view === v)?.view;
     // a view built on meaning sits on the concepts: leaving Citations or Sources first puts the concepts back
-    const to: GraphSubject = v === "sources" ? "sources" : "concepts";
+    const to: GraphSubject = v === "sources" ? (health ? "health" : "sources") : "concepts";
     applySubject(to, schema, shownTypes, currentView === "citations" || (!!embed && subject !== "concepts"));
     if (embed) applyEmbed({ view: embed, axes: embed === "map" ? [...useEmbedView.getState().axes] as [number, number] : undefined });
   };
@@ -522,7 +512,6 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   void resumeSession(f, row, !!sessions.data).catch(fail);
                 }}
                 done={closeAll}
-                noThemeSwitch={themeCorner}
               />
               <p className="pointer-events-none flex-none px-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Pinned</p>
               <div className="relative min-h-[150px] flex-1">
@@ -748,17 +737,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         </div>
       )}
 
-      {themeCorner && (
-        <CornerButton
-          disc
-          data-corners="theme"
-          label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-          style={{ position: "absolute", right: EDGE, bottom: EDGE }}
-          onClick={() => useTheme.getState().toggle()}
-        >
-          {theme === "dark" ? <Sun aria-hidden className="size-[18px]" strokeWidth={1.6} /> : <Moon aria-hidden className="size-[18px]" strokeWidth={1.6} />}
-        </CornerButton>
-      )}
+      {/* flag graph-corners: the theme switch is the app bar's own, right of Tours; this corner stays empty */}
 
       <ColourDots
         rows={key}
