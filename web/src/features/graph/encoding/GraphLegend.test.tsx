@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { node, sampleNodes } from "../fixtures";
-import { assignAreaColors } from "../style";
+import { useTheme } from "@/theme/theme";
+import { assignAreaColors, PERSON_INK, PERSON_INK_DARK } from "../style";
 import { colorChannel, fixedChannel, sizeChannel } from "./channels";
 import { GraphLegend, glyphRows, typeRows } from "./GraphLegend";
 import { ShapeIcon } from "./NodeMarkSvg";
@@ -25,6 +26,21 @@ describe("GraphLegend", () => {
     expect(within(row("size")!).getByText("Size = links")).toBeInTheDocument();
     expect(within(row("type")!).getByText("Question")).toBeInTheDocument();
     expect(within(row("sources")!).getByText("Paper")).toBeInTheDocument();
+  });
+
+  it("reads the key again when the theme changes, even when the surface memoised its channel", () => {
+    const people = [node("jane", { type: "person" })];
+    const channel = colorChannel("area"); // one object for both themes, as a surface's useMemo would keep it
+    const ink = (hex: string) => new RegExp(`${hex}|${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")}`, "i");
+    render(<GraphLegend nodes={people} color={channel} size={sizeChannel("uniform")} />);
+    expect(row("colour")!.innerHTML).toMatch(ink(PERSON_INK));
+    try {
+      act(() => useTheme.setState({ theme: "dark" }));
+      expect(row("colour")!.innerHTML).toMatch(ink(PERSON_INK_DARK));
+      expect(row("colour")!.innerHTML).not.toMatch(ink(PERSON_INK));
+    } finally {
+      act(() => useTheme.setState({ theme: "light" }));
+    }
   });
 
   it("drops the Size row when every node is one size, and the Sources row without sources", () => {
