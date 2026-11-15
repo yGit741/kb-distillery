@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Minus } from "lucide-react";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { ShapeIcon, SourceIcon } from "../../encoding/NodeMarkSvg";
 import { markOf } from "../../encoding/spec";
@@ -37,6 +38,7 @@ const GROUP = "flex h-6 min-w-0 max-w-full items-center overflow-x-auto [scrollb
 export function TypesCard({ concepts, sources, onToggle, keep, onSpot }: Props) {
   const MS = useReducedMotion() ? 0 : FULL_MS;
   const open = useCorners((s) => s.order.includes("types"));
+  const dot = useFlag("graph-corners");
   const toggle = useCorners((s) => s.toggle);
   const still = useStillClick(open, () => toggle("types"));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -144,9 +146,22 @@ export function TypesCard({ concepts, sources, onToggle, keep, onSpot }: Props) 
       {/* the one card behind both groups, symmetric around the fixed centre */}
       <span
         aria-hidden
-        className={cn("absolute -inset-x-3.5 -inset-y-[2.5px] -z-10 rounded-[14px] bg-card shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto opacity-100" : "opacity-0")}
+        className={cn("absolute -inset-y-[2.5px] -z-10 rounded-[14px] bg-card", dot ? "-inset-x-6" : "-inset-x-3.5", " shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto opacity-100" : "opacity-0")}
       />
-      {open && (
+      {open && dot && (
+        // flag graph-corners: folding is one small dark dot inside the card's right end, as on the colour legend
+        <button
+          type="button"
+          aria-label="Hide the page types"
+          title="Hide the page types"
+          data-fold="dot"
+          className={cn("group pointer-events-auto absolute -right-[21px] top-1/2 flex size-4 -translate-y-1/2 items-center justify-center rounded-full", RING)}
+          onClick={() => toggle("types")}
+        >
+          <i aria-hidden className="block size-1 rounded-full bg-foreground transition-transform group-hover:scale-125" />
+        </button>
+      )}
+      {open && !dot && (
         <button
           type="button"
           aria-label="Hide the page types"

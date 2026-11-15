@@ -1,3 +1,4 @@
+import { flag } from "@/flags";
 import { withAlpha, type CanvasColors } from "./canvasTheme";
 import type { SimLink, SimNode } from "./types";
 
@@ -95,15 +96,49 @@ export function drawCite(ctx: CanvasRenderingContext2D, l: SimLink, scale: numbe
   if (!pa || !pb) return;
   const px = (v: number) => v / scale;
   ctx.save();
+  const c = ctrlOf(l);
+  // flag graph-corners: the edge runs under the two papers, never across them: it is clipped at each paper's ring and
+  // ends in a small arrow at the cited paper's rim
+  const under = flag("graph-corners");
+  const rimA = radiusOf(a) + px(3);
+  const rimB = radiusOf(b) + px(3);
+  if (under) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-1e7, -1e7, 2e7, 2e7);
+    ctx.moveTo(pa.x + rimA, pa.y);
+    ctx.arc(pa.x, pa.y, rimA, 0, Math.PI * 2);
+    ctx.moveTo(pb.x + rimB, pb.y);
+    ctx.arc(pb.x, pb.y, rimB, 0, Math.PI * 2);
+    ctx.clip("evenodd");
+  }
   // the edge
   ctx.beginPath();
   ctx.moveTo(pa.x, pa.y);
-  const c = ctrlOf(l);
   if (c) ctx.quadraticCurveTo(c.x, c.y, pb.x, pb.y);
   else ctx.lineTo(pb.x, pb.y);
   ctx.strokeStyle = withAlpha(colors.text, 0.75);
   ctx.lineWidth = px(1.5);
   ctx.stroke();
+  if (under) {
+    ctx.restore();
+    // the arrow: along the edge's last direction, its tip on the cited paper's ring
+    const from = c ?? pa;
+    const d = Math.hypot(pb.x - from.x, pb.y - from.y) || 1;
+    const ux = (pb.x - from.x) / d;
+    const uy = (pb.y - from.y) / d;
+    const tx = pb.x - ux * rimB;
+    const ty = pb.y - uy * rimB;
+    const len = px(7);
+    const half = px(3.5);
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx - ux * len + uy * half, ty - uy * len - ux * half);
+    ctx.lineTo(tx - ux * len - uy * half, ty - uy * len + ux * half);
+    ctx.closePath();
+    ctx.fillStyle = withAlpha(colors.text, 0.75);
+    ctx.fill();
+  }
   // the two dots' rings
   for (const n of [a, b]) {
     ctx.beginPath();
