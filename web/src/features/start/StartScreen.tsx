@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import type { LifecycleSnapshot } from "@/api";
-import { ErrorState, Loading } from "@/components/states";
+import { ErrorState } from "@/components/states";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code, TableWrap } from "@/features/lifecycle/LifecycleScreen";
+import { IS_SHARE } from "@/share/env";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import { COMMIT_ROWS, LifecycleLink, ScreenLink, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
@@ -22,13 +24,34 @@ export function nowCards(s: LifecycleSnapshot): [string, string | number][] {
   return cards;
 }
 
+const NOW_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5";
+
+/** Placeholder with the loaded tiles' box (same grid, card and padding; lines as tall as the text) so Home does not shift. */
+function NowSkeleton() {
+  return (
+    <div className={NOW_GRID} role="status" aria-label="Loading the current state" data-testid="now-loading">
+      {Array.from({ length: nowTileCount(IS_SHARE) }, (_, i) => (
+        <Card key={i}>
+          <CardContent className="p-3">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-0 h-7 w-1/2" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/** How many tiles `nowCards` returns: a static share build has no working-tree state or branches, only the two base tiles. */
+export const nowTileCount = (share: boolean) => (share ? 2 : 5);
+
 function Now() {
   const q = useApiQuery(["lifecycle"], (ds) => ds.getLifecycle());
-  if (q.isPending) return <Loading label="Loading the current state" rows={1} />;
+  if (q.isPending) return <NowSkeleton />;
   if (q.isError)
     return <ErrorState title="Could not load the current state." error={q.error} onRetry={() => void q.refetch()} />;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" data-testid="now">
+    <div className={NOW_GRID} data-testid="now">
       {nowCards(q.data).map(([label, value]) => (
         <Card key={label}>
           <CardContent className="p-3">
