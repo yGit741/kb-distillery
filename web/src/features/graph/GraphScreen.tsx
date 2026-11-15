@@ -372,6 +372,23 @@ function Loaded({
       }),
     [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy],
   );
+  // what the screen draws before any view: a `>` hide takes pages out of this, never out of every page (flag graph-intent)
+  const baseDrawn = useMemo(
+    () =>
+      computeVisible(model.nodes, {
+        shownTypes,
+        shownDepths: ui.shownDepths,
+        search: ui.search,
+        rules: ui.rules,
+        restrict: null,
+        force: false,
+        revealed: ui.revealed,
+        keep: predicateFn(ui.predicate),
+        hiddenKeys: ui.hiddenKeys,
+        keyOf: (n) => colorKey(n, effectiveColorBy(ui.colorBy)),
+      }),
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy],
+  );
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
   // a view that draws a relation (Citations) shows the pages no such link reaches as one small group at the side
@@ -386,18 +403,19 @@ function Loaded({
 
   // ---- views (search, picked pages, scope)
   const setView = useCallback(
-    (view: GraphView | null, emptyNote = "") => {
+    (view: GraphView | null, emptyNote = "", select = true) => {
       useGraphUi.setState({ view });
       setNote(view ? "" : emptyNote);
-      if (view) useKb.getState().setSelection(view.hits);
+      if (view && select) useKb.getState().setSelection(view.hits);
+      else if (view) useKb.getState().clearSelection();
     },
     [],
   );
   const showPicked = useCallback(
-    (ids: string[], exact = false) => {
+    (ids: string[], exact = false, select = true) => {
       const next = makeView("picked", "picked", ids, byId, neighbors);
       // a Home subgraph is shown as drawn: exactly its pages (no extra hop), replacing any earlier pick
-      if (exact && next) setView({ ...next, shown: new Set(next.hits) }, "No such pages in the graph.");
+      if (exact && next) setView({ ...next, shown: new Set(next.hits) }, "No such pages in the graph.", select);
       else setView(extendView(useGraphUi.getState().view, next), "No such pages in the graph.");
     },
     [byId, neighbors, setView],
@@ -714,11 +732,13 @@ function Loaded({
           <GraphShell
             nodes={model.nodes}
             links={model.links}
+            drawnBase={baseDrawn}
+            onScreen={visible}
             byId={byId}
             colorBy={ui.colorBy}
             onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
             onRead={openReader}
-            onShowExact={(ids) => showPicked(ids, true)}
+            onShowExact={(ids, o) => showPicked(ids, true, o?.select ?? true)}
             shownTypes={shownTypes}
             onSubject={(s) => applySubject(s, schema, shownTypes)}
             healthWord={healthOn}

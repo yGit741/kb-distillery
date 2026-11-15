@@ -20,6 +20,8 @@ describe("fromSentence", () => {
   it("reads the ways people say hide", () => {
     for (const t of ["exclude all orphans", "Exclude orphans", "remove orphans", "drop orphans", "filter out orphans", "without orphans", "no orphans"])
       expect(fromSentence(t).lines, t).toEqual(["hide nodes degree = 0"]);
+    for (const t of ["don't show orphans", "dont show orphans", "don’t show orphans", "do not show orphans", "never show orphans"])
+      expect(fromSentence(t).lines, t).toEqual(["hide nodes degree = 0"]);
     expect(fromSentence("no leaves").lines).toEqual(["hide nodes degree = 1"]);
     expect(fromSentence("without favorites").lines).toEqual(["hide nodes favorite"]);
     // "no <type> notes" keeps its own meaning

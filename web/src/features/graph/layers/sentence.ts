@@ -86,7 +86,7 @@ function filterClause(clause: string): Layer | null {
   let kind: "show" | "hide" = "show";
   // "hide", and the ways people say it: "exclude all orphans", "filter out hubs", "no leaves", "without favorites"
   // ("no question notes" stays the "with no … notes" condition below, never a hide)
-  const HIDE = /^(?:hide|exclude|remove|drop|filter out|(?:without|no)(?!\s+[\w-]+\s+notes?\b))\s+/i;
+  const HIDE = /^(?:hide|exclude|remove|drop|filter out|(?:don['’]?t|do not|never) show|(?:without|no)(?!\s+[\w-]+\s+notes?\b))\s+/i;
   if (HIDE.test(rest)) {
     kind = "hide";
     rest = rest.replace(HIDE, "");

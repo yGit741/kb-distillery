@@ -18,7 +18,9 @@ const byId = new Map(sampleNodes.map((n) => [n.id, n] as const));
 const addRecent = vi.fn(async () => ({ recent: [] }));
 const listRecent = vi.fn(async () => ({ recent: [] }));
 
-function setup() {
+const showExact = vi.fn();
+
+function setup(shownTypes: ReadonlySet<string> = SHOWN, sets: { drawnBase?: ReadonlySet<string>; onScreen?: ReadonlySet<string> } = {}) {
   const ds = mockDataSource({
     search: async () => ({ hits: [], total: 0 }),
     listRecent,
@@ -28,7 +30,7 @@ function setup() {
   return render(
     <DataSourceProvider source={ds}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <GraphShell nodes={sampleNodes} links={sampleLinks} byId={byId} colorBy="type" shownTypes={SHOWN} onFocus={vi.fn()} onRead={vi.fn()} onShowExact={vi.fn()} onShowMentions={vi.fn()} onFit={vi.fn()} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} />
+        <GraphShell nodes={sampleNodes} links={sampleLinks} byId={byId} colorBy="type" shownTypes={shownTypes} drawnBase={sets.drawnBase} onScreen={sets.onScreen} onFocus={vi.fn()} onRead={vi.fn()} onShowExact={showExact} onShowMentions={vi.fn()} onFit={vi.fn()} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} />
       </QueryClientProvider>
     </DataSourceProvider>,
   );
@@ -40,6 +42,7 @@ const layers = () => useLayers.getState().stack.layers;
 beforeEach(() => {
   window.localStorage.clear();
   addRecent.mockClear();
+  showExact.mockClear();
   listRecent.mockReset();
   listRecent.mockResolvedValue({ recent: [] });
   useLayers.setState({ stack: EMPTY_STACK, history: [], future: [], applied: null, skipped: [], graph: null, preview: null });
@@ -59,6 +62,59 @@ describe("a > sentence is previewed before it applies (graph-intent)", () => {
       expect(layers()).toHaveLength(0);
       expect(useLayers.getState().preview?.ids).not.toBeNull();
       expect(useGraphUi.getState().view).toBeNull();
+    });
+  });
+
+  it("the preview says how to apply it", async () => {
+    await withFlag("graph-intent", true, async () => {
+      setup();
+      await userEvent.type(box(), "> only orphans{Enter}");
+      const row = await screen.findByTestId("resolved-line");
+      await waitFor(() => expect(row).toHaveTextContent(LINE_COPY.preview.hint));
+      expect(row).not.toHaveTextContent("not drawn now");
+    });
+  });
+
+  it("a preview whose pages the current view hides says so (applying draws them)", async () => {
+    await withFlag("graph-intent", true, async () => {
+      // a view that draws no paper: the papers the sentence keeps are all off screen
+      setup(new Set([...SHOWN].filter((t) => t !== "paper")));
+      await userEvent.type(box(), "> papers{Enter}");
+      const row = await screen.findByTestId("resolved-line");
+      await waitFor(() => expect(row).toHaveTextContent("show nodes type paper"));
+      expect(row).toHaveTextContent("none drawn now");
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(layers()).toHaveLength(1));
+    });
+  });
+
+  it("a hide draws the screen's own pages minus the hidden ones, without selecting them", async () => {
+    await withFlag("graph-intent", true, async () => {
+      const shown = new Set([...SHOWN].filter((t) => t !== "paper"));
+      setup(shown);
+      await userEvent.type(box(), "> hide people{Enter}{Enter}");
+      await waitFor(() => expect(showExact).toHaveBeenCalled());
+      const [ids, opts] = showExact.mock.calls.at(-1)!;
+      expect(opts).toEqual({ select: false });
+      const drawn = sampleNodes.filter((n) => shown.has(n.type) && n.type !== "person").map((n) => n.id);
+      expect([...(ids as string[])].sort()).toEqual(drawn.sort());
+    });
+  });
+
+  it("a hide takes from the pages the screen really draws (every filter, not the type filter alone)", async () => {
+    await withFlag("graph-intent", true, async () => {
+      // the screen draws three pages (a legend toggle or a depth filter hid the rest)
+      const base = new Set(sampleNodes.slice(0, 3).map((n) => n.id));
+      const person = sampleNodes.find((n) => n.type === "person")!;
+      base.add(person.id);
+      setup(SHOWN, { drawnBase: base, onScreen: base });
+      await userEvent.type(box(), "> hide people{Enter}");
+      const row = await screen.findByTestId("resolved-line");
+      await waitFor(() => expect(row).toHaveTextContent(`${base.size - 1} nodes`));
+      expect(row).not.toHaveTextContent("not drawn now");
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(showExact).toHaveBeenCalled());
+      expect([...(showExact.mock.calls.at(-1)![0] as string[])].sort()).toEqual([...base].filter((id) => id !== person.id).sort());
     });
   });
 

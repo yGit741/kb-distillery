@@ -15,12 +15,15 @@ const ROW = "flex min-h-6 items-center gap-2 px-1 text-sm text-muted-foreground"
 export function ResolvedLine({
   lines,
   count,
+  offScreen = 0,
   editing,
   onEditing,
   onApply,
 }: {
   lines: string[] | null;
   count: number;
+  /** How many of the `count` pages are not drawn in the current view (applying draws them). */
+  offScreen?: number;
   editing: boolean;
   onEditing: (on: boolean) => void;
   onApply: (layers: Layer[]) => void;
@@ -55,7 +58,11 @@ export function ResolvedLine({
     return (
       <button type="button" className={`${ROW} w-full text-left hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring`} data-testid="resolved-line" title={LINE_COPY.preview.edit} onClick={() => onEditing(true)}>
         <span className="min-w-0 flex-1 truncate text-foreground">{lines.join(" · ")}</span>
-        <span className="shrink-0">{LINE_COPY.preview.count(count)}</span>
+        <span className="shrink-0">
+          {LINE_COPY.preview.count(count)}
+          {offScreen > 0 && `, ${LINE_COPY.preview.offScreen(offScreen, count)}`}
+        </span>
+        <span className="shrink-0 text-xs">{LINE_COPY.preview.hint}</span>
       </button>
     );
   return (

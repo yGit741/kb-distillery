@@ -112,8 +112,14 @@ interface Props {
   onFocus: (id: string) => void;
   /** Shift+Enter on a page: read it in the side reader. */
   onRead: (id: string) => void;
-  /** Draw exactly these pages, replacing the pages on screen (free-text shaping). */
-  onShowExact: (ids: string[]) => void;
+  /** Draw exactly these pages, replacing the pages on screen (free-text shaping); `select: false` draws them
+   * without selecting them (a layer view). */
+  onShowExact: (ids: string[], opts?: { select?: boolean }) => void;
+  /** The pages the screen draws before any view (every filter but an applied one): a `>` hide takes from these.
+   * Absent: the pages of the shown types. */
+  drawnBase?: ReadonlySet<string>;
+  /** The pages drawn right now; a preview can light only these. Absent: the pages of the shown types. */
+  onScreen?: ReadonlySet<string>;
   /** The types drawn now (free-text shaping hides some). */
   shownTypes: ReadonlySet<string> | null;
   /** `> concepts` / `> sources` (flag graph-intent): switch the graph's view; false when it is already on. */
@@ -140,7 +146,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onSubject, healthWord, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
+export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, drawnBase, onScreen, shownTypes, onSubject, healthWord, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -174,6 +180,14 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const canUndo = useShellStore((s) => s.undo !== null);
   const layersUndo = useLayers((s) => s.history.length > 0);
   const preview = useLayers((s) => s.preview);
+  // the previewed pages a type filter of the current view hides: the preview cannot light them, applying draws them
+  const previewOffScreen = useMemo(() => {
+    if (!preview?.ids) return 0;
+    const drawnNow = (id: string) => (onScreen ? onScreen.has(id) : !shownTypes || shownTypes.has(byId.get(id)?.type ?? ""));
+    let n = 0;
+    for (const id of preview.ids) if (!drawnNow(id)) n++;
+    return n;
+  }, [preview, onScreen, shownTypes, byId]);
   // the sentence (with its op) the preview answers; editing the text retires the preview
   const previewKey = useRef("");
   const [editingLine, setEditingLine] = useState(false);
@@ -202,12 +216,15 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       nodes,
       links: links ?? [],
       favorites: favsLoaded ? favs : undefined,
-      show: (ids) => showRef.current(ids),
+      // what the screen draws before any layer (the host's own set, else its type filter; null: every page)
+      drawn: drawnBase ?? (shownTypes ? new Set(nodes.filter((n) => shownTypes.has(n.type)).map((n) => n.id)) : undefined),
+      // a layer view is what the graph draws, not a pick: hundreds of pages must not all become selected
+      show: (ids) => showRef.current(ids, { select: false }),
       applyLegacy: (spec) => pickRef.current?.({ id: "legacy", name: "", count: "", spec }),
       similar: meaningOn ? async ({ q, slug, k }) => (await ds.searchSimilar({ q, slug, k })).hits.map((h) => h.slug) : undefined,
     });
     return () => useLayers.getState().setGraph(null);
-  }, [intent, nodes, links, favs, favsLoaded, meaningOn, ds]);
+  }, [intent, nodes, links, favs, favsLoaded, meaningOn, ds, shownTypes, drawnBase]);
 
   // a shared site cannot change the view by writing: `>` is dropped and the rest is searched (with one quiet line saying so)
   const sentenceBlocked = intent && !caps.sentences && raw.startsWith(">");
@@ -1063,7 +1080,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}
-      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined)} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
