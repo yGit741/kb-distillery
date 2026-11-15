@@ -25,8 +25,8 @@ export function HeaderFold() {
   const label = folded ? "Show the app bar" : "Hide the app bar";
   const strip = useRef<HTMLDivElement>(null);
   const dx = useLineCentre(strip);
-  // flag graph-corners: the chevron is pinned to the window's top edge, folded or open, so a second press on the
-  // same spot undoes the first. Open, it sits on the bar, right of the main nav when the nav reaches the middle.
+  // flag graph-corners: a plain chevron pinned to the window's top edge, centred on the search line, folded or open,
+  // so a second press on the same spot undoes the first. Open, it sits in the bar's top 14px, over the nav's top edge where the nav reaches the middle.
   const pinned = useFlag("graph-corners");
   const at = usePinnedX(strip, pinned);
   if (pinned)
@@ -42,7 +42,7 @@ export function HeaderFold() {
               aria-expanded={!folded}
               onClick={toggle}
               className={cn(
-                "fixed top-0 z-[45] flex h-[18px] w-9 -translate-x-1/2 items-center justify-center rounded-b-full bg-background text-muted-foreground shadow-[0_2px_8px_-2px_rgb(0_0_0/0.18)] transition-colors hover:text-foreground motion-reduce:transition-none",
+                "fixed top-0 z-[45] flex h-3.5 w-9 -translate-x-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none",
                 RING,
               )}
               style={{ left: at }}
@@ -86,12 +86,8 @@ export function HeaderFold() {
   );
 }
 
-/** Room kept between the main nav's right end and the pinned chevron's centre. */
-const NAV_CLEAR = 46;
-
 /**
- * Flag graph-corners: the pinned chevron's x in the window, the same folded or open: over the search line's centre,
- * or right of the main nav when the nav reaches that far (the bar keeps its layout while folded, so it measures the same).
+ * Flag graph-corners: the pinned chevron's x in the window, the same folded or open: over the search line's centre.
  */
 function usePinnedX(strip: RefObject<HTMLDivElement | null>, on: boolean): number | null {
   const [x, setX] = useState<number | null>(null);
@@ -99,9 +95,7 @@ function usePinnedX(strip: RefObject<HTMLDivElement | null>, on: boolean): numbe
     if (!on) return;
     const measure = () => {
       const line = strip.current?.parentElement?.querySelector<HTMLElement>("[data-testid=graph-shell]")?.getBoundingClientRect();
-      const nav = document.querySelector<HTMLElement>("nav[aria-label=Main]")?.getBoundingClientRect();
-      const centre = line && line.width ? line.left + line.width / 2 : window.innerWidth / 2;
-      setX(Math.round(Math.max(centre, nav && nav.width ? nav.right + NAV_CLEAR : 0)));
+      setX(Math.round(line && line.width ? line.left + line.width / 2 : window.innerWidth / 2));
     };
     measure();
     window.addEventListener("resize", measure);

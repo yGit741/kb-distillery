@@ -913,7 +913,8 @@ describe("graph-corners: one raised disc per corner, and the theme switch in the
 
 describe("graph-corners: the pinned views hang from the pin in a loop", () => {
   const many = Array.from({ length: 16 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
-  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")];
+  // the pinned cards only (the graph's own views open the loop as `view:…` cards)
+  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]:not([data-view^='view:'])")];
 
   it("as many cards as fit between the pin and the spark; a short window shows fewer", () => {
     expect(loopFits(900)).toBeGreaterThan(loopFits(560));
@@ -933,7 +934,7 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
     }));
 
   it("with more views than fit, the faded ends turn the loop and the pin never moves", () =>
-    withFlag("graph-corners", true, async () => {
+    withFlag("graph-intent", false, () => withFlag("graph-corners", true, async () => {
       mount(fakeServer({ views: many }), {}, { kind: "http" });
       await userEvent.click(pins());
       await waitFor(() => expect(cards().length).toBeGreaterThan(1));
@@ -950,14 +951,16 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
       expect(cards()[0]!.dataset.view).toBe(frontBefore); // and back again
       expect(useCorners.getState().activeView).toBeNull(); // a faded end turns, it does not apply
       expect(pins().getBoundingClientRect().top).toBe(pinAt);
-    }));
+    })));
 
-  it("nothing pinned: the corner says how to pin, and /pin in the search line opens the name field", () =>
-    withFlag("graph-corners", true, async () => {
-      mount(fakeServer(), {}, { kind: "http" });
-      await userEvent.click(pins());
-      expect(await screen.findByText(/Type \/pin in the search line/)).toBeInTheDocument();
-    }));
+  it("nothing pinned and no views to list (graph-intent off): the corner says how to pin", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", false, async () => {
+        mount(fakeServer(), {}, { kind: "http" });
+        await userEvent.click(pins());
+        expect(await screen.findByText(/Type \/pin in the search line/)).toBeInTheDocument();
+      }),
+    ));
 
   it("flag off: the pinned corner keeps its list", () =>
     withFlag("graph-corners", false, async () => {
@@ -968,18 +971,21 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
     }));
 });
 
-describe("graph-corners: the views live at the top of the pin", () => {
-  const options = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=views] [data-view-option]")];
+describe("graph-corners: the graph's views open the pin's loop", () => {
+  const options = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view^='view:']")];
 
-  it("on: the pin lists the views above the pinned ones, Concepts on; picking Sources draws the sources alone", () =>
+  it("on: the loop starts with the views, then the pinned ones, Concepts on; picking Sources draws the sources alone", () =>
     withFlag("graph-corners", true, () =>
       withFlag("graph-intent", true, async () => {
         mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
         expect(document.querySelector("[data-corners=subject]")).toBeNull(); // no switch beside the line
         await userEvent.click(pins());
         await waitFor(() => expect(options().length).toBeGreaterThanOrEqual(2));
-        expect(options().slice(0, 2).map((o) => o.dataset.viewOption)).toEqual(["concepts", "sources"]);
-        expect(options()[0]).toHaveAttribute("aria-checked", "true");
+        expect(options().slice(0, 2).map((o) => o.dataset.view)).toEqual(["view:concepts", "view:sources"]);
+        expect(options()[0]).toHaveAttribute("aria-current", "true");
+        // the pinned view follows the graph's views in the same loop
+        const all = [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")].map((b) => b.dataset.view);
+        expect(all.indexOf("a")).toBeGreaterThan(all.indexOf("view:sources"));
         await userEvent.click(options()[1]!);
         const drawn = [...useGraphUi.getState().shownTypes!];
         const layerOf = new Map(schema.types.map((t) => [t.id, t.layer] as const));
@@ -994,19 +1000,37 @@ describe("graph-corners: the views live at the top of the pin", () => {
         const sourceTypes = schema.types.filter((t) => t.layer === "source").map((t) => t.id);
         mount(fakeServer(), { shownTypes: new Set(sourceTypes) }, { kind: "http" });
         await userEvent.click(pins());
-        await waitFor(() => expect(document.querySelector("[data-view-option=sources]")).toHaveAttribute("aria-checked", "true"));
-        expect(document.querySelector("[data-view-option=concepts]")).toHaveAttribute("aria-checked", "false");
+        await waitFor(() => expect(document.querySelector("[data-view='view:sources']")).toHaveAttribute("aria-current", "true"));
+        expect(document.querySelector("[data-view='view:concepts']")).not.toHaveAttribute("aria-current");
       }),
     ));
 
-  it("off: no views in the pin, and the Concepts / Sources switch stays beside the line", () =>
+  it("on: with more cards than fit, a faded end turns the loop of views and pinned ones without picking", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        const many = Array.from({ length: 12 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
+        mount(fakeServer({ views: many }), {}, { kind: "http" });
+        await userEvent.click(pins());
+        const all = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")];
+        await waitFor(() => expect(all().length).toBeGreaterThan(1));
+        expect(all()[0]!.dataset.view).toBe("view:concepts");
+        const typesBefore = useGraphUi.getState().shownTypes;
+        const second = all()[1]!.dataset.view;
+        await userEvent.click(all().find((b) => b.dataset.end)!);
+        expect(all()[0]!.dataset.view).toBe(second);
+        expect(useGraphUi.getState().shownTypes).toBe(typesBefore); // turning picks nothing
+        expect(useCorners.getState().activeView).toBeNull();
+      }),
+    ));
+
+  it("graph-corners off: no views in the pin, and the Concepts / Sources switch stays beside the line", () =>
     withFlag("graph-corners", false, () =>
       withFlag("graph-intent", true, async () => {
         mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
         expect(document.querySelector("[data-corners=subject]")).not.toBeNull();
         await userEvent.click(pins());
         await screen.findByText("Alpha");
-        expect(document.querySelector("[data-corners=views]")).toBeNull();
+        expect(document.querySelector("[data-view^='view:']")).toBeNull();
       }),
     ));
 });

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AREA_COLORS } from "@/theme/palette";
 
 /** A small deterministic number generator, so a view's picture is the same on every render. */
 function rng(seed: number): () => number {
@@ -14,12 +15,16 @@ const hash = (text: string): number => [...text].reduce((h, c) => (h * 31 + c.ch
  * The picture on a pinned-view row. It is a plain sketch of a graph (grey nodes, a few darker hubs), a different
  * one per view so rows are told apart at a glance; it does not claim to show the view's real pages.
  */
-export function ViewThumb({ id, className }: { id: string; className?: string }) {
+export function ViewThumb({ id, className, colour = false }: { id: string; className?: string; colour?: boolean }) {
   const art = useMemo(() => {
     const r = rng(hash(id));
+    // `colour` (flag graph-corners): the nodes take the area colours and a few sizes, like a small graph of its own
     const pts = Array.from({ length: 22 }, (_, i) => ({ x: 6 + r() * 88, y: 5 + r() * 54, hub: i % 7 === 0 }));
+    // the colours and sizes come from their own sequence, so the plain sketch keeps its exact layout
+    const c = rng(hash(id) + 1);
+    const look = pts.map(() => ({ hue: AREA_COLORS[Math.floor(c() * AREA_COLORS.length)]!, size: 2.8 + c() * 4 }));
     const lines = Array.from({ length: 18 }, (_, i) => [pts[i % pts.length]!, pts[(i * 7 + 3) % pts.length]!] as const);
-    return { pts, lines };
+    return { pts, lines, look };
   }, [id]);
   return (
     <svg viewBox="0 0 100 64" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
@@ -30,9 +35,13 @@ export function ViewThumb({ id, className }: { id: string; className?: string })
         ))}
       </g>
       {/* a dot is a round-capped stroke of no length: this sketch is not a node mark */}
-      {art.pts.map((p, i) => (
-        <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 6 : 3.6} className={p.hub ? "stroke-primary" : "stroke-muted-foreground"} />
-      ))}
+      {art.pts.map((p, i) =>
+        colour ? (
+          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 7.5 : art.look[i]!.size} stroke={art.look[i]!.hue} />
+        ) : (
+          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 6 : 3.6} className={p.hub ? "stroke-primary" : "stroke-muted-foreground"} />
+        ),
+      )}
     </svg>
   );
 }

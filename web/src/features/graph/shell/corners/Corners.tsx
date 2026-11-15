@@ -43,8 +43,7 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
-import { PinLoop } from "./PinLoop";
-import { VIEW_OPTIONS, ViewPicker, viewPickerHeight, type GraphView } from "./ViewPicker";
+import { PinLoop, type LoopCard } from "./PinLoop";
 import { useChatDock } from "../../tools/chatDockStore";
 import { QuickList, type QuickRow } from "./QuickList";
 import { useSparkPanel } from "../sparkPanelStore";
@@ -68,6 +67,12 @@ export interface CornersProps {
 }
 
 const LAYER_ORDER = ["concept", "collection", "source"] as const;
+/** flag graph-corners: the graph's own views, first in the pin's loop */
+const LEAD_VIEWS: readonly LoopCard[] = [
+  { id: "concepts", name: "Concepts", hint: "Concepts and the links between them" },
+  { id: "sources", name: "Sources", hint: "The sources you read, without the concepts" },
+  { id: "citations", name: "Citations", hint: "Papers joined by who cites whom" },
+];
 const NO_ROWS: readonly TypeRow[] = [];
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
 const BTN_ID = { pins: "corner-pins", think: "corner-think", agent: "corner-agent" } as const;
@@ -396,26 +401,32 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     [intent, subject, sourcesDrawn, embedding],
   );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
-  // flag graph-corners: the four views live at the top of the pin. Which one is on: the meaning map, else the
-  // Citations links, else what the drawn types say (Health is a lens on Concepts)
+  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and the views built on
+  // meaning close it (Topics, Meaning map, Missing links). Which one is on: an embedding view, else the Citations
+  // links, else what the drawn types say (Health is a lens on Concepts)
   const embedOn = useEmbedView((s) => s.view);
   const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
   const citationsStory = storyById("citations");
-  const viewOptions = useMemo(
-    () => VIEW_OPTIONS.filter((v) => (v.id === "citations" ? !!citationsStory && storyOffered(citationsStory) : v.id === "embedding" ? !!embedding : true)),
-    [citationsStory, embedding],
+  const currentView: string = embedOn ?? (edgeOn === "citations" ? "citations" : subject === "sources" && shownTypes ? "sources" : "concepts");
+  const leadCards = useMemo(
+    (): LoopCard[] =>
+      LEAD_VIEWS.filter((v) => v.id !== "citations" || (!!citationsStory && storyOffered(citationsStory))).map((v) => ({ ...v, on: v.id === currentView })),
+    [citationsStory, currentView],
   );
-  const currentView: GraphView = embedOn === "map" ? "embedding" : edgeOn === "citations" ? "citations" : subject === "sources" && shownTypes ? "sources" : "concepts";
-  const pickView = (v: GraphView) => {
+  const tailCards = useMemo(
+    (): LoopCard[] => suggestions.map((sg) => ({ id: sg.view, name: sg.name, hint: sg.hint, meta: "from meaning", suggested: true, on: sg.view === currentView })),
+    [suggestions, currentView],
+  );
+  const pickView = (v: string) => {
     setActive(null);
-    // another embedding lens (missing links) still reads as Concepts: picking Concepts leaves it
-    if (v === currentView && (v === "embedding" || !embedOn)) return;
+    if (v === currentView) return;
     if (embedOn) leaveEmbed();
     if (v === "citations") return useGraphUi.getState().applyStory("citations");
-    // the meaning map places the concepts; leaving Citations or Sources first puts the concepts back
+    const embed = SUGGESTED.find((sg) => sg.view === v)?.view;
+    // a view built on meaning sits on the concepts: leaving Citations or Sources first puts the concepts back
     const to: GraphSubject = v === "sources" ? "sources" : "concepts";
-    applySubject(to, schema, shownTypes, currentView === "citations" || (v === "embedding" && subject !== "concepts"));
-    if (v === "embedding") applyEmbed({ view: "map" });
+    applySubject(to, schema, shownTypes, currentView === "citations" || (!!embed && subject !== "concepts"));
+    if (embed) applyEmbed({ view: embed, axes: embed === "map" ? [...useEmbedView.getState().axes] as [number, number] : undefined });
   };
   // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
   // hiding a colour or changing the colouring must never change which types are drawn.
@@ -451,10 +462,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         <>
           {discs ? (
             <>
-              {intent && <ViewPicker open={pinsOpen} views={viewOptions} current={currentView} onPick={pickView} />}
               <PinLoop
                 open={pinsOpen}
-                offset={intent ? viewPickerHeight(viewOptions.length) : 0}
+                lead={intent ? leadCards : undefined}
+                tail={intent ? tailCards : undefined}
+                onPick={pickView}
                 views={views.data ?? []}
                 active={activeView}
                 areaHeight={areaHeight}
