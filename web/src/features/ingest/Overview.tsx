@@ -16,7 +16,7 @@ function Row({ label, value, to, action }: { label: string; value: ReactNode; to
     <li className="flex items-center gap-3 border-b py-2 text-sm last:border-b-0">
       <span className="min-w-0 flex-1">{label}</span>
       <span className="font-semibold tabular-nums">{value}</span>
-      <Link to={"/ingest" as "/"} search={to as never} className="inline-flex shrink-0 items-center gap-0.5 text-xs text-primary hover:underline">
+      <Link to={"/ingest" as "/"} search={to as never} className="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-end gap-0.5 text-xs text-primary hover:underline">
         {action} <ChevronRight aria-hidden className="size-3" />
       </Link>
     </li>
