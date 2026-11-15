@@ -27,6 +27,12 @@ export type NodeCond =
   | { t: "linkedFromType"; type: string }
   /** Pages on a path of at most `n` hops between two pages. */
   | { t: "paths"; a: string; b: string; n: number }
+  /** Pages on a shortest path between two pages, over every link (flag graph-algos); `all`: every shortest path. */
+  | { t: "shortest"; a: string; b: string; all?: boolean }
+  /** Pages linked to both pages (flag graph-algos). */
+  | { t: "common"; a: string; b: string }
+  /** A connected component of the drawn pages: the one holding `of`, else the `rank`-th largest (1 = largest). */
+  | { t: "component"; of?: string; rank?: number }
   /** Pages with (or, `exists: false`, without) a link of this type. */
   | { t: "hasEdge"; type: string; exists?: false }
   | { t: "mentionedIn"; chat: string }
@@ -64,6 +70,9 @@ export interface Layer {
   target: "nodes" | "edges";
   subgraph: Subgraph;
   style?: LayerStyle;
+  /** Nodes layers (flag graph-algos): also the pages this many drawn links away from the ones kept ("and their
+   * neighbours"). */
+  expand?: number;
   /** Plain words for the chip; `describe` fills it in when empty. */
   text: string;
   /** A V1 pinned view carried as one layer: applying it reuses `applySpec`. */
@@ -126,6 +135,12 @@ export function describeNodeCond(c: NodeCond): string {
       return `within ${c.n} hop${c.n === 1 ? "" : "s"} of ${c.of === FAVORITES ? "favorites" : c.of === FOCUS ? "this page" : c.of}`;
     case "paths":
       return `paths between ${c.a} and ${c.b} up to ${c.n} hops`;
+    case "shortest":
+      return `${c.all ? "all shortest paths" : "shortest path"} between ${c.a} and ${c.b}`;
+    case "common":
+      return `common neighbours of ${c.a} and ${c.b}`;
+    case "component":
+      return c.of ? `the component of ${c.of}` : !c.rank || c.rank === 1 ? "the largest component" : `component ${c.rank} by size`;
     case "hasEdge":
       return c.exists === false ? `without a ${c.type} link` : `with a ${c.type} link`;
     case "mentionedIn":
@@ -261,6 +276,49 @@ export function withinHops(adj: ReadonlyMap<string, ReadonlySet<string>>, from: 
   return seen;
 }
 
+/**
+ * The pages on a shortest path from `a` to `b` (breadth first, links both ways): every page on any shortest path with
+ * `all`, else one path. Empty when no path joins them.
+ */
+export function shortestPaths(adj: ReadonlyMap<string, ReadonlySet<string>>, a: string, b: string, all = false): Set<string> {
+  if (a === b) return new Set([a]);
+  const da = distances(adj, a, Infinity);
+  const target = da.get(b);
+  if (target === undefined) return new Set();
+  if (all) {
+    const db = distances(adj, b, Infinity);
+    return new Set([...da].filter(([id, d]) => d + (db.get(id) ?? Infinity) === target).map(([id]) => id));
+  }
+  // one path: walk back from b along strictly decreasing distance (the first neighbour found, so it is stable)
+  const path = new Set([b]);
+  let at = b;
+  for (let d = target; d > 0; d--) {
+    const prev = [...(adj.get(at) ?? [])].sort().find((o) => da.get(o) === d - 1)!;
+    path.add(prev);
+    at = prev;
+  }
+  return path;
+}
+
+/** The connected components of the pages `inside` (links with both ends inside), largest first, ties by first id. */
+export function components(adj: ReadonlyMap<string, ReadonlySet<string>>, inside: Iterable<string>): string[][] {
+  const left = new Set(inside);
+  const out: string[][] = [];
+  for (const start of [...left].sort()) {
+    if (!left.has(start)) continue;
+    const comp = [start];
+    left.delete(start);
+    for (let i = 0; i < comp.length; i++)
+      for (const o of adj.get(comp[i]!) ?? [])
+        if (left.has(o)) {
+          left.delete(o);
+          comp.push(o);
+        }
+    out.push(comp);
+  }
+  return out.sort((x, y) => y.length - x.length);
+}
+
 /** Hops from `from` to every page within `max` hops, over links in either direction. */
 function distances(adj: ReadonlyMap<string, ReadonlySet<string>>, from: string, max: number): Map<string, number> {
   const dist = new Map([[from, 0]]);
@@ -329,6 +387,9 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
 
   const matchNodes = (conds: NodeCond[] | undefined, label: string): Set<string> => {
     let out = new Set(all);
+    // a degree on its own is judged on the drawn pages; with a page type ("papers with more than 5 links") it may reach
+    // a type the view hides, which then counts all its links
+    const typed = (conds ?? []).some((c) => c.t === "type");
     for (const c of conds ?? []) {
       let keep: (n: GNode) => boolean;
       switch (c.t) {
@@ -340,7 +401,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           break;
         }
         case "degree":
-          keep = (n) => cmp(seenDegree(n.id), c.op, c.n);
+          keep = (n) => (!typed && graph.drawn && !graph.drawn.has(n.id) ? false : cmp(seenDegree(n.id), c.op, c.n));
           break;
         case "hops": {
           if (c.of === FAVORITES) {
@@ -372,6 +433,42 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           const da = distances(adj, a, c.n);
           const db = distances(adj, b, c.n);
           keep = (n) => (da.get(n.id) ?? Infinity) + (db.get(n.id) ?? Infinity) <= c.n;
+          break;
+        }
+        case "shortest":
+        case "common": {
+          const a = pageOf(c.a);
+          const b = pageOf(c.b);
+          let hit: Set<string>;
+          if (!a || !b) {
+            // a name that is no page answers nothing (never every page, which a hide would turn into a blank graph)
+            skip(`${label}: "${a ? c.b : c.a}" is not a page here`);
+            keep = () => false;
+            break;
+          }
+          if (c.t === "shortest") hit = shortestPaths(adj, a, b, !!c.all);
+          else {
+            const nb = adj.get(b) ?? new Set<string>();
+            hit = new Set([...(adj.get(a) ?? [])].filter((o) => nb.has(o)));
+          }
+          if (!hit.size) skip(`${label}: ${c.t === "shortest" ? "no path joins them" : "they share no neighbour"}`);
+          keep = (n) => hit.has(n.id);
+          break;
+        }
+        case "component": {
+          // components of the pages drawn (as seen), over the links between them
+          const comps = components(adj, graph.drawn ?? all);
+          let comp: string[] | undefined;
+          if (c.of) {
+            const of = pageOf(c.of);
+            comp = of ? comps.find((k) => k.includes(of)) : undefined;
+            if (!comp) skip(`${label}: "${c.of}" is ${of ? "not drawn here" : "not a page here"}`);
+          } else {
+            comp = comps[(c.rank ?? 1) - 1];
+            if (!comp) skip(`${label}: the drawn pages have ${comps.length} component${comps.length === 1 ? "" : "s"}`);
+          }
+          const s = new Set(comp ?? []);
+          keep = (n) => s.has(n.id);
           break;
         }
         case "hasEdge":
@@ -457,7 +554,24 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
       continue;
     }
     if (layer.target === "nodes") {
-      const m = matchNodes(layer.subgraph.nodes, label);
+      let m = matchNodes(layer.subgraph.nodes, label);
+      // "and their neighbours": the pages up to `expand` drawn links away join the ones kept
+      if (layer.expand && layer.expand > 0) {
+        const seen = (id: string) => !graph.drawn || graph.drawn.has(id);
+        let edge = [...m];
+        const grown = new Set(m);
+        for (let d = 0; d < layer.expand && edge.length; d++) {
+          const next: string[] = [];
+          for (const id of edge)
+            for (const o of adj.get(id) ?? [])
+              if (!grown.has(o) && seen(o)) {
+                grown.add(o);
+                next.push(o);
+              }
+          edge = next;
+        }
+        m = grown;
+      }
       if (layer.kind === "show") cur = cur === null ? m : new Set([...cur, ...m]);
       else {
         const base: Set<string> = cur ?? new Set(graph.drawn ? [...graph.drawn].filter((id) => all.has(id)) : all);

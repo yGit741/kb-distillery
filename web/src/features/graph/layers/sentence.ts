@@ -1,5 +1,6 @@
 import { FAVORITES, FOCUS, makeLayer, type EdgeCond, type Layer, type NodeCond, type Op } from "./model";
 import { print } from "./grammar";
+import { algoClause } from "./algoWords";
 import { LINE_COPY } from "../shell/copy";
 
 /**
@@ -162,6 +163,9 @@ function filterClause(clause: string): Layer | null {
 
 function clauseLayers(clause: string): Layer[] | null {
   const c = clause.trim();
+  // graph-theory words first (flag graph-algos): shortest paths, components, "and their neighbours"
+  const algo = algoClause(c, clauseLayers);
+  if (algo !== undefined) return algo;
   let m = c.match(/^(?:colou?r)(?:ed)?(?: the)?(?: nodes| pages)? by (?:the )?([\w-]+(?: [\w-]+)?)$/i);
   if (m) {
     // the legend's name or a loose word, a small typo forgiven ("theams" -> theme); anything else is for the model

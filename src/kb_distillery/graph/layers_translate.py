@@ -230,6 +230,14 @@ def _node(c):
         return f"within {c.n} hops of {_of(c.of)}"
     if t == "paths":
         return f"paths between {_quote(c.a)} and {_quote(c.b)} up to {c.n} hops"
+    if t == "shortest":
+        return f"{'all shortest paths' if c.all else 'shortest path'} between {_quote(c.a)} and {_quote(c.b)}"
+    if t == "common":
+        return f"common neighbours of {_quote(c.a)} and {_quote(c.b)}"
+    if t == "component":
+        if c.of:
+            return f"component of {_quote(c.of)}"
+        return "largest component" if not c.rank or c.rank == 1 else f"component {c.rank}"
     if t == "hasEdge":
         return f"having edge {c.type}" + (" exists = false" if c.exists is False else "")
     if t == "linkedFromType":
@@ -272,7 +280,8 @@ def print_layer(layer):
     conds = " and ".join((_node if layer.target == "nodes" else _edge)(c)
                          for c in ((layer.subgraph.nodes if layer.target == "nodes" else layer.subgraph.edges) or ()))
     if layer.kind != "style":
-        return " ".join(p for p in (layer.kind, layer.target, conds) if p)
+        grow = f"expand {layer.expand}" if layer.target == "nodes" and layer.expand else ""
+        return " ".join(p for p in (layer.kind, layer.target, conds, grow) if p)
     s = layer.style
     prop = next((p for p in ("color", "size", "width", "label") if s is not None and getattr(s, p) is not None), "color")
     value = _word(getattr(s, prop)) if s is not None and getattr(s, prop) is not None else ""

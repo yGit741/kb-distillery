@@ -71,7 +71,7 @@ describe("evaluate", () => {
     expect([...papers].sort()).toEqual(["2019-fine-grained", "2020-listed-paper"]);
   });
 
-  it("with the drawn pages given, a drawn page counts its links to drawn pages only; a hidden page counts all", () => {
+  it("with the drawn pages given, a drawn page counts its links to drawn pages only; a hidden page only with a type", () => {
     // a - b - c, and d - b: hide b, and a, c, d look alone
     const g = {
       nodes: ["a", "b", "c", "d"].map((id) => node(id)),
@@ -84,9 +84,13 @@ describe("evaluate", () => {
     const orphans = (drawn?: Set<string>) => [...evaluate(stack(EMPTY_STACK, [show("none", [{ t: "degree", op: "=", n: 0 }])]), { ...g, drawn }).nodeIds!].sort();
     expect(orphans()).toEqual([]);
     expect(orphans(new Set(["a", "c", "d"]))).toEqual(["a", "c", "d"]);
-    // b is hidden: it keeps all three of its links, so it is no orphan and it is a page with more than 2 links
-    const busy = evaluate(stack(EMPTY_STACK, [show("busy", [{ t: "degree", op: ">", n: 2 }])]), { ...g, drawn: new Set(["a", "c", "d"]) }).nodeIds!;
-    expect([...busy]).toEqual(["b"]);
+    // b is hidden: a bare degree judges the drawn pages only, so b is not "busy"; named by its type, b counts all
+    // three of its links ("papers with more than 2 links" from a view that hides papers)
+    const drawn = new Set(["a", "c", "d"]);
+    const busy = evaluate(stack(EMPTY_STACK, [show("busy", [{ t: "degree", op: ">", n: 2 }])]), { ...g, drawn }).nodeIds!;
+    expect([...busy]).toEqual([]);
+    const typed = evaluate(stack(EMPTY_STACK, [show("busy", [{ t: "type", value: g.nodes[1]!.type }, { t: "degree", op: ">", n: 2 }])]), { ...g, drawn }).nodeIds!;
+    expect([...typed]).toEqual(["b"]);
   });
 
   it("degree counts the distinct pages a page is linked with", () => {

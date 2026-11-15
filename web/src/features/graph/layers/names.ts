@@ -61,7 +61,11 @@ export function resolveNames(layers: Layer[], nodes: readonly GNode[], opts: { f
       case "hops":
         return { ...c, of: one(c.of) };
       case "paths":
+      case "shortest":
+      case "common":
         return { ...c, a: one(c.a), b: one(c.b) };
+      case "component":
+        return c.of ? { ...c, of: one(c.of) } : c;
       case "name":
         return { ...c, slugs: c.slugs.map(one) };
       case "about":
