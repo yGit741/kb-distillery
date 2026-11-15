@@ -421,7 +421,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   );
   const pickView = (v: string) => {
     setActive(null);
-    if (v === currentView && !activeView) return;
+    // the built-in view already on screen (under a pinned one): the mark moves to it, nothing is applied again
+    if (v === currentView) return;
     if (embedOn) leaveEmbed();
     if (v === "citations") return useGraphUi.getState().applyStory("citations");
     const embed = SUGGESTED.find((sg) => sg.view === v)?.view;

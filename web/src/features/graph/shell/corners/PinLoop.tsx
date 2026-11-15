@@ -30,6 +30,11 @@ export function loopSolid(areaHeight: number): number {
  */
 export function arcPlaces(solid: number): { x: number; y: number; deg: number }[] {
   if (solid < 1) return [];
+  // a single solid card has no last corner to bring to the border: give the arc a small fixed bend
+  if (solid < 2) {
+    const k = 0.06;
+    return [0, 1, 2].map((j) => ({ x: -54 * Math.sin(k * j) * j, y: [0, 54, 90][j]!, deg: (k * j * 180) / Math.PI }));
+  }
   const steps = [...Array(Math.max(0, solid - 1)).fill(STEP), 54, 36];
   const geo = (k: number) => {
     const a = Array.from({ length: solid + 2 }, (_, j) => k * j);
@@ -165,7 +170,7 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
         // closed, the first few tuck behind the pin as a small pile; the rest wait there unseen
         const q = Math.min(j, 4);
         const transform = !open
-          ? `translate(-40px,-46px) rotate(${q * 5}deg) scale(.6)`
+          ? `translate(-30px,-40px) rotate(${q * 5}deg) scale(.6)`
           : s
             ? `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) rotate(${s.deg.toFixed(2)}deg)`
             : `translate(${places[Math.min(solid, places.length - 1)]!.x.toFixed(1)}px,${(places[Math.min(solid, places.length - 1)]!.y + 20).toFixed(1)}px)`;
@@ -177,14 +182,16 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
         return (
           <div
             key={v.key}
-            role="listitem"
+            role={live ? "listitem" : undefined}
+            aria-hidden={!live || undefined}
+            inert={!live}
             data-slot={s ? (end ?? "solid") : undefined}
             data-pos={j}
             className="absolute left-0 top-0"
             style={{
               zIndex: s?.z ?? 1,
               transform,
-              transformOrigin: open ? "0 0" : "50% 50%",
+              transformOrigin: "0 0",
               opacity,
               transition: still ? undefined : `transform .45s ${ease}, opacity .45s`,
             }}
@@ -193,8 +200,6 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
               type="button"
               data-view={v.key}
               data-end={end}
-              tabIndex={live ? 0 : -1}
-              aria-hidden={!live || undefined}
               aria-current={v.on || undefined}
               aria-label={pressTurns ? `${v.name}, turn the pile${pressTurns < 0 ? " back" : ""}` : v.name}
               title={pressTurns ? `Turn the pile ${pressTurns < 0 ? "back " : ""}to ${v.name}` : v.hint}
