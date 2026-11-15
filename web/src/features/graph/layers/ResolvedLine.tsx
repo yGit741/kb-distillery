@@ -32,6 +32,7 @@ export function ResolvedLine({
   readAs = false,
   by = "rules",
   note = "",
+  via = "",
   display = (l) => l,
   resolve,
 }: {
@@ -39,6 +40,8 @@ export function ResolvedLine({
   count: number;
   /** How many of the `count` pages are not drawn in the current view (applying draws them). */
   offScreen?: number;
+  /** Flag graph-algos: the hidden pages a shortest path goes through (the preview draws them faded), in words. */
+  via?: string;
   editing: boolean;
   onEditing: (on: boolean) => void;
   onApply: (layers: Layer[]) => void;
@@ -109,6 +112,7 @@ export function ResolvedLine({
             {lines.length > READ_MAX && `${P.more(lines.length - READ_MAX)} · `}
             {P.count(count)}
             {offScreen > 0 && `, ${P.offScreen(offScreen, count)}`}
+            {via && <span data-testid="read-as-via">{`, ${via}`}</span>}
             {` · ${P.hint}`}
           </span>
         </span>
