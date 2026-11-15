@@ -584,7 +584,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             />
           )}
           {!chatOpen && (
-            <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} disc={discs} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+            <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} disc={discs} className={discs ? "z-[17]" : undefined} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
               {discs ? <LinePin /> : <PushPin />}
             </CornerButton>
           )}
