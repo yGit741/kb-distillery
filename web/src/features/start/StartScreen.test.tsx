@@ -68,6 +68,13 @@ describe("Start guide (Home card behind /start)", () => {
     expect(links[0]).toHaveAttribute("href", "/lifecycle");
   });
 
+  it("reserves the tiles' grid and card box while loading", async () => {
+    open();
+    const ph = await screen.findByTestId("now-loading");
+    expect(ph).toHaveClass("grid", "lg:grid-cols-5");
+    expect(ph.children).toHaveLength(5);
+  });
+
   it("shows the right-now cards from the lifecycle snapshot", async () => {
     open();
     const now = await screen.findByTestId("now");
