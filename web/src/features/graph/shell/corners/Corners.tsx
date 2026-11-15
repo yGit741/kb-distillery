@@ -39,6 +39,7 @@ import { SEARCH_LINE_H, useShellTop } from "../layout";
 import { useShellStore } from "../shellStore";
 import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
+import { useViewsTour } from "./viewsTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
 import { PinLoop, type LoopCard } from "./PinLoop";
@@ -429,6 +430,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // hiding a colour or changing the colouring must never change which types are drawn.
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
   useShellTour(`${server}|${allTypes.length > 0}`);
+  useViewsTour(discs, health);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
   // a double click on a type name puts the drawn types, and the story they belonged to, back exactly as they were
   const keepTypes = useCallback(() => {
