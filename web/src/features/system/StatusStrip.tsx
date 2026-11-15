@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Event, Tile, Tone } from "./model";
 
-// warn text is amber (under 4.5:1 on white): the dot carries the warning, the value stays readable.
-export const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
+// ok (green) and warn (amber) are under 4.5:1 on white: the dot carries the status, healthy values stay neutral.
+export const TONE_TEXT: Record<Tone, string> = { ok: "text-foreground", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
 export const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
 
 /** One row of status tiles; each opens the tab its number comes from. Used by System and (flag ui.data-system-split) Ingest. */
