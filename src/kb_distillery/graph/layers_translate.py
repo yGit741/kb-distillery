@@ -253,7 +253,13 @@ def parse_answer(text):
         where = ".".join(str(p) for p in first["loc"])
         raise LayersError(f"the reply is not a valid list of layers: {where}: {first['msg']} (answer: {shown})") from None
     ex = data.get("explanation")
-    return layers, ex.strip() if isinstance(ex, str) else ""
+    return layers, _one_sentence(ex) if isinstance(ex, str) else ""
+
+
+def _one_sentence(text):
+    """The explanation is one short sentence (the prompt asks for one); whatever the model adds after it is dropped, so
+    nothing beside the reading (a remark about its own run) reaches the line under "Model read as"."""
+    return re.split(r"(?<=[.!?])\s+(?=[A-Z])", text.strip(), maxsplit=1)[0]
 
 
 # ---- print: a layer as one line of the language (the Python twin of print() in grammar.ts)
