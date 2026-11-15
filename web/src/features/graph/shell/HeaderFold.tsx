@@ -26,7 +26,7 @@ export function HeaderFold() {
   const strip = useRef<HTMLDivElement>(null);
   const dx = useLineCentre(strip);
   // flag graph-corners: a plain chevron pinned to the window's top edge, centred on the search line, folded or open,
-  // so a second press on the same spot undoes the first. Open, it sits in the bar's top strip, above the nav links.
+  // so a second press on the same spot undoes the first. Open, it sits in the bar's top 14px, over the nav's top edge where the nav reaches the middle.
   const pinned = useFlag("graph-corners");
   const at = usePinnedX(strip, pinned);
   if (pinned)

@@ -426,7 +426,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     // a view built on meaning sits on the concepts: leaving Citations or Sources first puts the concepts back
     const to: GraphSubject = v === "sources" ? "sources" : "concepts";
     applySubject(to, schema, shownTypes, currentView === "citations" || (!!embed && subject !== "concepts"));
-    if (embed) applyEmbed({ view: embed });
+    if (embed) applyEmbed({ view: embed, axes: embed === "map" ? [...useEmbedView.getState().axes] as [number, number] : undefined });
   };
   // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
   // hiding a colour or changing the colouring must never change which types are drawn.

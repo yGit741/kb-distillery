@@ -19,9 +19,12 @@ export function ViewThumb({ id, className, colour = false }: { id: string; class
   const art = useMemo(() => {
     const r = rng(hash(id));
     // `colour` (flag graph-corners): the nodes take the area colours and a few sizes, like a small graph of its own
-    const pts = Array.from({ length: 22 }, (_, i) => ({ x: 6 + r() * 88, y: 5 + r() * 54, hub: i % 7 === 0, hue: AREA_COLORS[Math.floor(r() * AREA_COLORS.length)]!, size: 2.8 + r() * 4 }));
+    const pts = Array.from({ length: 22 }, (_, i) => ({ x: 6 + r() * 88, y: 5 + r() * 54, hub: i % 7 === 0 }));
+    // the colours and sizes come from their own sequence, so the plain sketch keeps its exact layout
+    const c = rng(hash(id) + 1);
+    const look = pts.map(() => ({ hue: AREA_COLORS[Math.floor(c() * AREA_COLORS.length)]!, size: 2.8 + c() * 4 }));
     const lines = Array.from({ length: 18 }, (_, i) => [pts[i % pts.length]!, pts[(i * 7 + 3) % pts.length]!] as const);
-    return { pts, lines };
+    return { pts, lines, look };
   }, [id]);
   return (
     <svg viewBox="0 0 100 64" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
@@ -34,7 +37,7 @@ export function ViewThumb({ id, className, colour = false }: { id: string; class
       {/* a dot is a round-capped stroke of no length: this sketch is not a node mark */}
       {art.pts.map((p, i) =>
         colour ? (
-          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 7.5 : p.size} stroke={p.hue} />
+          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 7.5 : art.look[i]!.size} stroke={art.look[i]!.hue} />
         ) : (
           <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 6 : 3.6} className={p.hub ? "stroke-primary" : "stroke-muted-foreground"} />
         ),

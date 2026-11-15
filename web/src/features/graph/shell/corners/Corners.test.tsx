@@ -1005,6 +1005,24 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
       }),
     ));
 
+  it("on: with more cards than fit, a faded end turns the loop of views and pinned ones without picking", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        const many = Array.from({ length: 12 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
+        mount(fakeServer({ views: many }), {}, { kind: "http" });
+        await userEvent.click(pins());
+        const all = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")];
+        await waitFor(() => expect(all().length).toBeGreaterThan(1));
+        expect(all()[0]!.dataset.view).toBe("view:concepts");
+        const typesBefore = useGraphUi.getState().shownTypes;
+        const second = all()[1]!.dataset.view;
+        await userEvent.click(all().find((b) => b.dataset.end)!);
+        expect(all()[0]!.dataset.view).toBe(second);
+        expect(useGraphUi.getState().shownTypes).toBe(typesBefore); // turning picks nothing
+        expect(useCorners.getState().activeView).toBeNull();
+      }),
+    ));
+
   it("graph-corners off: no views in the pin, and the Concepts / Sources switch stays beside the line", () =>
     withFlag("graph-corners", false, () =>
       withFlag("graph-intent", true, async () => {

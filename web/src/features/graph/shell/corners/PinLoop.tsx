@@ -52,6 +52,8 @@ interface Props {
   offset?: number;
 }
 
+type Item = { key: string; name: string; meta?: string; hint: string; on: boolean; suggested?: boolean; apply: () => void };
+
 /**
  * Flag graph-corners: the pinned views hang from the pin in a vertical loop, partly overlapped and curving gently
  * into the border: the top card is in front, each one below peeks out with its name. The pin holds the pile and
@@ -60,8 +62,6 @@ interface Props {
  * details; the view on screen has a small blue dot and a blue name. Pinning the current view is a command of the
  * search line (/pin), so the pile holds only what was pinned.
  */
-type Item = { key: string; name: string; meta?: string; hint: string; on: boolean; suggested?: boolean; apply: () => void };
-
 export function PinLoop({ open, views, lead = [], tail = [], onPick, active, areaHeight, onApply, empty, offset = 0 }: Props) {
   const still = useReducedMotion();
   // the graph's views first, then the pinned ones newest first, then the views built on meaning
@@ -107,7 +107,7 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
     <div
       ref={box}
       role="list"
-      aria-label="Pinned views"
+      aria-label={lead.length || tail.length ? "Views" : "Pinned views"}
       aria-hidden={!open}
       inert={!open}
       data-corners="pin-loop"
