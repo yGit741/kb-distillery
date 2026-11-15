@@ -163,6 +163,45 @@ describe("flag line-routing: Enter on a plain line reads it by itself", () => {
     });
   });
 
+  it("on: Enter on a view suggestion at the top runs it, not the line routing", async () => {
+    await on(async () => {
+      const routeLine = vi.fn(async () => ({ intent: "search", text: "orp" }) as LineRoute);
+      setup({ routeLine });
+      await userEvent.type(box(), "orp");
+      await screen.findByRole("option", { name: /> only orphans/ });
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(box()).toHaveValue("> only orphans"));
+      expect(routeLine).not.toHaveBeenCalled();
+      await waitFor(() => expect(useLayers.getState().preview).not.toBeNull());
+    });
+  });
+
+  it("on: Enter on a whole sentence the rules read previews it at once, never waiting on the model", async () => {
+    await on(async () => {
+      const routeLine = vi.fn(async () => ({ intent: "search", text: "x" }) as LineRoute);
+      setup({ routeLine });
+      await userEvent.type(box(), "papers with more than 5 links");
+      await screen.findByRole("option", { name: /Change the view: papers with more than 5 links/ });
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(box()).toHaveValue("> papers with more than 5 links"));
+      await waitFor(() => expect(useLayers.getState().preview?.lines).toEqual(["show nodes type paper and degree > 5"]));
+      expect(routeLine).not.toHaveBeenCalled();
+    });
+  });
+
+  it("on: a search with a shape word in it keeps Enter for the search (no view row on top)", async () => {
+    await on(async () => {
+      const routeLine = vi.fn(async () => ({ intent: "search", text: "node degree" }) as LineRoute);
+      setup({ routeLine });
+      await userEvent.type(box(), "node degree");
+      // the view lines are offered (after any page results), but Enter stays with the line routing
+      await screen.findByRole("option", { name: /> pages with more than 5 links/ });
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(routeLine).toHaveBeenCalled());
+      expect(box()).not.toHaveValue("> pages with more than 5 links");
+    });
+  });
+
   it("on: a / sentence no command fits offers no junk closest options and routes on Enter", async () => {
     await on(async () => {
       const routeLine = vi.fn(async (): Promise<LineRoute> => ({ intent: "view", text: "hide nodes degree = 1", backend: "subscription", usd: 0, reason: "" }));

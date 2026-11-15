@@ -3,6 +3,8 @@ export type LineMode = "search" | "view" | "command";
 
 export const LINE_COPY = {
   placeholder: "Explore Your Knowledge",
+  /** View lines a plain line's words suggest (flag graph-intent): a row previews its line, Enter applies it. */
+  viewSuggest: { heading: "View", whole: "Change the view:" },
   /** Lines to try, shown on an empty line; a row fills the line, Enter runs it. `{hub}` is the best-linked concept. */
   examples: {
     heading: "Try",

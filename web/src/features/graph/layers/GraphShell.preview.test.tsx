@@ -118,6 +118,33 @@ describe("a > sentence is previewed before it applies (graph-intent)", () => {
     });
   });
 
+  it("a plain line's shape word offers view lines; a row previews its line and Enter applies it", async () => {
+    await withFlag("graph-intent", true, async () => {
+      setup();
+      await userEvent.type(box(), "orp");
+      const row = await screen.findByRole("option", { name: /> only orphans/ });
+      expect(screen.getByRole("option", { name: /> don't show orphans/ })).toBeInTheDocument();
+      // the View rows come before the page results
+      const all = screen.getAllByRole("option");
+      expect(all[0]).toBe(row);
+      await userEvent.click(row);
+      expect(box()).toHaveValue("> only orphans");
+      await waitFor(() => expect(screen.getByTestId("resolved-line")).toHaveTextContent("show nodes degree = 0"));
+      expect(layers()).toHaveLength(0);
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(layers()).toHaveLength(1));
+    });
+  });
+
+  it("graph-intent off: a shape word offers no view lines", async () => {
+    await withFlag("graph-intent", false, async () => {
+      setup();
+      await userEvent.type(box(), "orp");
+      await screen.findByRole("combobox");
+      expect(screen.queryByRole("option", { name: /> only orphans/ })).not.toBeInTheDocument();
+    });
+  });
+
   it("Esc cancels the preview and gives back the knobs a style tinted", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();

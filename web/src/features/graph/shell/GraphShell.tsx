@@ -54,6 +54,7 @@ import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { exportPages } from "../export/runExport";
 import { planSentence, type Plan } from "../layers/sentenceRun";
+import { suggestViews } from "./viewSuggest";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, MIN_CLOSEST, type Command, type CommandIcon } from "./commands";
 import type { LineRoute } from "./lineRoute";
 import { useLineRoute } from "./useLineRoute";
@@ -180,6 +181,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const canUndo = useShellStore((s) => s.undo !== null);
   const layersUndo = useLayers((s) => s.history.length > 0);
   const preview = useLayers((s) => s.preview);
+  // the graph's link kinds, most links first: edge suggestions name only kinds that exist
+  const linkKinds = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const l of links ?? []) n.set(l.kind, (n.get(l.kind) ?? 0) + 1);
+    return [...n].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  }, [links]);
   // the previewed pages a type filter of the current view hides: the preview cannot light them, applying draws them
   const previewOffScreen = useMemo(() => {
     if (!preview?.ids) return 0;
@@ -700,6 +707,31 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           run: done(() => useChatDock.getState().ask(intent ? chatContextDraft(text) : text)),
         };
     if (intent && index) {
+      // a word about the graph's shape ("orp", "hubs", "edges") offers view lines: a row previews its line, the next
+      // Enter applies it. They go first only when the line clearly means the view (./viewSuggest)
+      const views = caps.sentences ? suggestViews(text, linkKinds) : { rows: [], first: false };
+      const viewRows: PanelRow[] = views.rows.map((s) => ({
+        key: `view-suggest:${s.line}`,
+        section: LINE_COPY.viewSuggest.heading,
+        label: s.whole ? (
+          <>
+            {LINE_COPY.viewSuggest.whole} <span className="text-muted-foreground">{s.line}</span>
+          </>
+        ) : (
+          `> ${s.line}`
+        ),
+        hint: s.hint,
+        wrap: s.whole,
+        lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
+        run: () => {
+          focusBar(`> ${s.line}`);
+          // the typed line itself, read as a view: said the way the line routing says it
+          setRoutedHint(s.line.toLowerCase() === text.toLowerCase() ? LINE_COPY.route.view(s.line) : null);
+          runSentence(s.line, "replace", {});
+          selectLine();
+        },
+      }));
+      if (views.first) out.push(...viewRows);
       // grouped, in a fixed order, each action row after them (./groupedRows)
       if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
       out.push(
@@ -742,6 +774,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           },
         }),
       );
+      if (!views.first) out.push(...viewRows);
       if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
       if (askRow) out.push(askRow);
       return out;
@@ -785,7 +818,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, routing, index, line, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
+  }, [slash, viewMode, intent, routing, index, line, text, commands, linkKinds, caps.sentences, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -1020,7 +1053,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       // a bare `/views`: Enter shows the list; only a row picked by arrow keys applies
       if (slash && intent && /^views\s*$/i.test(line.slice(1)) && !picked.current) return setOpen(true);
       // flag line-routing: a row picked with the arrows or the pointer runs as picked
-      const routed = routing && !e.shiftKey && !picked.current && idx === 0 ? routableLine() : null;
+      // a view suggestion on top (only there when the line clearly means the view: "orp", or a sentence the rules read)
+      // runs as shown, no routing needed
+      const suggested = idx === 0 && rows[0]?.key.startsWith("view-suggest:");
+      const routed = routing && !e.shiftKey && !picked.current && idx === 0 && !suggested ? routableLine() : null;
       if (routed) lineRoute.route(routed);
       else rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
