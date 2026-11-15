@@ -195,6 +195,9 @@ export interface EvalGraph {
   links: readonly Pick<GLink, "source" | "target" | "kind">[];
   /** Page ids marked favorite; absent while favorites are not loaded. */
   favorites?: ReadonlySet<string>;
+  /** The pages the screen draws before any layer (its type filter); a hide with no show before it takes from these,
+   * never from every page: "hide orphans" must not draw the sources a Concepts view hides. Absent: every page. */
+  drawn?: ReadonlySet<string>;
   now?: number;
 }
 
@@ -444,7 +447,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
       const m = matchNodes(layer.subgraph.nodes, label);
       if (layer.kind === "show") cur = cur === null ? m : new Set([...cur, ...m]);
       else {
-        const base: Set<string> = cur ?? new Set(all);
+        const base: Set<string> = cur ?? new Set(graph.drawn ? [...graph.drawn].filter((id) => all.has(id)) : all);
         cur = new Set([...base].filter((id) => !m.has(id)));
       }
       continue;

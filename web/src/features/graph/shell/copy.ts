@@ -11,9 +11,9 @@ export const LINE_COPY = {
       { line: "> exclude all orphans", hint: "hide pages with no links" },
       { line: "> papers with more than 5 links", hint: "filter by links" },
       { line: "> only pages within 2 hops of {hub}", hint: "a neighbourhood" },
-      { line: "> colour by depth", hint: "style" },
+      { line: "> colour by maturity", hint: "style" },
       { line: "> size by links", hint: "style" },
-      { line: "papers about transformers, colour by year, hide people", hint: "free text, read by the model", shape: true },
+      { line: "show me the papers with lots of links and hide the people", hint: "free text, read by the model", shape: true },
     ],
   },
   /** The key caps at the line's right end while it has the focus and nothing is typed yet. */
@@ -149,6 +149,8 @@ export const LINE_COPY = {
   preview: {
     count: (n: number) => (n === 1 ? "1 node" : `${n} nodes`),
     hint: "Enter applies · Esc cancels · Tab edits",
+    /** Some of the pages the sentence keeps are not drawn now (a type the current view hides): applying draws them. */
+    offScreen: (n: number, total: number) => (n === total ? "none drawn now" : `${n} not drawn now`),
     edit: "Edit the resolved sentence",
     editLabel: "Resolved sentence",
     editHint: "One line per layer. Enter applies exactly what is written.",

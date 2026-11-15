@@ -60,6 +60,17 @@ describe("evaluate", () => {
     expect(ev.nodeIds!.size).toBe(sampleNodes.length - 1);
   });
 
+  it("a hide with no show takes from the pages the screen draws, never adding the ones it hides", () => {
+    const drawn = new Set(sampleNodes.filter((n) => n.type !== "paper").map((n) => n.id));
+    const ev = evaluate(stack(EMPTY_STACK, [hide("people", [{ t: "type", value: "person" }])]), { ...graph, drawn });
+    expect(ev.nodeIds!.has("jane-doe")).toBe(false);
+    expect(ev.nodeIds!.has("2019-fine-grained")).toBe(false);
+    expect(ev.nodeIds!.size).toBe(drawn.size - 1);
+    // a show still finds pages the screen does not draw
+    const papers = evaluate(stack(EMPTY_STACK, [show("papers", [{ t: "type", value: "paper" }])]), { ...graph, drawn }).nodeIds!;
+    expect([...papers].sort()).toEqual(["2019-fine-grained", "2020-listed-paper"]);
+  });
+
   it("degree counts the distinct pages a page is linked with", () => {
     const connected = ids([show("connected", [{ t: "degree", op: ">=", n: 2 }])]);
     expect([...connected!].sort()).toEqual(["2019-fine-grained", "idea-margin", "topic-learning-theory"]);

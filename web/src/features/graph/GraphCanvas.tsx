@@ -462,7 +462,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // nothing drawn to light (a value just hidden under the pointer) is no spotlight, never a blank, all-dimmed graph
     const spotIds = spotAll?.size ? spotAll : null;
     const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
-    const preIds = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
+    // a preview whose pages are all off screen (a type the view hides) dims nothing: the row says so; one that keeps no
+    // page at all still dims everything, which is its answer
+    const preLit = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
+    const preIds = pre && preLit && pre.size > 0 && preLit.size === 0 ? null : preLit;
     const next: Focus | null = preIds
       ? { core: preIds, lit: preIds, dim: 0.15 }
       : spotIds
