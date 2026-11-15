@@ -13,6 +13,8 @@ export interface GLink {
   target: string;
   kind: "wikilink" | "related" | "book" | "shared" | "cites" | "pile-page" | "pile-pile";
   shared?: number;
+  /** a typed relation drawn as a link (./storyEdges): its own kind, the words on the lit edge (./edgeSelect) */
+  rel?: string;
   /** pile links: source files behind the edge */
   count?: number;
 }

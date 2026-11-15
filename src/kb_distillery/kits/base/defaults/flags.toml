@@ -427,3 +427,13 @@ expires = 2027-02-12
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "edge-select"
+description = "Graph: every edge lights up like a citation does in Citations, in every view and for every kind (links to, related, part of, shared sources, cites, typed relations): hover shows it, a click keeps it, Cmd- or Shift-click adds or removes it, and a kept edge brings its two pages into the selection."
+owner = "maintainer"
+created = 2026-11-15
+expires = 2027-02-12
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

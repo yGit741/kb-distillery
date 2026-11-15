@@ -16,6 +16,7 @@ import {
   visibleAdjacency,
 } from "../selection";
 import { useGraphUi } from "../store";
+import { useEdgeSelect } from "../edgeSelect";
 import type { GraphToolContext } from ".";
 
 /** Draw pages the type filter hides: a selection must be visible. */
@@ -38,6 +39,8 @@ export function SelectionPanel({ ctx }: { ctx: GraphToolContext }) {
   const ids = useMemo(() => pageIds(ctx.selection, ctx.byId), [ctx.selection, ctx.byId]);
   const all = useMemo(() => buildNeighborMap(ctx.model.links), [ctx.model]);
   const types = useMemo(() => typesOf(ids, ctx.byId), [ids, ctx.byId]);
+  // flag edge-select: the kept edges, whose pages are among the selected
+  const links = useEdgeSelect((s) => s.shown);
 
   const grow = (found: string[], what: string) => {
     if (!found.length) {
@@ -94,7 +97,7 @@ export function SelectionPanel({ ctx }: { ctx: GraphToolContext }) {
   return (
     <div className="flex flex-col gap-3 text-sm">
       <p role="status" aria-live="polite">
-        <b>{ids.length}</b> selected{types.length > 1 ? ` · ${types.length} types` : ""}
+        <b>{ids.length}</b> selected{links ? ` · ${links} link${links === 1 ? "" : "s"}` : ""}{types.length > 1 ? ` · ${types.length} types` : ""}
       </p>
       <div className="grid grid-cols-2 gap-1.5">
         <Button size="sm" variant="outline" disabled={!ids.length} onClick={neighbours} title="Add everything one link away over the drawn links (repeatable)">
