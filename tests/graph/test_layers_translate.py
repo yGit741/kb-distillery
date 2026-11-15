@@ -123,3 +123,14 @@ def test_vocabulary_reads_the_graph():
     v = lt.vocabulary(cypher.to_graph(SNAP))
     assert v["node_types"] == {"idea": 1, "paper": 1} and v["areas"] == {"ml": 1}
     assert set(v["titles"]) == {"Learning theory", "Attention"} and v["edge_types"]
+
+
+def test_the_prompt_reads_typos_missing_commas_and_the_legend_names():
+    from kb_distillery.graph.layers_translate import build_prompt
+
+    p = build_prompt("only orphans color by theams", {"node_types": {"paper": 3}, "edge_types": {}, "areas": {}, "titles": []})
+    assert "read past typos" in p
+    assert "theme -> area" in p and "type or kind -> format" in p
+    assert 'Never answer color "type"' in p
+    # a worked example of exactly that kind of line
+    assert "only orphnas colour by theams" in p

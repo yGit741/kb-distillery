@@ -50,7 +50,20 @@ const EDGE_WORDS: Record<string, string> = { mentions: "mentions", supports: "su
 /** Plural or loose page type words. */
 const TYPE_WORDS: Record<string, string> = { papers: "paper", paper: "paper", ideas: "idea", idea: "idea", questions: "question", question: "question", people: "person", person: "person", courses: "course", course: "course", topics: "topic", topic: "topic", books: "book", book: "book", concepts: "concept", concept: "concept", claims: "claim", claim: "claim" };
 /** Spoken colour and size fields to the graph's own. */
-const COLOR_FIELDS: Record<string, string> = { kind: "type", links: "degree", connections: "degree", maturity: "status" };
+/** The legend's own names, its field names and loose words, to the colour mode they mean ("type" on the legend is the
+ * page's format; colour mode "type" draws as the theme, so it is never the answer). */
+const COLOR_FIELDS: Record<string, string> = {
+  type: "format", types: "format", kind: "format", kinds: "format", format: "format",
+  theme: "area", themes: "area", area: "area", areas: "area",
+  maturity: "status", status: "status",
+  "digest status": "depth", digest: "depth", depth: "depth",
+  recency: "recency", recent: "recency", "date added": "added", added: "added", date: "added",
+  "source count": "evidence", evidence: "evidence", "source support": "support", support: "support",
+  links: "degree", connections: "degree", degree: "degree",
+  score: "score", layer: "layer", none: "none",
+};
+/** Words the rules key on, so a small typo in one still reads ("orphnas", "colur", "theams"). Never page names. */
+const VOCAB = ["orphans", "orphan", "isolated", "leaves", "favorites", "favourites", "contradictions", "colour", "color", "coloured", "colored", "theme", "themes", "maturity", "connections", "exclude"];
 const SIZE_FIELDS: Record<string, string> = { degree: "connections", links: "connections", connections: "connections", same: "uniform" };
 const WIDTHS: Record<string, "thick" | "thin"> = { thicken: "thick", widen: "thick", thicker: "thick", bolden: "thick", thin: "thin", thinner: "thin", thinnen: "thin" };
 const SINCE: [RegExp, (m: RegExpMatchArray) => number][] = [
@@ -153,10 +166,13 @@ function clauseLayers(clause: string): Layer[] | null {
   // graph-theory words first (flag graph-algos): shortest paths, components, "and their neighbours"
   const algo = algoClause(c, clauseLayers);
   if (algo !== undefined) return algo;
-  let m = c.match(/^(?:colou?r)(?:ed)?(?: the)?(?: nodes| pages)? by ([\w-]+)$/i);
+  let m = c.match(/^(?:colou?r)(?:ed)?(?: the)?(?: nodes| pages)? by (?:the )?([\w-]+(?: [\w-]+)?)$/i);
   if (m) {
+    // the legend's name or a loose word, a small typo forgiven ("theams" -> theme); anything else is for the model
     const f = m[1]!.toLowerCase();
-    return [makeLayer("style", "nodes", {}, "", { style: { color: ((COLOR_FIELDS[f] ?? f) as never) } })];
+    const key = f in COLOR_FIELDS ? f : closest(f, Object.keys(COLOR_FIELDS));
+    if (!key) return null;
+    return [makeLayer("style", "nodes", {}, "", { style: { color: COLOR_FIELDS[key] as never } })];
   }
   m = c.match(/^(?:size|scale)(?: the)?(?: nodes| pages)? by ([\w-]+)$/i);
   if (m) {
@@ -191,12 +207,70 @@ function clauseLayers(clause: string): Layer[] | null {
   return f ? [f] : null;
 }
 
+/** Edit distance (insert, delete, substitute, swap two neighbours), stopping early past `max`. */
+function distance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0]![j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) {
+      const sub = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + sub);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, d[i - 2]![j - 2]! + 1);
+      d[i]![j] = v;
+    }
+  return d[a.length]![b.length]!;
+}
+
+/** The closest of `words` to `w` within a small typo (one letter in a short word, two in a long one), else null. */
+function closest(w: string, words: readonly string[]): string | null {
+  const max = w.length >= 6 ? 2 : w.length >= 4 ? 1 : 0;
+  if (!max) return null;
+  let best: string | null = null;
+  let bestD = max + 1;
+  for (const k of words) {
+    const dd = distance(w, k, max);
+    if (dd < bestD) [best, bestD] = [k, dd];
+  }
+  return best;
+}
+
+/** A small typo in one of the rules' own words, put right; any other word (a page name) is left alone. */
+const KNOWN = new Set([
+  ...VOCAB,
+  ...Object.keys(COLOR_FIELDS).flatMap((k) => k.split(" ")),
+  ...Object.keys(SIZE_FIELDS),
+  ...Object.keys(TYPE_WORDS),
+  ...Object.keys(EDGE_WORDS),
+  ...Object.keys(NUM_OPS).flatMap((k) => k.split(" ")),
+  ...Object.keys(WIDTHS),
+  ...STOP,
+  ...["only", "hide", "show", "by", "size", "scale", "more", "than", "less", "hops", "hop", "within", "hubs", "hub", "leaf", "orphan"],
+  ...["favorite", "favourite", "named", "name", "about", "text", "mentioning", "similar", "neighbours", "neighbors", "paths", "path"],
+  ...["created", "added", "month", "week", "today", "days", "last", "this", "new", "dont", "don't", "never", "without", "remove", "drop", "filter"],
+]);
+function mendTypos(src: string): string {
+  // a page name, a phrase or a quote follows these: nothing from there on is mended ("about Colorado" stays)
+  const cut = src.search(/\b(?:of|to|between|like|about|named?|text|mentioning)\b|["“]/i);
+  const head = cut < 0 ? src : src.slice(0, cut);
+  const mended = head.replace(/[A-Za-z]+/g, (w) => {
+    const lw = w.toLowerCase();
+    if (KNOWN.has(lw) || lw.length < 4) return w;
+    return closest(lw, VOCAB) ?? w;
+  });
+  return cut < 0 ? mended : mended + src.slice(cut);
+}
+
+/** Where one clause ends and the next begins: a comma or "then", and also before a style ("only orphans colour by
+ * theme") or a second verb ("only papers and hide people"), so a line reads without commas. */
+const CLAUSE_BREAK = /\s*[,;]\s*|\s+then\s+|\s+(?:and\s+)?(?=(?:colou?r(?:ed)?|size|scale)\s+(?:the\s+)?(?:nodes\s+|pages\s+)?by\b)|\s+and\s+(?=(?:hide|show|only|exclude|don['’]?t show)\b)/i;
+
 /** Casual English as layers. `op` is the prefix the line was typed with; every operation reads the words the same way. */
 export function fromSentence(text: string, op: "replace" | "stack" | "remove" = "replace"): Sentence {
   void op;
-  const src = text.trim().replace(/[.!?]+$/, "").replace(/\s+/g, " ");
+  const src = mendTypos(text.trim().replace(/[.!?]+$/, "").replace(/\s+/g, " "));
   const layers: Layer[] = [];
-  for (const clause of src.split(/\s*[,;]\s*|\s+then\s+/i).filter(Boolean)) {
+  for (const clause of src.split(CLAUSE_BREAK).filter(Boolean)) {
     const ls = clauseLayers(clause);
     if (!ls) return { layers: [], lines: [], unknown: text.trim() };
     layers.push(...ls);

@@ -64,7 +64,7 @@ describe("a > sentence read by the grammar (graph-intent)", () => {
       setup();
       await userEvent.type(box(), ">+ only supports edges, color by type{Enter}{Enter}");
       await waitFor(() => expect(useLayers.getState().stack.layers).toHaveLength(2));
-      expect(useLayers.getState().stack.layers.map((l) => l.text)).toEqual(["show edges type supports", "style nodes color by type"]);
+      expect(useLayers.getState().stack.layers.map((l) => l.text)).toEqual(["show edges type supports", "style nodes color by format"]);
     });
   });
 
