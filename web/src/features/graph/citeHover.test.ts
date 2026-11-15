@@ -77,7 +77,7 @@ describe("drawEdges", () => {
     const arcs: { x: number; r: number }[] = [];
     const { ctx } = recorder();
     (ctx as unknown as { arc: unknown }).arc = (x: number, _y: number, r: number) => arcs.push({ x, r });
-    drawEdges(ctx, [{ source: a, target: b, kind: "wikilink" } as SimLink], 1, readCanvasColors(), () => 5, () => "links to", () => true, (n) => n.id === "a");
+    drawEdges(ctx, [{ source: a, target: b, kind: "wikilink" } as SimLink], 1, readCanvasColors(), () => 5, () => "links to", () => true, 1.5, (n) => n.id === "a");
     expect(arcs).toEqual([{ x: 200, r: 5 + STATE.gap }]);
   });
 });
