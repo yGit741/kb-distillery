@@ -26,12 +26,14 @@ screens = [
   { id = "graph", path = "/graph" },
   { id = "system", path = "/system", selector = "[data-testid=tile-nightly]" },
   { id = "system-flags", path = "/system?tab=flags", selector = "[data-testid=flags-table]" },
+  { id = "ingest", path = "/ingest", selector = "[data-testid=tile-inbox]" },
   { id = "pages", path = "/pages" },
   { id = "chat", path = "/chat" },
+  { id = "about", path = "/what-is-it" },
   { id = "covector", path = "/covector" },
 ]
 
-# tile text (data-testid=tile-<id>-value on /system) vs the endpoint it claims to show.
+# tile text (data-testid=tile-<id>-value on /system or /ingest) vs the endpoint it claims to show.
 # fail_tones: also FAIL when the tile's data-tone is one of these (the status is true but bad).
 # path: dotted keys, |max:<field> (latest), |filter:<field>=a,b, |count, |default:<x>, |map:a=b,…, "{p} / {q}".
 [[data_checks]]
@@ -42,41 +44,33 @@ path = "runs|max:started|.status|default:no runs yet"
 fail_tones = ["bad"]  # a correctly shown failed nightly is still not "done"
 selector = "[data-testid=tile-nightly-value]"
 
+# Flag ui.data-system-split (on in the local app) made System a three-tile strip (Nightly, Deploy, Open work) and moved the data tiles to
+# /ingest (Inbox, Queue, Lint, Version). The Hygiene, Merges and Stale tiles no longer exist anywhere by default, so their checks are gone.
 [[data_checks]]
 tile = "lint"
-screen = "/system"
+screen = "/ingest"
 endpoint = "/api/health"
 path = "{values.errors|default:0} / {values.warnings|default:0}"
 fail_tones = ["bad"]
 selector = "[data-testid=tile-lint-value]"
 
 [[data_checks]]
-tile = "hygiene"
-screen = "/system"
-endpoint = "/api/ops"
-path = "{hygiene.errors|default:0} / {hygiene.warnings|default:0}"
-selector = "[data-testid=tile-hygiene-value]"
+tile = "inbox"
+screen = "/ingest"
+endpoint = "/api/health"
+path = "inbox_count|default:0"
+selector = "[data-testid=tile-inbox-value]"
 
 [[data_checks]]
-tile = "merges"
-screen = "/system"
-endpoint = "/api/ops"
-path = "queue.holder.pr|default:idle"
-match = "contains"
-fail_tones = ["bad"]  # stuck / dead holder
-selector = "[data-testid=tile-merges-value]"
-
-[[data_checks]]
-tile = "stale"
-screen = "/system"
-endpoint = "/api/ops"
-# kinds mirror STALE_KINDS in web/src/features/system/model.ts
-path = "hygiene.findings|filter:kind=idle-branch,missing-worktree,detached-worktree,idle-pr|count|map:0=none"
-selector = "[data-testid=tile-stale-value]"
+tile = "queue"
+screen = "/ingest"
+endpoint = "/api/health"
+path = "values.queued|default:0"
+selector = "[data-testid=tile-queue-value]"
 
 [[data_checks]]
 tile = "version"
-screen = "/system"
+screen = "/ingest"
 endpoint = "/api/lifecycle"
 path = "version"
 match = "contains"
