@@ -21,7 +21,7 @@ interface Props {
 export function NodeMenu({ node, x, y, colorBy, ctx, items, title, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: x, top: y });
-  const list = visibleItems(node, items);
+  const list = visibleItems(node, items).filter((i) => !i.needs || ctx[i.needs]);
 
   useLayoutEffect(() => {
     const r = ref.current?.getBoundingClientRect();

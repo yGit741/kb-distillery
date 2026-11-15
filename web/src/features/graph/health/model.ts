@@ -51,7 +51,7 @@ export function sourceKinds(nodes: readonly GNode[], neighbors: NeighborMap, byI
 
 /**
  * The concept pages a kind's digested sources link to: what the dial spotlights on the map, and the same concepts the
- * inside of the kind lists (a waiting source feeds nothing yet, whatever its stub links to).
+ * map draws once the kind is pressed (a waiting source feeds nothing yet, whatever its stub links to).
  */
 export function fedConcepts(kind: SourceGlyph, nodes: readonly GNode[], neighbors: NeighborMap, byId: ById): Set<string> {
   const out = new Set<string>();
@@ -62,41 +62,19 @@ export function fedConcepts(kind: SourceGlyph, nodes: readonly GNode[], neighbor
   return out;
 }
 
-export interface KindDetail {
-  /** the kind's healthy sources, the ones feeding most concepts first */
-  sources: { node: GNode; concepts: string[] }[];
-  /** the concepts they feed, the least supported first, people after them; `support` counts sources of every kind */
-  concepts: { node: GNode; support: number }[];
-  waiting: GNode[];
-  unlinked: GNode[];
-}
-
-const title = (n: GNode): string => n.title || n.id;
-const byTitle = (a: GNode, b: GNode) => title(a).localeCompare(title(b));
-
-/** Inside a kind: its sources beside the concepts they feed, and the sources that feed nothing yet. */
-export function kindDetail(kind: SourceGlyph, nodes: readonly GNode[], neighbors: NeighborMap, byId: ById, support: ReadonlyMap<string, number>): KindDetail {
-  const d: KindDetail = { sources: [], concepts: [], waiting: [], unlinked: [] };
-  const fed = new Set<string>();
+/**
+ * A kind as the map draws it once the kind is pressed: its digested sources and every concept they feed. The sources
+ * that feed no concept are in it too (they stand alone, with no link); the waiting ones are not, they have nothing
+ * to show yet.
+ */
+export function kindPages(kind: SourceGlyph, nodes: readonly GNode[], neighbors: NeighborMap, byId: ById): string[] {
+  const out = new Set<string>();
   for (const n of nodes) {
-    if (n.layer !== "source" || glyphOf(n.type) !== kind) continue;
-    const state = sourceState(n, neighbors, byId);
-    if (state !== "healthy") {
-      d[state].push(n);
-      continue;
-    }
-    const concepts = conceptsOf(n.id, neighbors, byId);
-    for (const c of concepts) fed.add(c);
-    d.sources.push({ node: n, concepts });
+    if (n.layer !== "source" || glyphOf(n.type) !== kind || sourceState(n, neighbors, byId) === "waiting") continue;
+    out.add(n.id);
+    for (const c of conceptsOf(n.id, neighbors, byId)) out.add(c);
   }
-  d.sources.sort((a, b) => b.concepts.length - a.concepts.length || byTitle(a.node, b.node));
-  const person = (n: GNode) => (n.type === "person" ? 1 : 0);
-  d.concepts = [...fed]
-    .map((id) => ({ node: byId.get(id)!, support: support.get(id) ?? 0 }))
-    .sort((a, b) => person(a.node) - person(b.node) || a.support - b.support || byTitle(a.node, b.node));
-  d.waiting.sort(byTitle);
-  d.unlinked.sort(byTitle);
-  return d;
+  return [...out];
 }
 
 /** "8 waiting, 3 feed no concept", or "all in use" when the kind has no open issue. */
