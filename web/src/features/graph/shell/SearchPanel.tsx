@@ -20,6 +20,8 @@ export interface PanelRow {
   mark?: { text: string; title: string };
   /** What the row's action menu acts on; absent: the row has no menu. */
   actions?: RowTarget;
+  /** The label wraps instead of being cut, so a long typed line can be read in full. */
+  wrap?: boolean;
   run: (shift: boolean) => void;
 }
 
@@ -100,7 +102,7 @@ export function SearchPanel({ rows, idx, onHover, empty, status, hint, onMenu }:
             >
               {row.lead && <span className="grid size-4 shrink-0 place-items-center text-muted-foreground [&>svg]:size-4 [&>svg]:stroke-[1.6]">{row.lead}</span>}
               <span className="min-w-0 flex-1">
-                <span className="block truncate">{row.label}</span>
+                <span className={row.wrap ? "block whitespace-normal break-words" : "block truncate"}>{row.label}</span>
                 {row.detail && <span className="block truncate text-xs text-muted-foreground">{row.detail}</span>}
               </span>
               {row.fav && <Star aria-label={LINE_COPY.favorites.mark} role="img" className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.6} />}

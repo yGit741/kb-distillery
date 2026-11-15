@@ -142,6 +142,27 @@ describe("flag line-routing: Enter on a plain line reads it by itself", () => {
     });
   });
 
+  it("on: a line kept after routing is selected, so the next line replaces it instead of joining it", async () => {
+    await on(async () => {
+      setup({ routeLine: vi.fn(async () => ({ intent: "search", text: SENTENCE }) as LineRoute) });
+      await userEvent.type(box(), `${SENTENCE}{Enter}`);
+      expect(await screen.findByText(LINE_COPY.route.nothing(SENTENCE))).toBeInTheDocument();
+      await waitFor(() => expect((box() as HTMLInputElement).selectionEnd! - (box() as HTMLInputElement).selectionStart!).toBe(SENTENCE.length));
+      await userEvent.keyboard("what is noise?");
+      expect(box()).toHaveValue("what is noise?");
+    });
+  });
+
+  it("on: a long line is shown in full in the ask row, never cut", async () => {
+    await on(async () => {
+      setup();
+      await userEvent.type(box(), SENTENCE);
+      const label = (await screen.findByText(`"${SENTENCE}"`, { exact: false })).parentElement!;
+      expect(label).not.toHaveClass("truncate");
+      expect(label).toHaveClass("break-words");
+    });
+  });
+
   it("on: a / sentence no command fits offers no junk closest options and routes on Enter", async () => {
     await on(async () => {
       const routeLine = vi.fn(async (): Promise<LineRoute> => ({ intent: "view", text: "hide nodes degree = 1", backend: "subscription", usd: 0, reason: "" }));
