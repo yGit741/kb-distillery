@@ -1,4 +1,4 @@
-import { gapOf, pickMagnetic, reachOf, REACH_MAX, REACH_MIN, type ScreenNode } from "./magnet";
+import { DOT_SLACK_PX, gapOf, onDot, pickMagnetic, reachOf, REACH_MAX, REACH_MIN, type ScreenNode } from "./magnet";
 
 const n = (id: string, x: number, y: number, r = 5): ScreenNode => ({ id, x, y, r });
 
@@ -37,5 +37,14 @@ describe("magnetic pointer", () => {
     const x = 5 + reach * 1.15; // past the reach, inside LEAVE x reach
     expect(pickMagnetic(list, x, 0, null)).toBeNull();
     expect(pickMagnetic(list, x, 0, "a")).toBe("a");
+  });
+});
+
+describe("onDot", () => {
+  const dots = [{ id: "a", x: 0, y: 0, r: 5 }];
+  it("is true on a dot and within the slack past its rim, false beyond it", () => {
+    expect(onDot(dots, 2, 0)).toBe(true);
+    expect(onDot(dots, 7, 0, DOT_SLACK_PX)).toBe(true);
+    expect(onDot(dots, 9, 0, DOT_SLACK_PX)).toBe(false);
   });
 });

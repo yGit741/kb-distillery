@@ -22,7 +22,7 @@ import { hopsFrom, type Importance } from "./lab/importance";
 import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
 import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot, kbNameBottom } from "./lab/kbRegions";
-import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
+import { bubbleAim, DOT_SLACK_PX, drawBubble, magnetCursor, onDot, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
 import { useCites } from "./shell/citeStore";
 import { candidatesOf } from "./shell/replay";
 import { ReplayLegend } from "./shell/ReplayLegend";
@@ -45,6 +45,7 @@ import { clickEdge as applyEdgeClick, directed, edgeKey, edgeWord, endsOf, light
 import { useEmbedView } from "./embedding/store";
 import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
+import { markOf } from "./encoding/spec";
 import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
 import { linkKey, popSources } from "./shell/thinking";
 import { drawCiteBadge, drawGlow, drawHotRing, drawWebSource, popScale, THINK_DIM, webSpot } from "./shell/thinkingDraw";
@@ -422,6 +423,15 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const radius = useCallback(
     (n: GNode) => (isPile(n) ? pileRadius(n) : (layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)) * (quietRef.current.has(n.id) ? 0.75 : 1) * (rimOnRef.current ? 0.82 : 1)),
     [],
+  );
+  /**
+   * The radius a dot is drawn at, zoom `scale`: semantic zoom (./style) shrinks it as you zoom in, so everything that
+   * meets a dot (its click area, the magnet, arrow tips, the rings of a lit edge) uses this, never `radius` alone.
+   */
+  const drawnRadius = useCallback(
+    (n: GNode, scale: number = fg.current?.zoom() ?? 1, k = 1) =>
+      semanticRadius(radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * k, scale, rs.current.zr),
+    [radius],
   );
 
   // ---- calm hover: the rest of the graph cross-fades between foci instead of switching in one frame
@@ -1032,26 +1042,37 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, [ui.focusRequest, byId, shown, data]);
 
   // ---- the magnetic pointer: nearest page within its own reach
+  /** Every drawn page on screen (client px), at the radius it is drawn at. */
+  const screenNodes = useCallback((): ScreenNode[] => {
+    const g = fg.current;
+    if (!g) return [];
+    const scale = g.zoom();
+    const list: ScreenNode[] = [];
+    for (const n of g.nodes()) {
+      const s = g.screenOf(n);
+      if (s) list.push({ id: n.id, x: s.x, y: s.y, r: drawnRadius(n, scale) * scale });
+    }
+    return list;
+  }, [drawnRadius]);
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
     let queued = false;
     let last: { x: number; y: number } | null = null;
-    const screenNodes = (): ScreenNode[] => {
+    // flag edge-select: an edge right under the pointer wins over the pull of a nearby page, unless the pointer is on a dot
+    const target = (x: number, y: number, list: ScreenNode[] = screenNodes()) => {
       const g = fg.current;
-      if (!g) return [];
-      const scale = g.zoom();
-      const list: ScreenNode[] = [];
-      for (const n of g.nodes()) {
-        const s = g.screenOf(n);
-        if (s) list.push({ id: n.id, x: s.x, y: s.y, r: radius(n) * scale });
+      if (edgeOnRef.current && g && !onDot(list, x, y, DOT_SLACK_PX)) {
+        const p = g.graphAt(x, y);
+        const hidden = live.current.ui.hiddenLinkKinds;
+        if (p && pickCite(dataRef.current.links as SimLink[], cite.current.link, p.x, p.y, g.zoom(), (l) => canLight(l, hidden, true))) return null;
       }
-      return list;
+      return pickMagnetic(list, x, y, pointed());
     };
     const retarget = () => {
       queued = false;
       if (!fg.current || !last || !live.current.ui.magnet || pressed.current) return;
-      setHover(pickMagnetic(screenNodes(), last.x, last.y, pointed()));
+      setHover(target(last.x, last.y));
       kick();
     };
 
@@ -1077,11 +1098,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const aim = !!last && live.current.ui.magnet && !pressed.current;
       // the layout can drift under a pointer that holds still: re-check the target a few times a second
       const now = performance.now();
+      const list = aim ? screenNodes() : [];
       if (aim && last && now - recheckAt > 150) {
         recheckAt = now;
-        setHover(pickMagnetic(screenNodes(), last.x, last.y, pointed()));
+        setHover(target(last.x, last.y, list));
       }
-      const list = aim ? screenNodes() : [];
       const t = list.find((n) => n.id === pointed()) ?? null;
       const { want, strength } = t && last ? bubbleAim(t, last.x, last.y, list) : { want: 0, strength: 0 };
       bubble = stepBubble(bubble, want, strength, matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -1136,7 +1157,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       el.removeEventListener("pointerdown", down, true);
       window.removeEventListener("pointerup", up);
     };
-  }, [radius, setHover, pointed]);
+  }, [screenNodes, setHover, pointed]);
 
   // ---- right-click: a node opens its menu, empty space closes the panels and drops the selection.
   // A right-drag is the box / lasso selection (tools/RegionOverlay), so the click is decided on release:
@@ -1302,8 +1323,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       }
       // a spotlit type (legend hover) is drawn a third larger as well as lit; semantic zoom (./style)
       const tk = live.current.think;
-      const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
-      const r = semanticRadius(r0, scale, rs.current.zr);
+      const r = drawnRadius(n, scale, tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const ghost = live.current.ghosts.has(n.id);
       const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id)) * litFade(n.id) * (ghost ? GHOST_ALPHA : 1);
       const isSel = selected.has(n.id);
@@ -1343,7 +1363,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         scale,
       });
       if (ghost) drawGhostRing(ctx, n.x, n.y, r, scale, colors);
-      const sourcesBehind = !viewRef.current.sides && !tk && !live.current.replay && n.layer === "concept" ? viewRef.current.srcCount?.get(n.id) : undefined;
+      const sourcesBehind = !viewRef.current.sides && !tk && !live.current.replay && n.layer === "concept" && markOf(n.type) !== "person" ? viewRef.current.srcCount?.get(n.id) : undefined;
       if (sourcesBehind && r * scale >= COUNT_MIN_PX) drawSourceCount(ctx, n.x, n.y, r, sourcesBehind, scale, colors, alpha);
       if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
       if (role === "cited") {
@@ -1352,7 +1372,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         if (useThinking.getState().hot === n.id) drawHotRing(ctx, n.x, n.y, r, scale, colors);
       }
     },
-    [radius, initials],
+    [drawnRadius, initials],
   );
 
   // ---- knowledge base names: DOM labels just above each region's outline (lifted only over a page label of that
@@ -1491,11 +1511,15 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       });
       placeKbLabels(res.plan.placed);
       const shown = lit().links;
+      // the rings and arrow tips sit on each dot as drawn
+      const zs = g.zoom();
+      const drawnR = (n: SimNode) => drawnRadius(n, zs);
+      const ringed = (n: SimNode) => rs.current.selected.has(n.id);
       const route = pathRef.current.links;
       // (no words on a path's links: the arrows say which way each reads, and the titles stay clear)
-      if (route.length) drawEdges(ctx, route, g.zoom(), rs.current.colors, (n) => radius(n), () => "", directed, PATH_WIDTH);
-      if (shown.length && edgeOnRef.current) drawEdges(ctx, shown, g.zoom(), rs.current.colors, (n) => radius(n), edgeWord, directed);
-      else if (cite.current.link) drawCite(ctx, cite.current.link, g.zoom(), rs.current.colors, (n) => radius(n));
+      if (route.length) drawEdges(ctx, route, zs, rs.current.colors, drawnR, () => "", directed, PATH_WIDTH, ringed);
+      if (shown.length && edgeOnRef.current) drawEdges(ctx, shown, zs, rs.current.colors, drawnR, edgeWord, directed, 1.5, ringed);
+      else if (cite.current.link) drawCite(ctx, cite.current.link, zs, rs.current.colors, drawnR);
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
       rs.current.zr = res.zr;
       if (now - f.hudAt > 250) {
@@ -1605,7 +1629,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         forces={{ charge: rim ? RIM_CHARGE : (viewForces?.charge ?? ui.charge), linkDistance: viewForces?.linkDistance ?? ui.linkDistance, gravity: rim ? 0 : (viewForces?.gravity ?? ui.gravity) }}
         arrows={ui.arrows}
         citeArc={!!rim}
-        nodeRadius={radius}
+        nodeRadius={drawnRadius}
         drawNode={drawNode}
         drawFramePost={drawFramePost}
         drawFramePre={drawFramePre}
@@ -1617,6 +1641,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         onNodeHover={onNodeHover}
         onNodeClick={onNodeClick}
         onLinkClick={(ev, l) => {
+          // a click on a dot is the dot's, even where a lit edge runs into it
+          const dot = edgeOnRef.current ? screenNodes().find((n) => onDot([n], ev.clientX, ev.clientY, DOT_SLACK_PX)) : undefined;
+          if (dot) return clickNode(dot.id, ev);
           // the lit edge is the one the click means (force-graph's own pick can lag a frame behind the pointer), unless the
           // lit edge is about to change: then the edge under the pointer is
           const settled = cite.current.pending === undefined;
