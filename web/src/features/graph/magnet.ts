@@ -37,6 +37,12 @@ export function gapOf(n: ScreenNode, all: readonly ScreenNode[]): number {
 export const reachOf = (n: ScreenNode, all: readonly ScreenNode[]): number =>
   Math.min(REACH_MAX, Math.max(REACH_MIN, gapOf(n, all) * REACH_SHARE));
 
+/** How far outside a dot's rim (screen px) the pointer still counts as on it, where an edge under the pointer yields. */
+export const DOT_SLACK_PX = 3;
+
+/** True when the pointer is on a dot, or within `slack` px of its rim. */
+export const onDot = (nodes: readonly ScreenNode[], px: number, py: number, slack = 0): boolean => nodes.some((n) => rim(n, px, py) <= slack);
+
 /** Nearest node to the pointer within its own reach, or null (a miss). `current` is sticky. */
 export function pickMagnetic(
   nodes: readonly ScreenNode[],

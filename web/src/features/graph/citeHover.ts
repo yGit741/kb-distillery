@@ -1,5 +1,6 @@
 import { flag } from "@/flags";
 import { withAlpha, type CanvasColors } from "./canvasTheme";
+import { STATE } from "./encoding/spec";
 import type { SimLink, SimNode } from "./types";
 
 /**
@@ -125,6 +126,10 @@ export function drawEdges(
   radiusOf: (n: SimNode) => number,
   word: (l: SimLink) => string,
   arrow: (l: SimLink) => boolean,
+  /** The line's width in screen pixels: 1.5 for a lit edge, wider for a shortest path (./pathDraw). */
+  width = 1.5,
+  /** pages that already wear a ring (the selected ones): they get no second one */
+  ringed: (n: SimNode) => boolean = () => false,
 ): void {
   const px = (v: number) => v / scale;
   const ends = new Map<string, { n: SimNode; above: boolean }>();
@@ -133,17 +138,18 @@ export function drawEdges(
     const a = l.source as SimNode;
     const b = l.target as SimNode;
     if (!at(a) || !at(b)) continue;
-    drawEdgeLine(ctx, l, scale, colors, radiusOf, word(l), arrow(l));
+    drawEdgeLine(ctx, l, scale, colors, radiusOf, word(l), arrow(l), width);
     const [up, down] = a.y! <= b.y! ? [a, b] : [b, a];
     if (!ends.has(up.id)) ends.set(up.id, { n: up, above: true });
     if (!ends.has(down.id)) ends.set(down.id, { n: down, above: false });
   }
-  // the rings of the pages the edges touch
+  // the rings of the pages the edges touch, where the selection ring would sit (the arrow tips end on it)
   for (const { n } of ends.values()) {
+    if (ringed(n)) continue;
     ctx.beginPath();
-    ctx.arc(n.x!, n.y!, radiusOf(n) + px(2), 0, Math.PI * 2);
-    ctx.strokeStyle = withAlpha(colors.text, 0.8);
-    ctx.lineWidth = px(2);
+    ctx.arc(n.x!, n.y!, radiusOf(n) + px(STATE.gap), 0, Math.PI * 2);
+    ctx.strokeStyle = withAlpha(colors.text, 0.6);
+    ctx.lineWidth = px(1.5);
     ctx.stroke();
   }
   // each page's full title, once
@@ -174,7 +180,7 @@ function halo(ctx: CanvasRenderingContext2D, colors: CanvasColors, scale: number
 }
 
 /** One lit edge: the line (under its two pages, flag graph-corners), its arrow and its words. */
-function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number, words: string, arrow: boolean): void {
+function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number, words: string, arrow: boolean, width = 1.5): void {
   const a = l.source as SimNode;
   const b = l.target as SimNode;
   const pa = at(a)!;
@@ -185,8 +191,8 @@ function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, 
   // flag graph-corners: the edge runs under the two pages, never across them: it is clipped at each page's ring and,
   // where it reads one way, ends in a small arrow at its target's rim
   const under = flag("graph-corners");
-  const rimA = radiusOf(a) + px(3);
-  const rimB = radiusOf(b) + px(3);
+  const rimA = radiusOf(a) + px(STATE.gap);
+  const rimB = radiusOf(b) + px(STATE.gap);
   if (under) {
     ctx.save();
     ctx.beginPath();
@@ -201,8 +207,8 @@ function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, 
   ctx.moveTo(pa.x, pa.y);
   if (c) ctx.quadraticCurveTo(c.x, c.y, pb.x, pb.y);
   else ctx.lineTo(pb.x, pb.y);
-  ctx.strokeStyle = withAlpha(colors.text, 0.75);
-  ctx.lineWidth = px(1.5);
+  ctx.strokeStyle = withAlpha(colors.text, width > 1.5 ? 0.9 : 0.75);
+  ctx.lineWidth = px(width);
   ctx.stroke();
   if (under) {
     ctx.restore();

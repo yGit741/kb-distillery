@@ -55,6 +55,8 @@ export interface Preview {
   count: number;
   /** The pages that would stay, or null when the layers restrict nothing. */
   ids: ReadonlySet<string> | null;
+  /** The links of a shortest path it shows, in order (flag graph-algos): drawn bold, a hidden page on them brought in. */
+  pathLinks?: readonly (readonly [string, string])[];
 }
 
 interface LayersState {
@@ -75,6 +77,8 @@ interface LayersState {
   applied: Marker | null;
   /** What the last fold could not evaluate or draw, with the reason. */
   skipped: string[];
+  /** The links of a shortest path the applied stack shows, in order (flag graph-algos); empty when it shows none. */
+  pathLinks: readonly (readonly [string, string])[];
   setGraph: (g: GraphContext | null) => void;
   /** Before a preview or an apply: answers every `about` of these layers with the pages the meaning service names (`focus`: the one focused page). */
   resolveMeaning: (layers: Layer[], focus?: string) => Promise<Resolution>;
@@ -109,8 +113,16 @@ function untint() {
   previewKnobs = null;
 }
 
-function draw(next: ViewStack, g: GraphContext | null): { skipped: string[] } {
-  if (!g) return { skipped: [] };
+const NO_PATH: readonly (readonly [string, string])[] = [];
+
+/** The path links of a stack: evaluated only when one of its layers asks for a shortest path. */
+function pathOf(vs: ViewStack, g: GraphContext | null): readonly (readonly [string, string])[] {
+  if (!g || !vs.layers.some((l) => (l.subgraph.nodes ?? []).some((c) => c.t === "shortest"))) return NO_PATH;
+  return evaluate(vs, g).pathLinks ?? NO_PATH;
+}
+
+function draw(next: ViewStack, g: GraphContext | null): { skipped: string[]; pathLinks: readonly (readonly [string, string])[] } {
+  if (!g) return { skipped: [], pathLinks: NO_PATH };
   const ev = evaluate(next, g);
   if (ev.groups) setGroups(ev.groups.by, ev.groups.of);
   const ui = useGraphUi.getState();
@@ -144,15 +156,15 @@ function draw(next: ViewStack, g: GraphContext | null): { skipped: string[] } {
   }
   restricting = ev.nodeIds !== null || !!legacy;
   if (restricting || ev.patch.layoutMode) useGraphUi.getState().fit();
-  return { skipped: ev.skipped };
+  return { skipped: ev.skipped, pathLinks: ev.pathLinks ?? NO_PATH };
 }
 
 export const useLayers = create<LayersState>((set, get) => {
   const commit = (next: ViewStack, before: Snapshot, drawNow: boolean) => {
     const s = get();
     const history = [...s.history, { stack: s.stack, snap: before }].slice(-HISTORY_MAX);
-    const { skipped } = drawNow ? draw(next, s.graph) : { skipped: s.skipped };
-    set({ stack: next, history, future: [], applied: marker(), skipped });
+    const { skipped, pathLinks } = drawNow ? draw(next, s.graph) : { skipped: s.skipped, pathLinks: pathOf(next, s.graph) };
+    set({ stack: next, history, future: [], applied: marker(), skipped, pathLinks });
   };
   return {
     preview: null,
@@ -173,7 +185,7 @@ export const useLayers = create<LayersState>((set, get) => {
         previewKnobs = snapshot();
         useGraphUi.setState(tint);
       }
-      set({ preview: { layers, op, lines: layers.map(print), count: ev.nodeIds ? ev.nodeIds.size : s.graph.nodes.length, ids: ev.nodeIds } });
+      set({ preview: { layers, op, lines: layers.map(print), count: ev.nodeIds ? ev.nodeIds.size : s.graph.nodes.length, ids: ev.nodeIds, ...(ev.pathLinks ? { pathLinks: ev.pathLinks } : {}) } });
       return true;
     },
     cancelPreview: () => {
@@ -193,7 +205,9 @@ export const useLayers = create<LayersState>((set, get) => {
     graph: null,
     applied: null,
     skipped: [],
-    setGraph: (graph) => set({ graph }),
+    pathLinks: NO_PATH,
+    // a new graph (a reload, another kb) answers the applied path again
+    setGraph: (graph) => set({ graph, pathLinks: pathOf(get().stack, graph) }),
     resolveMeaning: (layers, focus) => resolveAbout(layers, get().graph?.similar ?? null, focus),
     apply: (op, payload) => {
       const s = get();
@@ -221,7 +235,7 @@ export const useLayers = create<LayersState>((set, get) => {
       owned = { patch: {}, kinds: null };
       restricting = useGraphUi.getState().view !== null;
       useShellStore.getState().clearShape();
-      set({ stack: e.stack, history: s.history.slice(0, -1), future: [...s.future, here], applied: marker() });
+      set({ stack: e.stack, history: s.history.slice(0, -1), future: [...s.future, here], applied: marker(), pathLinks: pathOf(e.stack, s.graph) });
       return true;
     },
     redo: () => {
@@ -232,7 +246,7 @@ export const useLayers = create<LayersState>((set, get) => {
       restore(e.snap);
       owned = { patch: {}, kinds: null };
       restricting = useGraphUi.getState().view !== null;
-      set({ stack: e.stack, future: s.future.slice(0, -1), history: [...s.history, here].slice(-HISTORY_MAX), applied: marker() });
+      set({ stack: e.stack, future: s.future.slice(0, -1), history: [...s.history, here].slice(-HISTORY_MAX), applied: marker(), pathLinks: pathOf(e.stack, s.graph) });
       return true;
     },
     clear: () => {

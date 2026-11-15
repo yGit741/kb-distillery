@@ -2,7 +2,7 @@ import { withFlag } from "@/flags/testing";
 import { node } from "../fixtures";
 import { parse, print } from "./grammar";
 import { isParseError } from "./grammar";
-import { components, EMPTY_STACK, evaluate, makeLayer, shortestPaths, stack, type Layer } from "./model";
+import { components, EMPTY_STACK, evaluate, makeLayer, shortestPaths, shortestRoute, stack, type Layer } from "./model";
 import { fromSentence } from "./sentence";
 
 /*
@@ -28,6 +28,23 @@ describe("graph algorithms", () => {
     expect([...shortestPaths(adj, "a", "c", true)].sort()).toEqual(["a", "b", "c", "e"]);
     expect([...shortestPaths(adj, "a", "d")]).toContain("d");
     expect(shortestPaths(adj, "a", "f").size).toBe(0);
+  });
+
+  it("a shortest route: its links in order from the first page; all routes, nearest first", () => {
+    expect(shortestRoute(adj, "a", "d").links).toEqual([["a", "b"], ["b", "c"], ["c", "d"]]);
+    expect(shortestRoute(adj, "d", "a").links).toEqual([["d", "c"], ["c", "b"], ["b", "a"]]);
+    expect(shortestRoute(adj, "a", "c", true).links).toEqual([["a", "b"], ["a", "e"], ["b", "c"], ["e", "c"]]);
+    expect(shortestRoute(adj, "a", "f")).toEqual({ ids: new Set(), links: [] });
+  });
+
+  it("a shortest path layer hands its links to the canvas, only those whose pages it keeps", () => {
+    const path = makeLayer("show", "nodes", { nodes: [{ t: "shortest", a: "A", b: "D" }] });
+    expect(evaluate(stack(EMPTY_STACK, [path]), graph).pathLinks).toEqual([["a", "b"], ["b", "c"], ["c", "d"]]);
+    // a page the view hides is still on the path (the canvas brings it in)
+    expect(evaluate(stack(EMPTY_STACK, [path]), { ...graph, drawn: new Set(["a", "d"]) }).pathLinks).toHaveLength(3);
+    const hideC = makeLayer("hide", "nodes", { nodes: [{ t: "name", slugs: ["c"] }] });
+    expect(evaluate(stack(EMPTY_STACK, [path, hideC]), graph).pathLinks).toEqual([["a", "b"]]);
+    expect(evaluate(stack(EMPTY_STACK, [makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: ["a"] }] })]), graph).pathLinks).toBeUndefined();
   });
 
   it("components, largest first", () => {
