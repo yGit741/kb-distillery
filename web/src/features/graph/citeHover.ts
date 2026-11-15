@@ -43,16 +43,36 @@ export function linkDistance(l: SimLink, x: number, y: number, samples = 24): nu
   return best;
 }
 
+/** True when the point is farther than `pad` from the box around the link's ends and bend: a cheap first test. */
+function outside(l: SimLink, x: number, y: number, pad: number): boolean {
+  const a = at(l.source);
+  const b = at(l.target);
+  if (!a || !b) return true;
+  const c = ctrlOf(l) ?? a;
+  return x < Math.min(a.x, b.x, c.x) - pad || x > Math.max(a.x, b.x, c.x) + pad || y < Math.min(a.y, b.y, c.y) - pad || y > Math.max(a.y, b.y, c.y) + pad;
+}
+
+const isCite = (l: SimLink) => l.kind === "cites";
+
 /**
  * The next hovered link given the current one, the pointer (graph units) and the zoom: enter within CITE_ENTER_PX,
  * stay until beyond CITE_LEAVE_PX, switch only to an edge CITE_SWITCH_PX closer. Pixel bands are divided by the zoom.
+ * `accept` names the links that can light up: the citations (Citations by meaning), or every edge (flag edge-select).
  */
-export function pickCite(links: readonly SimLink[], current: SimLink | null, x: number, y: number, zoom: number): SimLink | null {
+export function pickCite(
+  links: readonly SimLink[],
+  current: SimLink | null,
+  x: number,
+  y: number,
+  zoom: number,
+  accept: (l: SimLink) => boolean = isCite,
+): SimLink | null {
   const k = Math.max(zoom, 0.05);
+  const pad = CITE_LEAVE_PX / k;
   let best: SimLink | null = null;
   let bestD = Infinity;
   for (const l of links) {
-    if (l.kind !== "cites") continue;
+    if (!accept(l) || (l !== current && outside(l, x, y, pad))) continue;
     const d = linkDistance(l, x, y);
     if (d < bestD) {
       best = l;
@@ -89,16 +109,81 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, width: number): strin
  * its dot, the lower one's below, so the two never meet. Sizes are screen pixels (divided by `scale`).
  */
 export function drawCite(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number): void {
+  drawEdges(ctx, [l], scale, colors, radiusOf, () => "cites", () => true);
+}
+
+/**
+ * Draw lit edges on top, each as a hovered citation is drawn: the edge in label ink, its words at the middle (`word`),
+ * an arrow at the target where the edge reads one way (`arrow`, flag graph-corners), a thin ring on every page it
+ * touches and each page's full title once: above its dot when it is the higher end of its first edge, else below.
+ */
+export function drawEdges(
+  ctx: CanvasRenderingContext2D,
+  links: readonly SimLink[],
+  scale: number,
+  colors: CanvasColors,
+  radiusOf: (n: SimNode) => number,
+  word: (l: SimLink) => string,
+  arrow: (l: SimLink) => boolean,
+): void {
+  const px = (v: number) => v / scale;
+  const ends = new Map<string, { n: SimNode; above: boolean }>();
+  ctx.save();
+  for (const l of links) {
+    const a = l.source as SimNode;
+    const b = l.target as SimNode;
+    if (!at(a) || !at(b)) continue;
+    drawEdgeLine(ctx, l, scale, colors, radiusOf, word(l), arrow(l));
+    const [up, down] = a.y! <= b.y! ? [a, b] : [b, a];
+    if (!ends.has(up.id)) ends.set(up.id, { n: up, above: true });
+    if (!ends.has(down.id)) ends.set(down.id, { n: down, above: false });
+  }
+  // the rings of the pages the edges touch
+  for (const { n } of ends.values()) {
+    ctx.beginPath();
+    ctx.arc(n.x!, n.y!, radiusOf(n) + px(2), 0, Math.PI * 2);
+    ctx.strokeStyle = withAlpha(colors.text, 0.8);
+    ctx.lineWidth = px(2);
+    ctx.stroke();
+  }
+  // each page's full title, once
+  ctx.font = `500 ${px(12)}px ${colors.font}`;
+  ctx.textAlign = "center";
+  ctx.fillStyle = colors.text;
+  const lineH = px(15);
+  for (const { n, above } of ends.values()) {
+    const lines = wrap(ctx, n.title || n.id, px(200));
+    if (above) {
+      ctx.textBaseline = "bottom";
+      lines.forEach((t, i) => halo(ctx, colors, scale, t, n.x!, n.y! - radiusOf(n) - px(6) - (lines.length - 1 - i) * lineH));
+    } else {
+      ctx.textBaseline = "top";
+      lines.forEach((t, i) => halo(ctx, colors, scale, t, n.x!, n.y! + radiusOf(n) + px(6) + i * lineH));
+    }
+  }
+  ctx.restore();
+}
+
+/** Text with a background halo, so it reads over edges and dots. */
+function halo(ctx: CanvasRenderingContext2D, colors: CanvasColors, scale: number, text: string, x: number, y: number): void {
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = colors.background;
+  ctx.lineWidth = 3 / scale;
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+}
+
+/** One lit edge: the line (under its two pages, flag graph-corners), its arrow and its words. */
+function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number, words: string, arrow: boolean): void {
   const a = l.source as SimNode;
   const b = l.target as SimNode;
-  const pa = at(a);
-  const pb = at(b);
-  if (!pa || !pb) return;
+  const pa = at(a)!;
+  const pb = at(b)!;
   const px = (v: number) => v / scale;
   ctx.save();
   const c = ctrlOf(l);
-  // flag graph-corners: the edge runs under the two papers, never across them: it is clipped at each paper's ring and
-  // ends in a small arrow at the cited paper's rim
+  // flag graph-corners: the edge runs under the two pages, never across them: it is clipped at each page's ring and,
+  // where it reads one way, ends in a small arrow at its target's rim
   const under = flag("graph-corners");
   const rimA = radiusOf(a) + px(3);
   const rimB = radiusOf(b) + px(3);
@@ -112,7 +197,6 @@ export function drawCite(ctx: CanvasRenderingContext2D, l: SimLink, scale: numbe
     ctx.arc(pb.x, pb.y, rimB, 0, Math.PI * 2);
     ctx.clip("evenodd");
   }
-  // the edge
   ctx.beginPath();
   ctx.moveTo(pa.x, pa.y);
   if (c) ctx.quadraticCurveTo(c.x, c.y, pb.x, pb.y);
@@ -122,60 +206,34 @@ export function drawCite(ctx: CanvasRenderingContext2D, l: SimLink, scale: numbe
   ctx.stroke();
   if (under) {
     ctx.restore();
-    // the arrow: along the edge's last direction, its tip on the cited paper's ring
-    const from = c ?? pa;
-    const d = Math.hypot(pb.x - from.x, pb.y - from.y) || 1;
-    const ux = (pb.x - from.x) / d;
-    const uy = (pb.y - from.y) / d;
-    const tx = pb.x - ux * rimB;
-    const ty = pb.y - uy * rimB;
-    const len = px(7);
-    const half = px(3.5);
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx - ux * len + uy * half, ty - uy * len - ux * half);
-    ctx.lineTo(tx - ux * len - uy * half, ty - uy * len + ux * half);
-    ctx.closePath();
-    ctx.fillStyle = withAlpha(colors.text, 0.75);
-    ctx.fill();
+    if (arrow) {
+      // along the edge's last direction, its tip on the target's ring
+      const from = c ?? pa;
+      const d = Math.hypot(pb.x - from.x, pb.y - from.y) || 1;
+      const ux = (pb.x - from.x) / d;
+      const uy = (pb.y - from.y) / d;
+      const tx = pb.x - ux * rimB;
+      const ty = pb.y - uy * rimB;
+      const len = px(7);
+      const half = px(3.5);
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - ux * len + uy * half, ty - uy * len - ux * half);
+      ctx.lineTo(tx - ux * len - uy * half, ty - uy * len + ux * half);
+      ctx.closePath();
+      ctx.fillStyle = withAlpha(colors.text, 0.75);
+      ctx.fill();
+    }
   }
-  // the two dots' rings
-  for (const n of [a, b]) {
-    ctx.beginPath();
-    ctx.arc(n.x!, n.y!, radiusOf(n) + px(2), 0, Math.PI * 2);
-    ctx.strokeStyle = withAlpha(colors.text, 0.8);
-    ctx.lineWidth = px(2);
-    ctx.stroke();
-  }
-  const halo = (text: string, x: number, y: number) => {
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = colors.background;
-    ctx.lineWidth = px(3);
-    ctx.strokeText(text, x, y);
-    ctx.fillText(text, x, y);
-  };
-  // "cites" on the edge: at the curve's middle; on a short edge, just beside it so neither dot covers it
+  // the words on the edge: at the curve's middle; on a short edge, just beside it so neither dot covers them
   const mid = linkPoint(l, 0.5);
-  if (mid) {
+  if (mid && words) {
     ctx.font = `500 ${px(11)}px ${colors.font}`;
     ctx.textBaseline = "middle";
     ctx.fillStyle = withAlpha(colors.text, 0.85);
     const short = Math.hypot(pb.x - pa.x, pb.y - pa.y) * scale < 60;
     ctx.textAlign = short ? "left" : "center";
-    halo("cites", short ? mid.x + px(9) : mid.x, mid.y);
+    halo(ctx, colors, scale, words, short ? mid.x + px(9) : mid.x, mid.y);
   }
-  // the two full titles: the higher paper's above its dot, the lower one's below, so the two never meet
-  ctx.font = `500 ${px(12)}px ${colors.font}`;
-  ctx.textAlign = "center";
-  ctx.fillStyle = colors.text;
-  const lineH = px(15);
-  const titleOf = (n: SimNode) => n.title || n.id;
-  const [up, down] = a.y! <= b.y! ? [a, b] : [b, a];
-  const lu = wrap(ctx, titleOf(up), px(200));
-  const ld = wrap(ctx, titleOf(down), px(200));
-  ctx.textBaseline = "bottom";
-  lu.forEach((t, i) => halo(t, up.x!, up.y! - radiusOf(up) - px(6) - (lu.length - 1 - i) * lineH));
-  ctx.textBaseline = "top";
-  ld.forEach((t, i) => halo(t, down.x!, down.y! + radiusOf(down) + px(6) + i * lineH));
   ctx.restore();
 }

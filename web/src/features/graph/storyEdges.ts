@@ -17,7 +17,7 @@ export function withStoryEdges<M extends { nodes: readonly GNode[]; links: reado
   const ids = new Set(model.nodes.map((n) => n.id));
   const links: GLink[] = (model.relations ?? [])
     .filter((r) => want.has(r.kind) && ids.has(r.source) && ids.has(r.target))
-    .map((r) => ({ source: r.source, target: r.target, kind: r.kind === "cites" ? "cites" : "related" }));
+    .map((r): GLink => (r.kind === "cites" ? { source: r.source, target: r.target, kind: "cites" } : { source: r.source, target: r.target, kind: "related", rel: r.kind }));
   const out = new Map<string, number>();
   const into = new Map<string, number>();
   for (const l of links) {

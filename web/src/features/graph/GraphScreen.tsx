@@ -74,6 +74,7 @@ import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
 import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
 import { stackCurrent, useLayers } from "./layers/store";
 import { marker } from "./shell/shape";
+import { useEdgeSelect } from "./edgeSelect";
 
 /** The right pane keeps at least 320px, and the chat (with its list) at least 480px. */
 const clampPane = (w: number, total: number) => Math.round(Math.max(320, Math.min(total - 480, w)));
@@ -586,6 +587,8 @@ function Loaded({
     useGraphUi.setState({ readerSlug: null, detailsOpen: false });
   }, []);
   const selected = useMemo(() => [...selection].map((id) => byId.get(id)).filter((n): n is GNode => !!n), [selection, byId]);
+  // flag edge-select: the edges kept on the canvas, whose pages are among the selected
+  const keptLinks = useEdgeSelect((s) => s.shown);
   const closeMenu = useCallback(() => setMenu(null), []);
 
   // the empty-space menu closes like any menu: Escape (even from the search line) or a press outside it
@@ -862,7 +865,10 @@ function Loaded({
       )}
       {selected.length > 0 && !showDetails && !reader && (
         <div data-tour="graph-selection" className="pointer-events-auto absolute bottom-14 left-1/2 [.gt-active_&]:bottom-24 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
-          <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
+          <span>
+            {selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}
+            {keptLinks > 0 && ` · ${keptLinks} link${keptLinks === 1 ? "" : "s"}`}
+          </span>
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details
           </Button>
