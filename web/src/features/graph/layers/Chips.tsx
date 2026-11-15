@@ -78,6 +78,8 @@ export function Chips({ byId }: { byId: ReadonlyMap<string, GNode> }) {
   const canUndo = useLayers((s) => s.history.length > 0);
   const applied = useLayers((s) => s.applied);
   const live = useGraphUi((s) => stackCurrent(applied, marker(s)));
+  // the pages a restricting stack draws, said next to its chips (never as a pill over the graph)
+  const drawn = useGraphUi((s) => s.view?.hits.size ?? null);
   const [editing, setEditing] = useState<string | null>(null);
   const focus = [...selection];
   if (!focus.length && !layers.length && !canUndo) return null;
@@ -121,6 +123,11 @@ export function Chips({ byId }: { byId: ReadonlyMap<string, GNode> }) {
               </span>
             );
           })}
+          {layers.length > 0 && live && drawn !== null && (
+            <span className="px-1 text-xs text-muted-foreground" data-testid="view-count">
+              {drawn} {drawn === 1 ? "page" : "pages"}
+            </span>
+          )}
           {canUndo && (
             <button type="button" className={cn(CHIP, "text-muted-foreground hover:bg-accent hover:text-foreground")} title="Undo the last change (Cmd-Z)" onClick={() => useLayers.getState().undo()}>
               <Undo2 aria-hidden className="size-3" strokeWidth={1.6} />

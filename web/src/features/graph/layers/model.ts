@@ -196,7 +196,8 @@ export interface EvalGraph {
   /** Page ids marked favorite; absent while favorites are not loaded. */
   favorites?: ReadonlySet<string>;
   /** The pages the screen draws before any layer (its type filter); a hide with no show before it takes from these,
-   * never from every page: "hide orphans" must not draw the sources a Concepts view hides. Absent: every page. */
+   * never from every page: "hide orphans" must not draw the sources a Concepts view hides. Links are counted to
+   * these pages only (degree, orphans, hubs). Absent: every page. */
   drawn?: ReadonlySet<string>;
   now?: number;
 }
@@ -298,6 +299,18 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
   const all = new Set(nodes.map((n) => n.id));
   const byId = new Map(nodes.map((n) => [n.id, n] as const));
   const adj = adjacency(links);
+  // links counted the way the screen shows them: a drawn page counts its links to drawn pages ("orphans" are the pages
+  // that look alone, not the few with no link at all; a blog post linked only to its hidden series is an orphan in the
+  // Sources view). A page the view hides has no such context and counts all its links ("papers with more than 5 links"
+  // from the Concepts view keeps its meaning)
+  const seenDegree = (id: string): number => {
+    const nb = adj.get(id);
+    if (!nb) return 0;
+    if (!graph.drawn || !graph.drawn.has(id)) return nb.size;
+    let k = 0;
+    for (const m of nb) if (graph.drawn.has(m)) k++;
+    return k;
+  };
   const now = graph.now ?? Date.now();
   const presentKinds = new Set<string>(links.map((l) => l.kind));
   const skipped: string[] = [];
@@ -327,7 +340,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           break;
         }
         case "degree":
-          keep = (n) => cmp(adj.get(n.id)?.size ?? 0, c.op, c.n);
+          keep = (n) => cmp(seenDegree(n.id), c.op, c.n);
           break;
         case "hops": {
           if (c.of === FAVORITES) {

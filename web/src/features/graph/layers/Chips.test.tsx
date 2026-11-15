@@ -8,6 +8,7 @@ import { parseSchema } from "../schema";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
 import { Chips } from "./Chips";
 import { EMPTY_STACK, makeLayer } from "./model";
+import { makeView } from "../pageSearch";
 import { useLayers } from "./store";
 
 const byId = new Map(sampleNodes.map((n) => [n.id, n] as const));
@@ -35,6 +36,21 @@ describe("Chips", () => {
     await userEvent.click(within(row).getByRole("button", { name: /remove idea margin/i }));
     expect([...useKb.getState().selection]).toEqual(["jane-doe"]);
     expect(screen.queryByRole("group", { name: "View" })).not.toBeInTheDocument();
+  });
+
+  it("says how many pages a restricting view draws, next to its chips", () => {
+    // the screen draws what the stack keeps (GraphScreen showPicked), as the real show does
+    show.mockImplementation((ids: string[]) => useGraphUi.setState({ view: makeView("picked", "picked", ids, byId, new Map()) }));
+    useLayers.getState().apply("replace", [makeLayer("show", "nodes", { nodes: [{ t: "type", value: "paper" }] }, "only papers")]);
+    render(<Chips byId={byId} />);
+    const papers = sampleNodes.filter((n) => n.type === "paper").length;
+    expect(screen.getByTestId("view-count")).toHaveTextContent(`${papers} pages`);
+  });
+
+  it("a style-only view says no count", () => {
+    useLayers.getState().apply("replace", [makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } })]);
+    render(<Chips byId={byId} />);
+    expect(screen.queryByTestId("view-count")).not.toBeInTheDocument();
   });
 
   it("shows one View chip per layer in plain words, and remove drops the layer", async () => {

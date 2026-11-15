@@ -71,6 +71,24 @@ describe("evaluate", () => {
     expect([...papers].sort()).toEqual(["2019-fine-grained", "2020-listed-paper"]);
   });
 
+  it("with the drawn pages given, a drawn page counts its links to drawn pages only; a hidden page counts all", () => {
+    // a - b - c, and d - b: hide b, and a, c, d look alone
+    const g = {
+      nodes: ["a", "b", "c", "d"].map((id) => node(id)),
+      links: [
+        { source: "a", target: "b", kind: "wikilink" as const },
+        { source: "b", target: "c", kind: "wikilink" as const },
+        { source: "d", target: "b", kind: "wikilink" as const },
+      ],
+    };
+    const orphans = (drawn?: Set<string>) => [...evaluate(stack(EMPTY_STACK, [show("none", [{ t: "degree", op: "=", n: 0 }])]), { ...g, drawn }).nodeIds!].sort();
+    expect(orphans()).toEqual([]);
+    expect(orphans(new Set(["a", "c", "d"]))).toEqual(["a", "c", "d"]);
+    // b is hidden: it keeps all three of its links, so it is no orphan and it is a page with more than 2 links
+    const busy = evaluate(stack(EMPTY_STACK, [show("busy", [{ t: "degree", op: ">", n: 2 }])]), { ...g, drawn: new Set(["a", "c", "d"]) }).nodeIds!;
+    expect([...busy]).toEqual(["b"]);
+  });
+
   it("degree counts the distinct pages a page is linked with", () => {
     const connected = ids([show("connected", [{ t: "degree", op: ">=", n: 2 }])]);
     expect([...connected!].sort()).toEqual(["2019-fine-grained", "idea-margin", "topic-learning-theory"]);
