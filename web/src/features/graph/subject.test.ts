@@ -38,6 +38,16 @@ describe("the types a view draws", () => {
   });
 });
 
+describe("graph-corners: the Sources view is the sources alone", () => {
+  it("on: Sources draws only the source types; Concepts comes back with the whole concept layer", () =>
+    withFlag("graph-corners", true, () => {
+      expect([...typesFor("sources", schema, new Set(["idea"]))]).toEqual(["paper", "lecture"]);
+      expect([...typesFor("concepts", schema, new Set(["paper", "lecture"]))]).toEqual(["topic", "idea"]);
+    }));
+  it("off: Sources keeps the concepts beside the sources", () =>
+    withFlag("graph-corners", false, () => expect([...typesFor("sources", schema, new Set(["idea"]))]).toEqual(["idea", "paper", "lecture"])));
+});
+
 describe("switching the view", () => {
   beforeEach(() => useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, hiddenKeys: new Set(["x"]) }));
 
@@ -66,6 +76,17 @@ describe("switching the view", () => {
     applySubject("sources", schema, new Set(["topic", "idea"]));
     expect(useGraphUi.getState().quick.recent).toBe(7);
   });
+
+  it("force leaves Citations for Sources, although its papers already read as Sources", () =>
+    withFlag("graph-corners", true, () => {
+      useGraphUi.getState().applyStory("citations");
+      const t = useGraphUi.getState().shownTypes!;
+      expect(applySubject("sources", schema, t)).toBe(false);
+      expect(applySubject("sources", schema, t, true)).toBe(true);
+      const s = useGraphUi.getState();
+      expect(s.edgeStory).toBe("");
+      expect([...s.shownTypes!]).toEqual(["paper", "lecture"]);
+    }));
 
   it("does nothing when the view is already on", () => {
     expect(applySubject("concepts", schema, new Set(["topic"]))).toBe(false);

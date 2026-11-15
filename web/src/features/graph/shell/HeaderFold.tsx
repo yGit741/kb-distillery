@@ -1,6 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { useHeaderFold } from "@/app/headerFold";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 
 const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -23,6 +25,34 @@ export function HeaderFold() {
   const label = folded ? "Show the app bar" : "Hide the app bar";
   const strip = useRef<HTMLDivElement>(null);
   const dx = useLineCentre(strip);
+  // flag graph-corners: the chevron is pinned to the window's top edge, folded or open, so a second press on the
+  // same spot undoes the first. Open, it sits on the bar, right of the main nav when the nav reaches the middle.
+  const pinned = useFlag("graph-corners");
+  const at = usePinnedX(strip, pinned);
+  if (pinned)
+    return (
+      <div ref={strip} data-testid="header-fold" data-folded={folded || undefined} data-pinned="" className="pointer-events-none absolute inset-x-0 top-0 h-0">
+        {at !== null &&
+          createPortal(
+            <button
+              type="button"
+              data-testid="header-fold-button"
+              aria-label={label}
+              title={label}
+              aria-expanded={!folded}
+              onClick={toggle}
+              className={cn(
+                "fixed top-0 z-[45] flex h-[18px] w-9 -translate-x-1/2 items-center justify-center rounded-b-full bg-background text-muted-foreground shadow-[0_2px_8px_-2px_rgb(0_0_0/0.18)] transition-colors hover:text-foreground motion-reduce:transition-none",
+                RING,
+              )}
+              style={{ left: at }}
+            >
+              <ChevronDown aria-hidden className={cn("size-[14px] transition-transform duration-200 motion-reduce:transition-none", !folded && "rotate-180")} strokeWidth={1.6} />
+            </button>,
+            document.body,
+          )}
+      </div>
+    );
   return (
     <div
       ref={strip}
@@ -54,6 +84,35 @@ export function HeaderFold() {
       </button>
     </div>
   );
+}
+
+/** Room kept between the main nav's right end and the pinned chevron's centre. */
+const NAV_CLEAR = 46;
+
+/**
+ * Flag graph-corners: the pinned chevron's x in the window, the same folded or open: over the search line's centre,
+ * or right of the main nav when the nav reaches that far (the bar keeps its layout while folded, so it measures the same).
+ */
+function usePinnedX(strip: RefObject<HTMLDivElement | null>, on: boolean): number | null {
+  const [x, setX] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!on) return;
+    const measure = () => {
+      const line = strip.current?.parentElement?.querySelector<HTMLElement>("[data-testid=graph-shell]")?.getBoundingClientRect();
+      const nav = document.querySelector<HTMLElement>("nav[aria-label=Main]")?.getBoundingClientRect();
+      const centre = line && line.width ? line.left + line.width / 2 : window.innerWidth / 2;
+      setX(Math.round(Math.max(centre, nav && nav.width ? nav.right + NAV_CLEAR : 0)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // the line can mount after this strip; measure again once it is there
+    const t = window.setTimeout(measure, 300);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.clearTimeout(t);
+    };
+  }, [strip, on]);
+  return x;
 }
 
 /** How far the search line's centre sits right of this strip's centre, kept current as the frame and line resize. */

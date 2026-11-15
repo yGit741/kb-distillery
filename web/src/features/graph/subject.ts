@@ -10,7 +10,7 @@ import type { GNode } from "./types";
 /**
  * The graph's two views (flag graph-intent). Concepts: the concept layer and the links among concepts, each concept
  * with a quiet count of its sources. Sources: the same concepts plus the source pages and the links between the two,
- * sources on one side. Which view is on is read from the drawn types (a source type drawn = Sources), so a saved
+ * sources on one side; under flag graph-corners, the source pages alone. Which view is on is read from the drawn types (a source type drawn = Sources), so a saved
  * view, the types card and the `>` line all agree with the toggle, and the selection carries across.
  *
  * Health (flag knowledge-health) is a lens on Concepts, reached by typing "health": the concepts alone, coloured by how
@@ -41,7 +41,9 @@ export function typesFor(subject: GraphSubject, schema: GraphSchema, shownTypes:
   const concepts = typesOf(schema, "concept");
   const kept = concepts.filter((t) => !shownTypes || shownTypes.has(t));
   const base = kept.length ? kept : concepts;
-  return new Set(subject === "sources" ? [...base, ...typesOf(schema, "source")] : base);
+  if (subject !== "sources") return new Set(base);
+  // flag graph-corners: the Sources view is the sources alone; before it, the concepts stayed beside them
+  return new Set(flag("graph-corners") ? typesOf(schema, "source") : [...base, ...typesOf(schema, "source")]);
 }
 
 /** The colouring a view opens with: the one in use when the view offers it, else the view's first. */
@@ -50,11 +52,14 @@ export function colourFor(subject: GraphSubject, by: ColorBy): ColorBy {
   return dims.some((d) => d.by === by) ? by : dims[0]!.by;
 }
 
-/** Switch the graph to a view: its types, a colouring it offers, and no colour value left hidden from the other. */
-export function applySubject(subject: GraphSubject, schema: GraphSchema, shownTypes: ReadonlySet<string> | null): boolean {
+/**
+ * Switch the graph to a view: its types, a colouring it offers, and no colour value left hidden from the other.
+ * `force` switches even when the drawn types already read as that view (leaving Citations, whose papers read as Sources).
+ */
+export function applySubject(subject: GraphSubject, schema: GraphSchema, shownTypes: ReadonlySet<string> | null, force = false): boolean {
   const by = effectiveColorBy(useGraphUi.getState().colorBy);
   const health = flag("knowledge-health") && flag("graph-intent");
-  if (subjectOf(schema, shownTypes, health ? by : undefined) === subject) return false;
+  if (!force && subjectOf(schema, shownTypes, health ? by : undefined) === subject) return false;
   // leaving a view that draws a relation (Citations) takes its links and its Connected filter with it: the other
   // view draws the page links again, and the layout re-runs on them. The legend's other filters stay.
   const cur = useGraphUi.getState();

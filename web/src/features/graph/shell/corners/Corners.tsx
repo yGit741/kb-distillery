@@ -19,7 +19,9 @@ import { useFavorites } from "../../favorites/store";
 import { BAR_BY, colorKey, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS, useAreaPalette } from "../../style";
 import { dimensionsFor, withTopic, type GraphSubject } from "../../colourDimensions";
 import { useEmbedding } from "../../embedding/EmbeddingLayer";
-import { embedSpec, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
+import { applyEmbed, embedSpec, leaveEmbed, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
+import { liveEdgeStory } from "../../storyEdges";
+import { storyById, storyOffered } from "../../lab/views";
 import { applySubject, subjectOf } from "../../subject";
 import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
@@ -42,6 +44,7 @@ import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
 import { PinLoop } from "./PinLoop";
+import { VIEW_OPTIONS, ViewPicker, viewPickerHeight, type GraphView } from "./ViewPicker";
 import { useChatDock } from "../../tools/chatDockStore";
 import { QuickList, type QuickRow } from "./QuickList";
 import { useSparkPanel } from "../sparkPanelStore";
@@ -86,6 +89,10 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // flag graph-corners: four raised discs with line icons, and the graph's one theme switch in the bottom-right corner
   const discs = useFlag("graph-corners");
   const themeCorner = discs && ds.kind === "http" && !IS_SHARE;
+  // flag graph-corners: the legend opens on every page load, whatever an earlier visit folded
+  useEffect(() => {
+    if (discs) useCorners.getState().openLegendsOnce();
+  }, [discs]);
   // while the disc is on screen the app bar leaves out its own switch: one theme switch, always (the folded full
   // chat hides this frame, disc and all, so the bar keeps its switch then)
   const { folded: chatFolded } = useFullChat();
@@ -389,6 +396,26 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     [intent, subject, sourcesDrawn, embedding],
   );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
+  // flag graph-corners: the four views live at the top of the pin. Which one is on: the meaning map, else the
+  // Citations links, else what the drawn types say (Health is a lens on Concepts)
+  const embedOn = useEmbedView((s) => s.view);
+  const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
+  const citationsStory = storyById("citations");
+  const viewOptions = useMemo(
+    () => VIEW_OPTIONS.filter((v) => (v.id === "citations" ? !!citationsStory && storyOffered(citationsStory) : v.id === "embedding" ? !!embedding : true)),
+    [citationsStory, embedding],
+  );
+  const currentView: GraphView = embedOn === "map" ? "embedding" : edgeOn === "citations" ? "citations" : subject === "sources" ? "sources" : "concepts";
+  const pickView = (v: GraphView) => {
+    setActive(null);
+    if (v === currentView) return;
+    if (embedOn) leaveEmbed();
+    if (v === "citations") return useGraphUi.getState().applyStory("citations");
+    // the meaning map places the concepts; leaving Citations or Sources first puts the concepts back
+    const to: GraphSubject = v === "sources" ? "sources" : "concepts";
+    applySubject(to, schema, shownTypes, currentView === "citations" || (v === "embedding" && subject !== "concepts"));
+    if (v === "embedding") applyEmbed({ view: "map" });
+  };
   // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
   // hiding a colour or changing the colouring must never change which types are drawn.
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
@@ -423,8 +450,10 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         <>
           {discs ? (
             <>
+              <ViewPicker open={pinsOpen} views={viewOptions} current={currentView} onPick={pickView} />
               <PinLoop
                 open={pinsOpen}
+                offset={viewPickerHeight(viewOptions.length)}
                 views={views.data ?? []}
                 active={activeView}
                 areaHeight={areaHeight}
@@ -729,8 +758,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         thinkCards={Math.max(1, thinkCards.length)}
       />
       {/* the switch is always Concepts / Sources; Health is a lens on concepts, reached by typing "health" */}
-      {intent && <SubjectToggle subject={subject === "health" ? "concepts" : subject} onPick={(s) => (subject === "health" && s === "concepts" ? undefined : pickSubject(s))} top={shellTop} />}
-      <TypesCard concepts={concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} keep={keepTypes} onSpot={spot} />
+      {intent && !discs && <SubjectToggle subject={subject === "health" ? "concepts" : subject} onPick={(s) => (subject === "health" && s === "concepts" ? undefined : pickSubject(s))} top={shellTop} />}
+      <TypesCard concepts={discs && subject === "sources" ? NO_ROWS : concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} keep={keepTypes} onSpot={spot} />
     </div>
   );
 }

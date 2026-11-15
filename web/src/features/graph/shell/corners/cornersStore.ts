@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { flag } from "@/flags";
 
 /** Everything the corner controls can have open. `menu` and `edit` belong to a list or a fan. */
 export type Layer = "pins" | "think" | "agent" | "legend" | "types" | "menu" | "edit";
@@ -24,6 +25,8 @@ interface CornersState {
   startEdit: (e: Edit) => void;
   endEdit: () => void;
   setActive: (id: string | null) => void;
+  /** flag graph-corners: open both legends, once per page load */
+  openLegendsOnce: () => void;
   /** Close the topmost layer (Esc). Returns what it closed, or null when nothing was open. */
   closeTop: () => Layer | null;
   closeAll: () => void;
@@ -43,7 +46,10 @@ function settle(order: Layer[], menu: Snap["menu"], edit: Snap["edit"]): Snap {
   return { order: o, menu: m, edit: e };
 }
 
-/** The two legends start open; one the user folds with its minus stays folded until they open it again. */
+/**
+ * The two legends start open; one the user folds with its minus stays folded until they open it again. Under flag
+ * graph-corners a fold lasts until the page reloads: every visit opens on the legend.
+ */
 const LEGENDS: Layer[] = ["legend", "types"];
 const FOLDED_KEY = "kb-graph-legends-folded";
 function foldedLegends(): Set<Layer> {
@@ -64,6 +70,8 @@ function rememberFolded(l: Layer, folded: boolean) {
   }
 }
 const openLegends = (): Layer[] => LEGENDS.filter((l) => !foldedLegends().has(l));
+/** once per page load (flag graph-corners): the legends open whatever an earlier visit folded */
+let legendsReopened = false;
 const keepLegends = (order: Layer[]) => order.filter((l) => LEGENDS.includes(l));
 
 export const useCorners = create<CornersState>((set, get) => ({
@@ -76,7 +84,7 @@ export const useCorners = create<CornersState>((set, get) => ({
   toggle: (l, opts) =>
     set((s) => {
       let base = s.order;
-      if (LEGENDS.includes(l) && opts?.remember !== false) rememberFolded(l, base.includes(l));
+      if (LEGENDS.includes(l) && opts?.remember !== false && !flag("graph-corners")) rememberFolded(l, base.includes(l));
       if (base.includes(l)) base = without(base, l);
       else {
         // pins close both fans, a fan closes the pins, the two fans may be open together
@@ -93,6 +101,12 @@ export const useCorners = create<CornersState>((set, get) => ({
   startEdit: (edit) => set((s) => settle([...without(s.order, "menu", "edit"), "edit"], null, edit)),
   endEdit: () => set((s) => settle(without(s.order, "edit"), s.menu, null)),
   setActive: (activeView) => set({ activeView }),
+  openLegendsOnce: () => {
+    if (legendsReopened) return;
+    legendsReopened = true;
+    // a fold remembered before graph-corners (or by another tab) does not carry into this page load
+    set((s) => settle([...LEGENDS.filter((l) => !(l === "legend" && s.order.includes("think"))), ...without(s.order, ...LEGENDS)], s.menu, s.edit));
+  },
   closeTop: () => {
     const { order, menu, edit } = get();
     // Esc closes fans, lists and menus; the legends close only with their own minus

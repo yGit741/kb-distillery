@@ -1196,6 +1196,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         initials: initials.get(n.id),
         state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && !tk && live.current.cited.has(n.id) ? "focus" : flag("graph-intent") && useFavorites.getState().slugs.has(n.id) ? "favorite" : null,
         alpha,
+        // flag graph-corners: a dimmed node still hides the links under it
+        ground: flag("graph-corners") ? colors.background : undefined,
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
       });

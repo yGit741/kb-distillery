@@ -92,6 +92,8 @@ export function AppShell() {
   // every hook runs on every render (flags can arrive later from the server), then the switch's place is worked out
   const viewsPanelOn = useFlag("views-panel");
   const shellOn = useFlag("graph-shell");
+  // flag graph-corners: the bar drops the share chip (deploy status stays on the System screen)
+  const cornersOn = useFlag("graph-corners");
   // flag graph-corners: the graph's corner disc says while it is on screen (`elsewhere`), so the bar leaves its own out
   const themeInPanel = (viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph);
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
@@ -119,7 +121,7 @@ export function AppShell() {
           ))}
         </nav>
         <div id={HEADER_SLOT_ID} className="min-w-0 flex-1 px-2" />
-        <ShareChip />
+        {!cornersOn && <ShareChip />}
         <ToursMenu />
         {!themeInPanel && (
           <Button
