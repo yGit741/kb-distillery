@@ -18,7 +18,7 @@ import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
-import { arcPlaces, loopSolid } from "./PinLoop";
+import { arcPlaces, loopSlots, loopSolid } from "./PinLoop";
 import { useTheme } from "@/theme/theme";
 
 const schema = parseSchema(sampleSnapshot().schema);
@@ -931,6 +931,24 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
     expect(p[4]!.x).toBeLessThan(0);
     const bottomLeftX = p[4]!.x - 106 * Math.sin((p[4]!.deg * Math.PI) / 180);
     expect(Math.abs(bottomLeftX + 38)).toBeLessThan(1); // the loop hangs from the pin's centre (36px in); 2px past the border
+  });
+
+  it("past the window's count both ends always show, no place is taken twice, and nothing is dropped that fits", () => {
+    for (const base of [3, 4, 5]) {
+      expect(loopSlots(base, base).slots.every((x) => x === "solid")).toBe(true);
+      for (let n = base + 1; n <= base + 8; n++) {
+        const { solid, slots } = loopSlots(n, base);
+        const named = slots.filter(Boolean) as string[];
+        const ends = named.filter((x) => x !== "solid");
+        expect(new Set(ends).size).toBe(ends.length); // each end place once
+        expect(ends).toContain("b1");
+        expect(ends).toContain("t1");
+        expect(solid).toBeGreaterThanOrEqual(2);
+        expect(named.length).toBe(Math.min(n, solid + 5)); // every card that has a place is shown
+        if (ends.includes("b2")) expect(slots.indexOf("b2")).toBe(solid + 1);
+        expect(slots.indexOf("t1")).toBe(n - 1);
+      }
+    }
   });
 
   it("pressing a card applies its view, and the view on screen has a blue dot and name", () =>
