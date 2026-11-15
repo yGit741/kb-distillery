@@ -1,4 +1,3 @@
-import { useTheme } from "@/theme/theme";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -77,7 +76,7 @@ describe("AppShell", () => {
     }
   });
 
-  it("flag graph-corners: exactly one theme switch on every screen, also when the graph cannot load", async () => {
+  it("flag graph-corners: exactly one theme switch on every screen, the bar's own, right of Tours", async () => {
     await withFlag("graph-corners", true, () =>
       withFlag("views-panel", false, () =>
       withFlag("graph-shell", true, async () => {
@@ -89,14 +88,17 @@ describe("AppShell", () => {
           await waitFor(() => expect(screen.queryAllByRole("button", { name: /switch to/i, hidden: true })).toHaveLength(1));
           unmount();
         }
-        // with the corner disc on screen the bar leaves its own switch out, and brings it back once the disc is gone
-        useTheme.getState().setElsewhere(true);
+        // the graph has no theme corner: on the graph the switch is the bar's own, right of Tours
         const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
         const { unmount } = render(<App source={ds} router={router} />);
         await screen.findByRole("navigation", { name: "Main", hidden: true });
-        expect(document.querySelector("header")!.querySelectorAll("button[aria-label^='Switch to']")).toHaveLength(0);
+        const bar = document.querySelector("header")!;
+        expect(bar.querySelectorAll("button[aria-label^='Switch to']")).toHaveLength(1);
+        expect(document.querySelector("[data-corners=theme]")).toBeNull();
+        const buttons = [...bar.querySelectorAll("button")];
+        const tours = buttons.findIndex((x) => x.textContent?.includes("Tours"));
+        if (tours >= 0) expect(buttons.findIndex((x) => x.getAttribute("aria-label")?.startsWith("Switch to"))).toBeGreaterThan(tours);
         unmount();
-        useTheme.getState().setElsewhere(false);
       })),
     );
   });
