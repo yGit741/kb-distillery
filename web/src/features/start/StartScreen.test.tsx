@@ -6,7 +6,7 @@ import { ApiError, type DataSource, type LifecycleSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
 import { withFlag } from "@/flags/testing";
 import { LifecycleLink, ScreenLink } from "./content";
-import { nowCards } from "./StartScreen";
+import { nowCards, nowTileCount } from "./StartScreen";
 
 const snap = {
   version: "0.13.1",
@@ -73,6 +73,12 @@ describe("Start guide (Home card behind /start)", () => {
     const ph = await screen.findByTestId("now-loading");
     expect(ph).toHaveClass("grid", "lg:grid-cols-5");
     expect(ph.children).toHaveLength(5);
+  });
+
+  it("the placeholder count matches the loaded tiles, also on the read-only share site", () => {
+    const shared = { ...snap, working: undefined, infra_branches: undefined } as unknown as LifecycleSnapshot;
+    expect(nowTileCount(true)).toBe(nowCards(shared).length);
+    expect(nowTileCount(false)).toBe(nowCards(snap).length);
   });
 
   it("shows the right-now cards from the lifecycle snapshot", async () => {

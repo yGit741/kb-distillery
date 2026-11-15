@@ -4,6 +4,7 @@ import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code, TableWrap } from "@/features/lifecycle/LifecycleScreen";
+import { IS_SHARE } from "@/share/env";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import { COMMIT_ROWS, LifecycleLink, ScreenLink, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
@@ -29,7 +30,7 @@ const NOW_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5";
 function NowSkeleton() {
   return (
     <div className={NOW_GRID} role="status" aria-label="Loading the current state" data-testid="now-loading">
-      {Array.from({ length: 5 }, (_, i) => (
+      {Array.from({ length: nowTileCount(IS_SHARE) }, (_, i) => (
         <Card key={i}>
           <CardContent className="p-3">
             <Skeleton className="h-4 w-2/3" />
@@ -40,6 +41,9 @@ function NowSkeleton() {
     </div>
   );
 }
+
+/** How many tiles `nowCards` returns: a static share build has no working-tree state or branches, only the two base tiles. */
+export const nowTileCount = (share: boolean) => (share ? 2 : 5);
 
 function Now() {
   const q = useApiQuery(["lifecycle"], (ds) => ds.getLifecycle());
