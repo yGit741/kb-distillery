@@ -312,6 +312,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     input.current?.blur();
   }, []);
   const openPanel = useCallback(() => setOpen(true), []);
+  /** Select the whole line once it has rendered: typing next replaces it. */
+  const selectLine = useCallback(() => requestAnimationFrame(() => input.current?.select()), []);
   const focusBar = useCallback((value?: string) => {
     if (value !== undefined) setRaw(value);
     setOpen(true);
@@ -611,6 +613,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     const shapeRow: PanelRow = {
       key: "shape",
       section: "Actions",
+      wrap: true,
       label: (
         <>
           Shape the graph: <span className="text-muted-foreground">{text}</span>
@@ -630,6 +633,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       : {
           key: "ask",
           section: "Actions",
+          wrap: true,
           label: intent ? (
             <>
               {LINE_COPY.askRow} <span className="text-muted-foreground">"{text}"</span>
@@ -925,6 +929,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (parseMode(rawNow.current).mode !== "search") {
         // a `/` line: it becomes a plain line, and its page results show
         focusBar(r.text);
+        selectLine();
         return setRoutedHint(LINE_COPY.route.search(r.text));
       }
       // the search's own first page, from the rows of the line as typed
@@ -932,7 +937,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (top) {
         top.run(false);
         say(LINE_COPY.route.search(typeof top.label === "string" ? top.label : r.text));
-      } else setRoutedHint(LINE_COPY.route.nothing(r.text));
+      } else {
+        // the line stays for editing, selected so a new line typed next replaces it instead of joining it
+        selectLine();
+        setRoutedHint(LINE_COPY.route.nothing(r.text));
+      }
     }
   }
 
