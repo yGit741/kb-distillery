@@ -64,13 +64,14 @@ export type SlotName = "solid" | "b1" | "b2" | "t1" | "t2" | "t3";
 
 /**
  * Which place each card takes, by its steps after the front one (null = out of sight). Up to the window's count every
- * card is solid. Past it both ends always show, as in the mockup: the next card half there below (b1) and the card
- * just turned past tilted above the pin (t1); with more cards, the one after almost gone below (b2), then two more
- * tilted above (t2, t3). The solid run gives way (never below two) so the ends fit.
+ * card is solid. Past it both ends show, as in the mockup: two cards fading below (b1 half there, b2 almost gone) and
+ * two turned past, tilted above the pin (t1, t2; a third, t3, once there are more cards). The solid run gives way
+ * (never below two) so the four ends fit.
  */
 export function loopSlots(n: number, base: number): { solid: number; slots: (SlotName | null)[] } {
   if (n <= base) return { solid: n, slots: Array.from({ length: n }, (): SlotName => "solid") };
-  const solid = Math.max(2, Math.min(base, n - 3));
+  // room for four ends (two fading below, two turned past above) before the solid run takes the window's count
+  const solid = Math.max(2, Math.min(base, n - 4));
   const slots: (SlotName | null)[] = Array.from({ length: n }, (_, j) => (j < solid ? "solid" : null));
   const free = (j: number) => j >= solid && j < n && slots[j] === null;
   const put = (j: number, name: SlotName) => free(j) && (slots[j] = name);
@@ -251,10 +252,9 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
               <GraphThumb kind={v.thumb} seed={v.key} className={cn("absolute inset-0 size-full", v.suggested && "opacity-75")} />
               <span className="absolute inset-x-0 bottom-0 flex items-baseline gap-2 border-t bg-card px-2.5 py-1.5 text-[12.5px]">
                 {v.on && <span aria-hidden className="size-1.5 flex-none self-center rounded-full bg-primary" />}
-                <span className={cn("min-w-0 truncate font-semibold", v.on && "text-primary")}>{v.name}</span>
-                {v.meta && (
-                  <small className={cn("ml-auto flex-none text-[11px] text-muted-foreground transition-opacity", !v.suggested && "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100")}>{v.meta}</small>
-                )}
+                <span className={cn("max-w-[72%] flex-none truncate font-semibold", v.on && "text-primary")}>{v.name}</span>
+                {/* the small grey text is always there, as in the mockup; it gives way before the name does */}
+                {v.meta && <small className="ml-auto min-w-0 shrink-[4] truncate text-[11px] text-muted-foreground">{v.meta}</small>}
               </span>
             </button>
           </div>

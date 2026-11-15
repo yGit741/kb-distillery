@@ -947,6 +947,7 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
         expect(named.length).toBe(Math.min(n, solid + 5)); // every card that has a place is shown
         if (ends.includes("b2")) expect(slots.indexOf("b2")).toBe(solid + 1);
         expect(slots.indexOf("t1")).toBe(n - 1);
+        if (n - solid >= 4) expect(ends).toEqual(expect.arrayContaining(["b1", "b2", "t1", "t2"])); // two below, two above
       }
     }
   });
@@ -1043,7 +1044,7 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         await userEvent.click(pins());
         await waitFor(() => expect(onScreen().length).toBeGreaterThan(3));
         const ends = onScreen().map((b) => b.dataset.end).filter(Boolean);
-        expect(ends).toEqual(expect.arrayContaining(["b1", "b2", "t1"]));
+        expect(ends).toEqual(expect.arrayContaining(["b1", "b2", "t1", "t2"]));
         // the top card hangs from the pin's centre: its corner is a quarter under the disc
         const top = document.querySelector<HTMLElement>("[data-corners=pin-loop]")!;
         expect(top.style.left).toBe("36px");
@@ -1065,6 +1066,26 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         expect(onScreen()[0]!.dataset.view).toBe(second);
         expect(useGraphUi.getState().shownTypes).toBe(typesBefore); // turning picks nothing
         expect(useCorners.getState().activeView).toBeNull();
+      }),
+    ));
+
+  it("on: the loop reads the graph's views, the pinned ones, then the placeholders V1 to V3, which pick nothing", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+        await userEvent.click(pins());
+        const order = () =>
+          [...document.querySelectorAll<HTMLElement>("[data-corners=pin-loop] [data-pos]")]
+            .map((li) => li.querySelector<HTMLButtonElement>("[data-view]")!)
+            .map((b) => b.getAttribute("aria-label")!.replace(/, turn the pile.*$/, ""));
+        await waitFor(() => expect(order()).toContain("Alpha"));
+        const names = order();
+        expect(names.slice(0, 2)).toEqual(["Concepts", "Sources"]);
+        expect(names.slice(-3)).toEqual(["V1", "V2", "V3"]);
+        expect(names.indexOf("Alpha")).toBeLessThan(names.indexOf("V1"));
+        const before = useGraphUi.getState().shownTypes;
+        act(() => document.querySelector<HTMLButtonElement>("[data-view='view:placeholder-v1']")!.click());
+        expect(useGraphUi.getState().shownTypes).toBe(before);
       }),
     ));
 
