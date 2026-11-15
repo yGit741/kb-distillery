@@ -10,6 +10,7 @@ import { FOCUS, makeLayer, type Layer, type NodeCond } from "./model";
  *  - "deg>4", "deg >= 4": degree
  *  - "cliques of 4+", "triangles", "the 3-core", "cut vertices", "bridges", "top 20 by betweenness", "most central",
  *    "largest community", "community of A", "colour by community" / "communities", "colour by component"
+ *  - "near A", "close to A", "around A": A and its neighbours
  * Returns undefined when the clause is not one of these (the other rules read it), null when it is but cannot be read.
  */
 type Read = (clause: string) => Layer[] | null;
@@ -56,6 +57,9 @@ export function algoClause(clause: string, read: Read): Layer[] | null | undefin
   if (m) return show({ t: "community", rank: 1 });
   m = c.match(new RegExp(`${lead}(?:community|cluster) (?:of|with|containing|around) (.+)$`, "i"));
   if (m) return show({ t: "community", of: nameOf(m[1]!) });
+  // "near A", "close to A", "around A": A and the pages one link from it
+  m = c.match(/^(?:show |find )?(?:me )?(?:all )?(?:the )?(?:pages |nodes |everything )?(?:that are |which are )?(?:near|close to|next to|around) (.+)$/i);
+  if (m) return show({ t: "hops", of: nameOf(m[1]!), n: 1 });
   // colour by the structure: communities, clusters, components
   m = c.match(/^(?:colou?r(?:ed)?(?: the)?(?: nodes| pages)? by (?:the )?)?(communit(?:y|ies)|clusters?|components?)$/i);
   if (m) return [makeLayer("style", "nodes", {}, "", { style: { color: /^comp/i.test(m[1]!) ? "component" : "community" } })];

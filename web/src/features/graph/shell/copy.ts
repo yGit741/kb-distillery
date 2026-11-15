@@ -3,6 +3,8 @@ export type LineMode = "search" | "view" | "command";
 
 export const LINE_COPY = {
   placeholder: "Explore Your Knowledge",
+  /** Page names inside a `>` line (flag graph-algos): pages the name being typed may be, Tab puts one in. */
+  names: { heading: "Pages", hint: "Tab puts it in" },
   /** View lines a plain line's words suggest (flag graph-intent): a row previews its line, Enter applies it. */
   viewSuggest: { heading: "View", whole: "Change the view:" },
   /** Lines to try, shown on an empty line; a row fills the line, Enter runs it. `{hub}` is the best-linked concept. */
@@ -153,6 +155,14 @@ export const LINE_COPY = {
     hint: "Enter applies · Esc cancels · Tab edits",
     /** Some of the pages the sentence keeps are not drawn now (a type the current view hides): applying draws them. */
     offScreen: (n: number, total: number) => (n === total ? "none drawn now" : `${n} not drawn now`),
+    /** Flag graph-algos: the "Read as" row, labelled by who read the line. */
+    readAs: "Read as",
+    readByModel: "Model read as",
+    readAsWaiting: "Enter shows the query this line becomes.",
+    more: (n: number) => `${n} more in the edit field`,
+    /** A written line names a page that is not there, or could be several. */
+    noPage: (name: string) => `No page is called "${name}".`,
+    whichPage: (name: string, options: string[]) => `"${name}" could be ${options.slice(0, 3).join(", ")}: write the full title.`,
     edit: "Edit the resolved sentence",
     editLabel: "Resolved sentence",
     editHint: "One line per layer. Enter applies exactly what is written.",
