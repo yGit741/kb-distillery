@@ -968,6 +968,49 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
     }));
 });
 
+describe("graph-corners: the views live at the top of the pin", () => {
+  const options = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=views] [data-view-option]")];
+
+  it("on: the pin lists the views above the pinned ones, Concepts on; picking Sources draws the sources alone", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+        expect(document.querySelector("[data-corners=subject]")).toBeNull(); // no switch beside the line
+        await userEvent.click(pins());
+        await waitFor(() => expect(options().length).toBeGreaterThanOrEqual(2));
+        expect(options().slice(0, 2).map((o) => o.dataset.viewOption)).toEqual(["concepts", "sources"]);
+        expect(options()[0]).toHaveAttribute("aria-checked", "true");
+        await userEvent.click(options()[1]!);
+        const drawn = [...useGraphUi.getState().shownTypes!];
+        const layerOf = new Map(schema.types.map((t) => [t.id, t.layer] as const));
+        expect(drawn.length).toBeGreaterThan(0);
+        expect(drawn.every((t) => layerOf.get(t) === "source")).toBe(true);
+      }),
+    ));
+
+  it("on: with the sources drawn, Sources is the view marked in the pin", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        const sourceTypes = schema.types.filter((t) => t.layer === "source").map((t) => t.id);
+        mount(fakeServer(), { shownTypes: new Set(sourceTypes) }, { kind: "http" });
+        await userEvent.click(pins());
+        await waitFor(() => expect(document.querySelector("[data-view-option=sources]")).toHaveAttribute("aria-checked", "true"));
+        expect(document.querySelector("[data-view-option=concepts]")).toHaveAttribute("aria-checked", "false");
+      }),
+    ));
+
+  it("off: no views in the pin, and the Concepts / Sources switch stays beside the line", () =>
+    withFlag("graph-corners", false, () =>
+      withFlag("graph-intent", true, async () => {
+        mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+        expect(document.querySelector("[data-corners=subject]")).not.toBeNull();
+        await userEvent.click(pins());
+        await screen.findByText("Alpha");
+        expect(document.querySelector("[data-corners=views]")).toBeNull();
+      }),
+    ));
+});
+
 describe("graph-corners: the spark and the brain open quick lists", () => {
   const chats = [
     { id: "c1", title: "Oldest chat", updated: "2026-11-01T10:00:00Z", status: "idle" },

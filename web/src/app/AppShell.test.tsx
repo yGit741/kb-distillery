@@ -37,6 +37,22 @@ describe("AppShell", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
   }))));
 
+  it("flag graph-corners drops the share chip from the bar; off, it shows", async () => {
+    const shared = mockDataSource({ ...ds, getShareStatus: async () => ({ status: null, chip: { label: "kb-1.5.0 · 3 h ago", cls: "ok", title: "", href: "" } }) } as Partial<DataSource>);
+    for (const on of [false, true]) {
+      await withFlag("graph-corners", on, async () => {
+        const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
+        const { unmount } = render(<App source={shared} router={router} />);
+        await screen.findByRole("navigation", { name: "Main" });
+        if (on) {
+          await new Promise((r) => setTimeout(r, 50));
+          expect(screen.queryByTestId("share-chip")).toBeNull();
+        } else expect(await screen.findByTestId("share-chip")).toBeInTheDocument();
+        unmount();
+      });
+    }
+  });
+
   it("flag ui.ingest adds an Ingest tab after What is it?, and only then", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", true, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);

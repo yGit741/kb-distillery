@@ -15,8 +15,8 @@ export const LOOP_TOP = EDGE + BUTTON - 6;
 const KEEP_BOTTOM = EDGE + BUTTON + 24;
 
 /** How many cards fit between the pin and the spark: a short window shows fewer, never fewer than one. */
-export function loopFits(areaHeight: number): number {
-  const free = areaHeight - LOOP_TOP - KEEP_BOTTOM - LOOP_H;
+export function loopFits(areaHeight: number, offset = 0): number {
+  const free = areaHeight - LOOP_TOP - offset - KEEP_BOTTOM - LOOP_H;
   return Math.max(1, Math.floor(free / LOOP_STEP) + 1);
 }
 
@@ -30,6 +30,8 @@ interface Props {
   onApply: (id: string) => void;
   /** said when nothing is pinned yet */
   empty: string;
+  /** px the loop starts below the pin's first card place: room for the views above it */
+  offset?: number;
 }
 
 /**
@@ -40,11 +42,11 @@ interface Props {
  * details; the view on screen has a small blue dot and a blue name. Pinning the current view is a command of the
  * search line (/pin), so the pile holds only what was pinned.
  */
-export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Props) {
+export function PinLoop({ open, views, active, areaHeight, onApply, empty, offset = 0 }: Props) {
   const still = useReducedMotion();
   const list = [...views].reverse(); // newest first
   const n = list.length;
-  const fits = Math.min(n, loopFits(areaHeight));
+  const fits = Math.min(n, loopFits(areaHeight, offset));
   const looping = n > fits;
   const [turn, setTurn] = useState(0);
   useEffect(() => setTurn(0), [n]);
@@ -64,7 +66,7 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
       <p
         role="status"
         className="pointer-events-auto absolute z-[16] w-[240px] rounded-xl border bg-card px-3 py-2 text-[12.5px] text-muted-foreground shadow-[var(--shadow)]"
-        style={{ left: EDGE + 5, top: LOOP_TOP + 12 }}
+        style={{ left: EDGE + 5, top: LOOP_TOP + offset + 12 }}
       >
         {empty}
       </p>
@@ -85,7 +87,7 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
       data-corners="pin-loop"
       onWheel={onWheel}
       className={cn("pointer-events-none absolute z-[16] transition-opacity duration-300 motion-reduce:transition-none", open ? "opacity-100" : "opacity-0")}
-      style={{ left: EDGE + 4, top: LOOP_TOP, width: LOOP_W + 40, height: LOOP_H + (fits - 1) * LOOP_STEP }}
+      style={{ left: EDGE + 4, top: LOOP_TOP + offset, width: LOOP_W + 40, height: LOOP_H + (fits - 1) * LOOP_STEP }}
     >
       {before && (
         <button

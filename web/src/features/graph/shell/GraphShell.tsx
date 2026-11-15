@@ -163,7 +163,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const input = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const frameW = useFrameWidth(box);
-  const lineBox = viewSwitchBox(intent && onSubject ? placeFor(switchPlace, frameW) : null);
+  // flag graph-corners: the views live in the pin, so the line keeps its whole width
+  const viewsInPin = useFlag("graph-corners");
+  const lineBox = viewSwitchBox(intent && onSubject && !viewsInPin ? placeFor(switchPlace, frameW) : null);
   const notice = useShellStore((s) => s.notice);
   const shaping = useShellStore((s) => s.shaping);
   const shape = useShellStore((s) => s.shape);

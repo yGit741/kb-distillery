@@ -99,6 +99,25 @@ describe("flag header-fold on the graph screen", () => {
       }),
     ));
 
+  it("graph-corners: the chevron is pinned to the window's top edge, the same folded or open", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, () =>
+        withFlag("graph-corners", true, async () => {
+          screenWith();
+          const show = await screen.findByRole("button", { name: "Show the app bar" });
+          expect(show.parentElement).toBe(document.body); // out of the frame, so it does not ride its slide
+          const placed = (b: HTMLElement) => [b.className.replace(/\s+/g, " "), b.style.left];
+          const folded = placed(show);
+          expect(folded[0]).toContain("fixed top-0");
+          await userEvent.click(show);
+          const hide = screen.getByRole("button", { name: "Hide the app bar" });
+          expect(placed(hide)).toEqual(folded);
+          await userEvent.click(hide);
+          expect(screen.getByRole("button", { name: "Show the app bar" })).toBeInTheDocument();
+        }),
+      ),
+    ));
+
   it("off: no chevron, the frame stays under the bar", () =>
     withFlag("graph-shell", true, () =>
       withFlag("header-fold", false, async () => {

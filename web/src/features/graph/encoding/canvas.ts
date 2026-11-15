@@ -188,6 +188,8 @@ export interface NodeDraw {
   state?: NodeState;
   /** opacity of the mark (dimming); the state ring is always drawn in full */
   alpha?: number;
+  /** the ground colour: a dimmed mark is first laid on a solid disc of it, so links under the node never show through */
+  ground?: string;
   /** a source shows its type glyph (big enough on screen, or hovered) */
   glyph?: boolean;
   /** the zoom: px values (state rings) are divided by it; 1 when drawing in screen px */
@@ -197,6 +199,12 @@ export interface NodeDraw {
 /** One page as a node, the same on every surface: its state ring, then its type's mark (and a source's glyph). */
 export function drawNode(ctx: CanvasRenderingContext2D, type: string, d: NodeDraw): void {
   drawNodeState(ctx, d.state ?? null, d.x, d.y, d.r, d.color, d.ring, d.scale ?? 1);
+  if (d.ground && (d.alpha ?? 1) < 1) {
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r, 0, 2 * Math.PI);
+    ctx.fillStyle = d.ground;
+    ctx.fill();
+  }
   ctx.globalAlpha = d.alpha ?? 1;
   const mark = markOf(type);
   drawMark(ctx, mark, d.x, d.y, d.r, d.color, d.background, d.font, d.initials);
