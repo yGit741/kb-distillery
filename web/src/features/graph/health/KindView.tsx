@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/theme/theme";
 import { NodeSwatch, SourceIcon } from "../encoding/NodeMarkSvg";
 import { GLYPH_LABEL, type SourceGlyph } from "../encoding/spec";
 import type { NeighborMap } from "../graphData";
@@ -40,7 +39,6 @@ interface Props {
  * Resting on a row lights its links; pressing it opens the page.
  */
 export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClose }: Props) {
-  useTheme((s) => s.theme); // the support colours have a value per ground: redraw the swatches with the theme
   const d = useMemo(() => kindDetail(kind, nodes, neighbors, byId, support), [kind, nodes, neighbors, byId, support]);
   const [hot, setHot] = useState<string | null>(null);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
