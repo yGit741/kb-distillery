@@ -1,0 +1,26 @@
+{
+  "name": "graph-theory structure: cliques, cores, cuts, bridges, centrality, communities (flag graph-algos)",
+  "stack": {
+    "v": 2,
+    "layers": [
+      {"id": "L1", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "clique", "min": 4}]}},
+      {"id": "L2", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "core", "k": 3}]}},
+      {"id": "L3", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "cut"}]}},
+      {"id": "L4", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "bridge"}]}},
+      {"id": "L5", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "top", "by": "betweenness", "n": 20}]}},
+      {"id": "L6", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "community", "rank": 1}]}},
+      {"id": "L7", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "community", "of": "A"}]}},
+      {"id": "L8", "kind": "style", "target": "nodes", "text": "", "subgraph": {}, "style": {"color": "community"}}
+    ]
+  },
+  "lines": [
+    "show nodes clique >= 4",
+    "show nodes core 3",
+    "show nodes cut vertex",
+    "show nodes bridge end",
+    "show nodes top 20 by betweenness",
+    "show nodes largest community",
+    "show nodes community of \"A\"",
+    "style nodes color by community"
+  ]
+}

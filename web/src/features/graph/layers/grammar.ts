@@ -68,6 +68,20 @@ export const NODE_SPECS: Spec<NodeCond>[] = [
     read: (m) => (m[2] !== undefined ? { t: "component", of: unquote(m[2]) } : { t: "component", rank: m[1] ? Number(m[1]) : 1 }),
     write: (c) => (c.t === "component" ? (c.of ? `component of ${quote(c.of)}` : !c.rank || c.rank === 1 ? "largest component" : `component ${c.rank}`) : null),
   },
+  { re: /^clique >= (\d+)$/, read: (m) => ({ t: "clique", min: Math.max(2, Number(m[1])) }), write: (c) => (c.t === "clique" ? `clique >= ${c.min}` : null) },
+  { re: /^core (\d+)$/, read: (m) => ({ t: "core", k: Math.max(1, Number(m[1])) }), write: (c) => (c.t === "core" ? `core ${c.k}` : null) },
+  { re: /^cut vertex$/, read: () => ({ t: "cut" }), write: (c) => (c.t === "cut" ? "cut vertex" : null) },
+  { re: /^bridge end$/, read: () => ({ t: "bridge" }), write: (c) => (c.t === "bridge" ? "bridge end" : null) },
+  {
+    re: /^top (\d+) by (degree|betweenness|pagerank|closeness)$/,
+    read: (m) => ({ t: "top", n: Math.max(1, Number(m[1])), by: m[2] as "degree" | "betweenness" | "pagerank" | "closeness" }),
+    write: (c) => (c.t === "top" ? `top ${c.n} by ${c.by}` : null),
+  },
+  {
+    re: new RegExp(`^(?:largest community|community (\\d+)|community of ${STR})$`),
+    read: (m) => (m[2] !== undefined ? { t: "community", of: unquote(m[2]) } : { t: "community", rank: m[1] ? Number(m[1]) : 1 }),
+    write: (c) => (c.t === "community" ? (c.of ? `community of ${quote(c.of)}` : !c.rank || c.rank === 1 ? "largest community" : `community ${c.rank}`) : null),
+  },
   {
     re: new RegExp(`^paths between ${STR} and ${STR} up to (\\d+) hops?$`),
     read: (m) => ({ t: "paths", a: unquote(m[1]!), b: unquote(m[2]!), n: Number(m[3]) }),
@@ -134,7 +148,7 @@ export function print(layer: Layer): string {
 
 // ---- parse
 /** Split on `and` only where a condition starts, so `paths between "A" and "B"` stays whole. */
-const COND_START = /^(?:not |all\b|type |degree |within |paths |shortest |common |largest component|component |having |linked_from |created |in area |about |favorite\b|mentioned_in |text |name |count |direction |between )/;
+const COND_START = /^(?:not |all\b|type |degree |within |paths |shortest |common |largest component|component |clique |core |cut vertex|bridge end|top |largest community|community |having |linked_from |created |in area |about |favorite\b|mentioned_in |text |name |count |direction |between )/;
 
 function splitConds(s: string): string[] {
   const out: string[] = [];
@@ -184,7 +198,7 @@ function readConds<C>(specs: Spec<C>[], s: string, at: number): C[] | ParseError
   return out;
 }
 
-const COLORS = new Set(["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support"]);
+const COLORS = new Set(["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support", "community", "component"]);
 const SIZES = new Set(["connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"]);
 const WIDTHS = new Set(["thin", "normal", "thick"]);
 

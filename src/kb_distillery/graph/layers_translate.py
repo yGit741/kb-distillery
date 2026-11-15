@@ -159,7 +159,8 @@ Request: {text}
 
 # ---- the answer
 _BY = re.compile(r"^[\w-]+$")
-_COLORS = {"type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support"}
+_COLORS = {"type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support",
+           "community", "component"}
 _SIZES = {"connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"}
 _WIDTHS = {"thin", "normal", "thick"}
 
@@ -238,6 +239,20 @@ def _node(c):
         if c.of:
             return f"component of {_quote(c.of)}"
         return "largest component" if not c.rank or c.rank == 1 else f"component {c.rank}"
+    if t == "clique":
+        return f"clique >= {c.min}"
+    if t == "core":
+        return f"core {c.k}"
+    if t == "cut":
+        return "cut vertex"
+    if t == "bridge":
+        return "bridge end"
+    if t == "top":
+        return f"top {c.n} by {c.by}"
+    if t == "community":
+        if c.of:
+            return f"community of {_quote(c.of)}"
+        return "largest community" if not c.rank or c.rank == 1 else f"community {c.rank}"
     if t == "hasEdge":
         return f"having edge {c.type}" + (" exists = false" if c.exists is False else "")
     if t == "linkedFromType":

@@ -65,6 +65,7 @@ export function resolveNames(layers: Layer[], nodes: readonly GNode[], opts: { f
       case "common":
         return { ...c, a: one(c.a), b: one(c.b) };
       case "component":
+      case "community":
         return c.of ? { ...c, of: one(c.of) } : c;
       case "name":
         return { ...c, slugs: c.slugs.map(one) };

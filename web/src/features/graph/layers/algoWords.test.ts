@@ -117,3 +117,61 @@ describe("the language lines", () => {
     }
   });
 });
+
+// two triangles joined by the bridge c-d, and a tail d-g (PR 2: structure)
+const dumb = {
+  nodes: ["a", "b", "c", "d", "e", "f", "g"].map((id) => node(id, { title: id.toUpperCase() })),
+  links: ["a-b", "b-c", "c-a", "d-e", "e-f", "f-d", "c-d", "d-g"].map((e) => ({ source: e[0]!, target: e[2]!, kind: "wikilink" as const })),
+};
+const drawStack = (layers: Layer[]) => [...(evaluate(stack(EMPTY_STACK, layers), dumb).nodeIds ?? [])].sort();
+
+describe("flag graph-algos: structure words (cliques, cores, cuts, bridges, centrality, communities)", () => {
+  it("on: the words read as lines", () =>
+    withFlag("graph-algos", true, async () => {
+      const cases: [string, string][] = [
+        ["cliques of 4+", "show nodes clique >= 4"],
+        ["triangles", "show nodes clique >= 3"],
+        ["the 3-core", "show nodes core 3"],
+        ["k-core 2", "show nodes core 2"],
+        ["cut vertices", "show nodes cut vertex"],
+        ["articulation points", "show nodes cut vertex"],
+        ["bridges", "show nodes bridge end"],
+        ["top 5 by betweenness", "show nodes top 5 by betweenness"],
+        ["top 10 by page rank", "show nodes top 10 by pagerank"],
+        ["most central", "show nodes top 20 by betweenness"],
+        ["largest community", "show nodes largest community"],
+        ["community of A", 'show nodes community of "A"'],
+        ["colour by community", "style nodes color by community"],
+        ["communities", "style nodes color by community"],
+        ["colour by component", "style nodes color by component"],
+      ];
+      for (const [t, line] of cases) expect(fromSentence(t).lines, t).toEqual([line]);
+    }));
+
+  it("on: they draw the right pages", () =>
+    withFlag("graph-algos", true, async () => {
+      const read = (t: string) => fromSentence(t).layers;
+      expect(drawStack(read("triangles"))).toEqual(["a", "b", "c", "d", "e", "f"]);
+      expect(drawStack(read("the 2-core"))).toEqual(["a", "b", "c", "d", "e", "f"]);
+      expect(drawStack(read("cut vertices"))).toEqual(["c", "d"]);
+      expect(drawStack(read("bridges"))).toEqual(["c", "d", "g"]);
+      expect(drawStack(read("top 2 by betweenness"))).toEqual(["c", "d"]);
+      const left = drawStack(read("community of A"));
+      expect(left).toContain("b");
+      expect(left).not.toContain("e");
+    }));
+
+  it("off: none of them is read by the rules", () =>
+    withFlag("graph-algos", false, async () => {
+      for (const t of ["cliques of 4+", "the 3-core", "cut vertices", "bridges", "top 5 by betweenness", "largest community", "communities"])
+        expect(fromSentence(t).unknown, t).toBe(t);
+    }));
+
+  it("the lines print and parse back", () => {
+    for (const line of ["show nodes clique >= 4", "show nodes core 3", "show nodes cut vertex", "show nodes bridge end", "show nodes top 5 by pagerank", "show nodes largest community", "show nodes community 2", 'show nodes community of "A"', "style nodes color by community", "style nodes color by component"]) {
+      const l = parse(line);
+      expect(isParseError(l), line).toBe(false);
+      expect(print(l as Layer)).toBe(line);
+    }
+  });
+});

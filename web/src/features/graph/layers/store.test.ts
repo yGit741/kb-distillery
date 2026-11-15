@@ -2,6 +2,7 @@ import { useKb } from "@/lib/store";
 import { sampleLinks, sampleNodes } from "../fixtures";
 import { useShellStore } from "../shell/shellStore";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
+import { getGroups, setGroups } from "../style";
 import { EMPTY_STACK, makeLayer, type Layer } from "./model";
 import { HISTORY_MAX, sentenceLayer, useLayers } from "./store";
 
@@ -191,5 +192,22 @@ describe("editing a layer in place", () => {
     expect(useGraphUi.getState().colorBy).toBe("type");
     undo();
     expect(useGraphUi.getState().colorBy).toBe("depth");
+  });
+});
+
+describe("colour by community (flag graph-algos): the groups the canvas reads", () => {
+  const byCommunity = () => [makeLayer("style", "nodes", {}, "colour by community", { style: { color: "community" } })];
+
+  it("applying sets them; a cancelled preview gives the earlier ones back", () => {
+    setGroups("community", new Map());
+    useLayers.getState().apply("replace", byCommunity());
+    const applied = getGroups("community");
+    expect(applied.size).toBeGreaterThan(0);
+    setGroups("community", new Map([["x", 0]]));
+    const before = getGroups("community");
+    useLayers.getState().setPreview("replace", byCommunity());
+    expect(getGroups("community")).not.toBe(before);
+    useLayers.getState().cancelPreview();
+    expect(getGroups("community")).toBe(before);
   });
 });

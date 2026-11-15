@@ -6,7 +6,7 @@ import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
-export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support" | "topic";
+export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support" | "topic" | "community" | "component";
 export type SizeBy = "connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg";
 
 /** Size and colour modes that read a 0..1 signal of the importance score (lab/importance) instead of the page. */
@@ -155,6 +155,13 @@ let TOPICS: { of: ReadonlyMap<string, number>; names: ReadonlyMap<number, string
 export function setTopics(of: ReadonlyMap<string, number>, names: ReadonlyMap<number, string>): void {
   TOPICS = { of, names };
 }
+/** Communities and components of the drawn pages (flag graph-algos), set when a `>` line colours by them. */
+const GROUPS: Record<"community" | "component", ReadonlyMap<string, number>> = { community: new Map(), component: new Map() };
+export function setGroups(by: "community" | "component", of: ReadonlyMap<string, number>): void {
+  GROUPS[by] = of;
+}
+export const getGroups = (by: "community" | "component"): ReadonlyMap<string, number> => GROUPS[by];
+const NOT_DRAWN = "(not drawn)";
 /** A page without a vector has no topic: the neutral "none" colour, its own key row (sorted last). */
 export const NO_TOPIC = "No vector";
 const topicOf = (n: Pick<GNode, "id">): number | undefined => TOPICS.of.get(n.id);
@@ -282,6 +289,11 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       const t = topicOf(n);
       return t === undefined ? NONE_GREY : topicColor(t);
     }
+    case "community":
+    case "component": {
+      const g = GROUPS[by].get(n.id);
+      return g === undefined ? NONE_GREY : topicColor(g);
+    }
     default:
       return "#7aa2ff";
   }
@@ -319,6 +331,11 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
     case "topic": {
       const t = topicOf(n);
       return t === undefined ? NO_TOPIC : (TOPICS.names.get(t) ?? `Topic ${t + 1}`);
+    }
+    case "community":
+    case "component": {
+      const g = GROUPS[by].get(n.id);
+      return g === undefined ? NOT_DRAWN : `${by === "community" ? "Community" : "Component"} ${g + 1}`;
     }
     case "none":
       return "All pages";
@@ -418,4 +435,5 @@ export function semanticRadius(rGraph: number, scale: number, zr: number): numbe
 
 /** Type is the mark (./encoding), so colour by type would repeat the shape: such a view colours by area instead. */
 /** A topic colouring without topics loaded (flag off, no embedding) colours by theme instead of all grey. */
-export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" || (by === "topic" && !TOPICS.of.size) ? "area" : by);
+export const effectiveColorBy = (by: ColorBy): ColorBy =>
+  by === "type" || (by === "topic" && !TOPICS.of.size) || ((by === "community" || by === "component") && !GROUPS[by].size) ? "area" : by;
