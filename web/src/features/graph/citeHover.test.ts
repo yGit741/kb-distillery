@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drawEdges, pickCite } from "./citeHover";
+import { STATE } from "./encoding/spec";
 import { readCanvasColors } from "./canvasTheme";
 import type { SimLink, SimNode } from "./types";
 
@@ -68,5 +69,15 @@ describe("drawEdges", () => {
     drawEdges(ctx, [l1, l2], 1, readCanvasColors(), () => 5, (l) => (l.kind === "shared" ? "2 shared sources" : "links to"), () => true);
     expect(texts.filter((t) => t === "Title hub")).toHaveLength(1);
     expect(texts).toEqual(expect.arrayContaining(["links to", "2 shared sources", "Title a", "Title b"]));
+  });
+
+  it("rings each touched page where the selection ring sits, and skips pages that already wear one", () => {
+    const a = titled("a", 0, 0);
+    const b = titled("b", 200, 0);
+    const arcs: { x: number; r: number }[] = [];
+    const { ctx } = recorder();
+    (ctx as unknown as { arc: unknown }).arc = (x: number, _y: number, r: number) => arcs.push({ x, r });
+    drawEdges(ctx, [{ source: a, target: b, kind: "wikilink" } as SimLink], 1, readCanvasColors(), () => 5, () => "links to", () => true, 1.5, (n) => n.id === "a");
+    expect(arcs).toEqual([{ x: 200, r: 5 + STATE.gap }]);
   });
 });

@@ -159,6 +159,13 @@ export const LINE_COPY = {
     hint: "Enter applies · Esc cancels · Tab edits",
     /** Some of the pages the sentence keeps are not drawn now (a type the current view hides): applying draws them. */
     offScreen: (n: number, total: number) => (n === total ? "none drawn now" : `${n} not drawn now`),
+    /** Flag graph-algos: a shortest path runs through pages the view hides; the preview brings them in, faded. */
+    via: (titles: string[], type: string | null) => {
+      const one = type ? type.replace(/-/g, " ") : "hidden page";
+      const noun = titles.length === 1 ? one : one === "person" ? "people" : `${one}s`;
+      const named = titles.slice(0, 2).join(", ") + (titles.length > 2 ? ` and ${titles.length - 2} more` : "");
+      return `goes through ${titles.length} ${noun}: ${named}`;
+    },
     /** Flag graph-algos: the "Read as" row, labelled by who read the line. */
     readAs: "Read as",
     readByModel: "Model read as",
