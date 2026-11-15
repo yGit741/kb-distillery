@@ -1,3 +1,5 @@
+import { withAlpha } from "./canvasTheme";
+
 /** The magnetic pointer: the hovered page is the nearest one, not only the one under the pointer. */
 
 export interface ScreenNode {
@@ -34,6 +36,12 @@ export function gapOf(n: ScreenNode, all: readonly ScreenNode[]): number {
 /** How far a node's pull reaches: follows the spacing around it (density and zoom both count). */
 export const reachOf = (n: ScreenNode, all: readonly ScreenNode[]): number =>
   Math.min(REACH_MAX, Math.max(REACH_MIN, gapOf(n, all) * REACH_SHARE));
+
+/** How far outside a dot's rim (screen px) the pointer still counts as on it, where an edge under the pointer yields. */
+export const DOT_SLACK_PX = 3;
+
+/** True when the pointer is on a dot, or within `slack` px of its rim. */
+export const onDot = (nodes: readonly ScreenNode[], px: number, py: number, slack = 0): boolean => nodes.some((n) => rim(n, px, py) <= slack);
 
 /** Nearest node to the pointer within its own reach, or null (a miss). `current` is sticky. */
 export function pickMagnetic(
@@ -72,10 +80,15 @@ export function stepBubble(b: Bubble, want: number, strength: number, still: boo
   return still ? { r: want, a: strength } : { r: b.r + (want - b.r) * 0.3, a: b.a + (strength - b.a) * 0.2 };
 }
 
-/** What the bubble aims for: it reaches past the target's rim and weakens toward the edge of its reach. */
+/** How far past the target's rim the bubble reaches, screen px: the same at every zoom. */
+export const BUBBLE_OVERLAP = 8;
+
+/** What the bubble aims for: it reaches just past the target's rim (never across the whole node, so it does not
+ *  grow with the zoom) and weakens toward the edge of the reach. Inside the node it shrinks away. */
 export function bubbleAim(t: ScreenNode, px: number, py: number, all: readonly ScreenNode[]): { want: number; strength: number } {
-  const want = Math.hypot(t.x - px, t.y - py) + t.r + 10;
-  const strength = 1 - 0.55 * Math.min(1, Math.max(0, rim(t, px, py)) / reachOf(t, all));
+  const gap = rim(t, px, py);
+  const want = gap > 0 ? gap + BUBBLE_OVERLAP : 0;
+  const strength = 1 - 0.55 * Math.min(1, Math.max(0, gap) / reachOf(t, all));
   return { want, strength };
 }
 
@@ -88,25 +101,34 @@ export function drawBubble(
   b: Bubble,
   rgb: string,
 ): void {
-  if (b.a <= 0.02 || b.r <= 2) return;
-  const R = b.r * 1.12;
-  const g = ctx.createRadialGradient(px, py, 0, px, py, R);
-  g.addColorStop(0, `rgba(${rgb},${0.17 * b.a})`);
-  g.addColorStop(0.6, `rgba(${rgb},${0.11 * b.a})`);
-  g.addColorStop(1, `rgba(${rgb},0)`);
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(px, py, R, 0, Math.PI * 2);
-  ctx.fill();
+  if (b.a <= 0.02) return;
+  const hex = hexOf(rgb);
+  if (b.r > 2) {
+    const R = b.r * 1.12;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, R);
+    g.addColorStop(0, withAlpha(hex, 0.09 * b.a));
+    g.addColorStop(0.6, withAlpha(hex, 0.05 * b.a));
+    g.addColorStop(1, withAlpha(hex, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, R, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (!target) return;
-  const g2 = ctx.createRadialGradient(target.x, target.y, target.r * 0.6, target.x, target.y, target.r + 16);
-  g2.addColorStop(0, `rgba(${rgb},${0.3 * b.a})`);
-  g2.addColorStop(1, `rgba(${rgb},0)`);
+  // a thin halo just outside the rim, screen px, so it keeps one size at every zoom
+  const outer = target.r + 10;
+  const g2 = ctx.createRadialGradient(target.x, target.y, target.r, target.x, target.y, outer);
+  g2.addColorStop(0, withAlpha(hex, 0.18 * b.a));
+  g2.addColorStop(1, withAlpha(hex, 0));
   ctx.fillStyle = g2;
   ctx.beginPath();
-  ctx.arc(target.x, target.y, target.r + 16, 0, Math.PI * 2);
+  ctx.arc(target.x, target.y, outer, 0, Math.PI * 2);
   ctx.fill();
 }
+
+/** `#rrggbb` of an "r,g,b" triple, for the shared `withAlpha`. */
+const hexOf = (rgb: string): string =>
+  "#" + rgb.split(",").map((n) => Math.max(0, Math.min(255, Math.round(Number(n) || 0))).toString(16).padStart(2, "0")).join("");
 
 /** "r,g,b" of a CSS colour (#rrggbb or rgb()/rgba()); the blue accent when it cannot be read. */
 export function rgbOf(color: string): string {

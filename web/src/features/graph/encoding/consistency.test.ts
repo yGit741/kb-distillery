@@ -27,6 +27,7 @@ const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/home/SampleGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
   "features/graph/GraphCanvas.tsx": { n: 2, why: "experiment halos (tools/decor) under a node, and the soft glow under an open uncited clump's outer dots (Citations by meaning): not nodes" },
   "features/graph/citeHover.ts": { n: 3, why: "the thin ring round the pages of a lit edge (a hovered citation, or any edge under flag edge-select): an emphasis, not a node; and the two discs that clip the edge so it runs under its pages" },
+  "features/graph/pathDraw.ts": { n: 1, why: "the dashed outline round a page a previewed shortest path brings in (flag graph-algos): state around a mark drawn by the encoding, never a mark" },
   "features/graph/rawLayer.ts": { n: 4, why: "raw piles: stacks of raw files, not pages (Full Graph feature)" },
   "features/graph/shell/corners/SubjectToggle.tsx": { n: 3, why: "the view switch's line icon for Concepts (three linked rings, a UI icon), never a page mark" },
   "features/graph/shell/thinkingDraw.ts": { n: 5, why: "show-thinking: the citation badge, the hover ring and the temporary web-source mark (not a page), never a page mark" },
