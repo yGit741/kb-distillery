@@ -169,7 +169,7 @@ function readConds<C>(specs: Spec<C>[], s: string, at: number): C[] | ParseError
   return out;
 }
 
-const COLORS = new Set(["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none"]);
+const COLORS = new Set(["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support"]);
 const SIZES = new Set(["connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"]);
 const WIDTHS = new Set(["thin", "normal", "thick"]);
 

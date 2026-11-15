@@ -11,7 +11,7 @@ describe("fromSentence", () => {
 
   it("reads the synonyms", () => {
     expect(fromSentence("only orphans").lines).toEqual(["show nodes degree = 0"]);
-    expect(fromSentence("colour by kind").lines).toEqual(["style nodes color by type"]);
+    expect(fromSentence("colour by kind").lines).toEqual(["style nodes color by format"]);
     expect(fromSentence("size by links").lines).toEqual(["style nodes size by connections"]);
     expect(fromSentence("thin mentions edges").lines).toEqual(["style edges width by thin for type mentions"]);
     expect(fromSentence("Hide orphans.").lines).toEqual(["hide nodes degree = 0"]);
@@ -29,6 +29,30 @@ describe("fromSentence", () => {
     expect(fromSentence("no question notes").lines[0]).toMatch(/^show nodes not /);
     expect(fromSentence("papers with more than 5 links").lines).toEqual(["show nodes type paper and degree > 5"]);
     expect(fromSentence("exclude papers with more than 5 links").lines).toEqual(["hide nodes type paper and degree > 5"]);
+  });
+
+  it("reads a line without commas, the legend's names and small typos (your line)", () => {
+    expect(fromSentence("only orphans color by theams").lines).toEqual(["show nodes degree = 0", "style nodes color by area"]);
+    expect(fromSentence("only orphans colour by theme").lines).toEqual(["show nodes degree = 0", "style nodes color by area"]);
+    expect(fromSentence("orphnas").lines).toEqual(["show nodes degree = 0"]);
+    expect(fromSentence("dont show orphans and colour by maturity").lines).toEqual(["hide nodes degree = 0", "style nodes color by status"]);
+    expect(fromSentence("only papers and hide people").lines).toEqual(["show nodes type paper", "hide nodes type person"]);
+    expect(fromSentence("colour by digest status").lines).toEqual(["style nodes color by depth"]);
+    expect(fromSentence("colour by date added").lines).toEqual(["style nodes color by added"]);
+    expect(fromSentence("colour by source count").lines).toEqual(["style nodes color by evidence"]);
+    expect(fromSentence("colur by type").lines).toEqual(["style nodes color by format"]);
+  });
+
+  it("never mends a page name, and a colour it cannot place is left for the model", () => {
+    expect(fromSentence("within 2 hops of Colors of noise").lines[0]).toContain("Colors of noise");
+    expect(fromSentence('about "Colorado"').lines[0]).toContain("Colorado");
+    expect(fromSentence("don't show orphnas").lines).toEqual(["hide nodes degree = 0"]);
+    expect(fromSentence("favorites").lines).toEqual(["show nodes favorite"]);
+    expect(fromSentence("colour by score").lines).toEqual(["style nodes color by score"]);
+    // topic colouring is a view of its own, never a layer colour
+    expect(fromSentence("colour by topic").unknown).toBe("colour by topic");
+    expect(fromSentence("colour by year").unknown).toBe("colour by year");
+    expect(fromSentence("colour by vibes").unknown).toBe("colour by vibes");
   });
 
   it("returns unknown for text it cannot read", () => {

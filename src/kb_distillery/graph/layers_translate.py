@@ -42,9 +42,17 @@ Page conditions (kind "nodes"):
   | linked_from type <t> | created > <days>d | in area "<area>" | about "<phrase>" | favorite
   | mentioned_in chat "<title>" | text "<phrase>" | name "<page>" [or "<page>" ...] | not <condition>
 Link conditions (target "edges"): all | type <t> | count <op> <n> | direction in|out|both | between "<page>" and "<page>"
-<op> is one of >= <= > < =. Names are page titles or slugs, quoted. Style values: color by type|layer|depth|status|area|
-degree|evidence|score|none; size by connections|in|out|uniform|tier|evidence|score|gap|logdeg; width by thin|normal|thick;
-any other value is a page property written {"by": "<property>"}."""
+<op> is one of >= <= > < =. Names are page titles or slugs, quoted. Style values: color by
+format|area|status|depth|recency|added|evidence|support|layer|degree|score|none; size by
+connections|in|out|uniform|tier|evidence|score|gap|logdeg; width by thin|normal|thick; any other value is a page
+property written {"by": "<property>"}.
+
+READING A REQUEST
+People type fast: read past typos ("orphnas", "colur", "theams") and missing commas ("only orphans color by theme" is
+two layers). The legend's colour names map to values: theme -> area, type or kind -> format, maturity -> status,
+digest status -> depth, date added -> added, recency -> recency, source count -> evidence, source support -> support.
+Never answer color "type" (it draws as the theme). Words for links counted on screen: orphans or isolated -> degree = 0,
+leaves -> degree = 1, hubs -> degree >= 8. "don't show", "exclude", "without", "no", "remove" mean hide."""
 
 # Layer objects as the browser holds them: "t" names the condition, the lines above are only for reading.
 SHAPES = """\
@@ -61,6 +69,9 @@ Link conditions: {"t":"type","value":"supports"} {"t":"count","op":">","n":1} {"
   {"t":"endpoints","slugs":["<page>","<page>"]} {"t":"all"}"""
 
 EXAMPLES = (
+    ("only orphnas colour by theams",
+     [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "degree", "op": "=", "n": 0}]}},
+      {"kind": "style", "target": "nodes", "subgraph": {}, "style": {"color": "area"}}]),
     ("only non-orphans within 3 hops of Learning theory",
      [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "degree", "op": ">", "n": 0},
                                                                    {"t": "hops", "of": "Learning theory", "n": 3}]}}]),
