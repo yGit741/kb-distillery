@@ -163,3 +163,11 @@ def test_the_graph_theory_examples_validate_and_print_like_the_browser():
         ['show nodes shortest path between "Learning theory" and "Compression"', "style nodes color by community"],
         ["show nodes cut vertex"],
     ]
+
+
+def test_the_explanation_is_one_sentence(monkeypatch):
+    layer = {"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "type", "value": "paper"}]}}
+    fake_ask(monkeypatch, json.dumps({"layers": [layer], "explanation": "Papers; reading status is not a condition. The machine is busy."}))
+    assert lt.translate("papers to read", vocabulary=VOCAB)["explanation"] == "Papers; reading status is not a condition."
+    fake_ask(monkeypatch, json.dumps({"layers": [layer], "explanation": "  Papers, e.g. v1.2 and all  "}))
+    assert lt.translate("papers", vocabulary=VOCAB)["explanation"] == "Papers, e.g. v1.2 and all"
