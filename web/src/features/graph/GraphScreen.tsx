@@ -320,10 +320,14 @@ function Loaded({
   const cornersFlag = useFlag("graph-corners");
   // flag graph-corners: every page load opens on Concepts coloured by theme, whatever view an earlier visit left
   // (a link that names a view still wins). Set before the first render builds the canvas, like the calm default.
-  if (cornersFlag && firstBare.current && !openedOnConcepts) {
+  // A load that opens on a named view uses up the chance too, so coming back to a bare graph later in the same page
+  // load keeps whatever was picked meanwhile.
+  if (cornersFlag && !openedOnConcepts) {
     openedOnConcepts = true;
-    if (useEmbedView.getState().view) leaveEmbed(false);
-    useGraphUi.getState().applyStory(CALM_STORY);
+    if (firstBare.current) {
+      if (useEmbedView.getState().view) leaveEmbed(false);
+      useGraphUi.getState().applyStory(CALM_STORY);
+    }
   }
   const sparkPanelW = useChatFull((s) => s.panelW);
   const explorerOpen = useChatFull((s) => s.explorerOpen);

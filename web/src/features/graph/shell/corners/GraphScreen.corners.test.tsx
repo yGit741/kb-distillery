@@ -76,6 +76,18 @@ describe("graph-corners: every page load opens on Concepts by theme", () => {
       expect(useGraphUi.getState().story).toBe("sources");
     }));
 
+  it("on: a load that opens on a named view uses up the reset, so a later bare visit keeps the view", () =>
+    withFlag("graph-corners", true, async () => {
+      resetOpenedOnConcepts();
+      const { unmount } = render(wrap(graph(), <GraphScreen search={{ view: "sources" }} host={host} />));
+      await screen.findByTestId("graph-corners");
+      unmount();
+      useGraphUi.setState({ story: "sources", colorBy: "format" });
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-corners");
+      expect(useGraphUi.getState().colorBy).toBe("format");
+    }));
+
   it("off: the view an earlier visit left stays", () =>
     withFlag("graph-corners", false, async () => {
       resetOpenedOnConcepts();
