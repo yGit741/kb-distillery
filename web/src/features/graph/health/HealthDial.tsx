@@ -126,7 +126,7 @@ export function HealthDial({ nodes, neighbors, byId }: Props) {
             key={kind.kind}
             type="button"
             data-kind={kind.kind}
-            aria-label={`${kind.label}: ${kind.total} sources, ${kindLine(kind)}. Show on the map`}
+            aria-label={`${kind.label}: ${kind.total} ${kind.total === 1 ? "source" : "sources"}, ${kindLine(kind)}. Show on the map`}
             title={`Show ${kind.label.toLowerCase()} and the concepts they feed`}
             onClick={() => {
               spot(null);

@@ -186,7 +186,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     }
   },
   "knowledge-health": {
-    "description": "Graph: the second view is Health instead of Sources. Concepts are coloured by how many sources back them, a dial lists the source kinds with how much of each is digested, and pressing a kind opens its sources beside the concepts they feed (needs graph-intent).",
+    "description": "Graph: the second view is Health instead of Sources. Concepts are coloured by how many sources back them, a dial lists the source kinds with how much of each is digested, and pressing a kind draws its sources and the concepts they feed on the graph itself (needs graph-intent).",
     "owner": "maintainer",
     "created": "2026-11-14",
     "expires": "2027-02-12",
