@@ -252,7 +252,7 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
               <GraphThumb kind={v.thumb} seed={v.key} className={cn("absolute inset-0 size-full", v.suggested && "opacity-75")} />
               <span className="absolute inset-x-0 bottom-0 flex items-baseline gap-2 border-t bg-card px-2.5 py-1.5 text-[12.5px]">
                 {v.on && <span aria-hidden className="size-1.5 flex-none self-center rounded-full bg-primary" />}
-                <span className={cn("max-w-[72%] flex-none truncate font-semibold", v.on && "text-primary")}>{v.name}</span>
+                <span className={cn("min-w-0 truncate font-semibold", v.meta && "max-w-[72%] flex-none", v.on && "text-primary")}>{v.name}</span>
                 {/* the small grey text is always there, as in the mockup; it gives way before the name does */}
                 {v.meta && <small className="ml-auto min-w-0 shrink-[4] truncate text-[11px] text-muted-foreground">{v.meta}</small>}
               </span>

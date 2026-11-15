@@ -405,8 +405,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     [intent, subject, sourcesDrawn, embedding],
   );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
-  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and the views built on
-  // meaning close it (Semantics, then three placeholders V1–V3 after the pinned ones). Which one is on: an embedding view, else the Citations
+  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and a kb with an
+  // embedding adds Semantics (the meaning map) to them; three placeholders V1–V3 close the loop after the
+  // pinned ones (Topics and Missing links stay in the gallery). Which one is on: an embedding view, else the Citations
   // links, else what the drawn types say (Health is a lens on Concepts)
   const embedOn = useEmbedView((s) => s.view);
   const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));

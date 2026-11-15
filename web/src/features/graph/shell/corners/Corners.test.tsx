@@ -1084,8 +1084,15 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         expect(names.slice(-3)).toEqual(["V1", "V2", "V3"]);
         expect(names.indexOf("Alpha")).toBeLessThan(names.indexOf("V1"));
         const before = useGraphUi.getState().shownTypes;
-        act(() => document.querySelector<HTMLButtonElement>("[data-view='view:placeholder-v1']")!.click());
+        // a faded card turns the loop: turn until V1 is a solid card, then press it
+        const v1 = () => document.querySelector<HTMLButtonElement>("[data-view='view:placeholder-v1']")!;
+        for (let i = 0; i < 10 && v1().closest<HTMLElement>("[data-slot]")?.dataset.slot !== "solid"; i++)
+          await userEvent.click(onScreen().find((b) => b.dataset.end === "b1")!);
+        await userEvent.click(v1());
         expect(useGraphUi.getState().shownTypes).toBe(before);
+        expect(await screen.findByText(/V1 is a placeholder/)).toBeInTheDocument();
+        // no embedding in this kb: no Semantics card
+        expect(document.querySelector("[data-view='view:map']")).toBeNull();
       }),
     ));
 
