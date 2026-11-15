@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AREA_COLORS } from "@/theme/palette";
 
 /** A small deterministic number generator, so a view's picture is the same on every render. */
 function rng(seed: number): () => number {
@@ -14,10 +15,11 @@ const hash = (text: string): number => [...text].reduce((h, c) => (h * 31 + c.ch
  * The picture on a pinned-view row. It is a plain sketch of a graph (grey nodes, a few darker hubs), a different
  * one per view so rows are told apart at a glance; it does not claim to show the view's real pages.
  */
-export function ViewThumb({ id, className }: { id: string; className?: string }) {
+export function ViewThumb({ id, className, colour = false }: { id: string; className?: string; colour?: boolean }) {
   const art = useMemo(() => {
     const r = rng(hash(id));
-    const pts = Array.from({ length: 22 }, (_, i) => ({ x: 6 + r() * 88, y: 5 + r() * 54, hub: i % 7 === 0 }));
+    // `colour` (flag graph-corners): the nodes take the area colours and a few sizes, like a small graph of its own
+    const pts = Array.from({ length: 22 }, (_, i) => ({ x: 6 + r() * 88, y: 5 + r() * 54, hub: i % 7 === 0, hue: AREA_COLORS[Math.floor(r() * AREA_COLORS.length)]!, size: 2.8 + r() * 4 }));
     const lines = Array.from({ length: 18 }, (_, i) => [pts[i % pts.length]!, pts[(i * 7 + 3) % pts.length]!] as const);
     return { pts, lines };
   }, [id]);
@@ -30,9 +32,13 @@ export function ViewThumb({ id, className }: { id: string; className?: string })
         ))}
       </g>
       {/* a dot is a round-capped stroke of no length: this sketch is not a node mark */}
-      {art.pts.map((p, i) => (
-        <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 6 : 3.6} className={p.hub ? "stroke-primary" : "stroke-muted-foreground"} />
-      ))}
+      {art.pts.map((p, i) =>
+        colour ? (
+          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 7.5 : p.size} stroke={p.hue} />
+        ) : (
+          <path key={i} d={`M${p.x} ${p.y}h.01`} strokeLinecap="round" strokeWidth={p.hub ? 6 : 3.6} className={p.hub ? "stroke-primary" : "stroke-muted-foreground"} />
+        ),
+      )}
     </svg>
   );
 }
