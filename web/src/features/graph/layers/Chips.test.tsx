@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
@@ -45,6 +45,12 @@ describe("Chips", () => {
     render(<Chips byId={byId} />);
     const papers = sampleNodes.filter((n) => n.type === "paper").length;
     expect(screen.getByTestId("view-count")).toHaveTextContent(`${papers} pages`);
+    // pages added to the view by hand count too, once each: a page the view already draws is not counted again
+    const paper = sampleNodes.find((n) => n.type === "paper")!.id;
+    const other = sampleNodes.find((n) => n.type !== "paper")!.id;
+    act(() => useGraphUi.setState({ revealed: new Set([paper, other]) }));
+    expect(screen.getByTestId("view-count")).toHaveTextContent(`${papers + 1} pages`);
+    act(() => useGraphUi.setState({ revealed: new Set() }));
   });
 
   it("a style-only view says no count", () => {

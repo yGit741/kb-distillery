@@ -46,6 +46,9 @@ describe("the Health dial", () => {
     expect(kinds[0]).toHaveTextContent("Papers 3");
     expect(kinds[0]).toHaveTextContent("1 waiting, 1 feed no concept");
     expect(kinds[1]).toHaveTextContent("all in use");
+    // one source is "1 source"
+    expect(kinds[1]).toHaveAccessibleName("Lectures: 1 source, all in use. Show on the map");
+    expect(kinds[0]).toHaveAccessibleName("Papers: 3 sources, 1 waiting, 1 feed no concept. Show on the map");
   });
 
   it("the ring draws what is in use and what feeds no concept; waiting stays the empty track", () => {

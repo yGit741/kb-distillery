@@ -9,6 +9,7 @@ import { useFavorites } from "./favorites/store";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { useLayers } from "./layers/store";
+import { placeNew } from "./placeNew";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, type NeighborMap } from "./graphData";
@@ -561,6 +562,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // a path ghost (flag graph-algos) is pinned between its neighbours on the path while previewed, and let go once the
   // view draws it as its own page
   const pinnedGhosts = useRef<string[]>([]);
+  // read when the drawn set changes, never a reason to rebuild it
+  const revealedRef = useRef(ui.revealed);
+  revealedRef.current = ui.revealed;
   const data = useMemo(() => {
     const prev = new Map(fg.current?.nodes().map((n) => [n.id, { x: n.x, y: n.y, fx: n.fx, fy: n.fy }]) ?? []);
     for (const id of pinnedGhosts.current) {
@@ -569,7 +573,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
     if (!ghostSet.size) {
       pinnedGhosts.current = [];
-      return buildGraphData(model, shown, prev);
+      const d = buildGraphData(model, shown, prev);
+      // pages added by hand come in beside the page they hang from, each on a free spot: the drawn pages are held,
+      // so the layout alone would leave them in one heap (./placeNew)
+      if (prev.size && revealedRef.current.size) placeNew(d.nodes, d.links, revealedRef.current);
+      return d;
     }
     pinnedGhosts.current = [...pinnedGhosts.current.filter((id) => ghostSet.has(id)), ...seedGhosts(prev, ghosts, previewPath ?? [], fg.current?.center())];
     // the view is built without its ghosts (a ghost source must not turn the Concepts view's shared-source links off);
@@ -973,7 +981,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a shortest path (flag graph-algos) carries each page's full title over its dot: the top one keeps clear of the
     // search line and the chip row under it
     const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
-    if (!mapped && !routed) fg.current?.fit(pick, ms);
+    // a view made of layers (a pressed source kind, "show only") has its chip row under the search line: every page
+    // of it is framed, the lone ones too, with the top title clear of that row
+    const layered = !mapped && !routed && useLayers.getState().stack.layers.length > 0 && !!live.current.ui.view && !!fg.current?.fitIn(() => true, 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
+    if (!mapped && !routed && !layered) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
