@@ -69,7 +69,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     }
   },
   "graph-algos": {
-    "description": "Graph: graph-theory words in a > line: shortest paths, common neighbours, components and 'and their neighbours' (expand), read by the rules (needs graph-intent). The flag gates the plain words; the language lines themselves (Tab edit, saved views) read them always. Round #364.",
+    "description": "Graph: graph-theory words in a > line: shortest paths, common neighbours, components and 'and their neighbours' (expand), read by the rules (needs graph-intent). The flag gates the plain words; the language lines themselves (Tab edit, saved views) read them always. Tracked in round 364.",
     "owner": "maintainer",
     "created": "2026-11-15",
     "expires": "2027-02-12",
