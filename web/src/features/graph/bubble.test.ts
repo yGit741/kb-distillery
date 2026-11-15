@@ -7,9 +7,16 @@ describe("magnetic bubble", () => {
   it("reaches past the target and fades toward the edge of the reach", () => {
     const near = bubbleAim(t, 85, 0, [t, far]);
     const edge = bubbleAim(t, -10, 0, [t, far]);
-    expect(near.want).toBeCloseTo(35);
+    expect(near.want).toBeCloseTo(5 + 8);
     expect(near.strength).toBeGreaterThan(edge.strength);
     expect(edge.strength).toBeCloseTo(0.45);
+  });
+
+  it("keeps one screen size at every zoom and vanishes inside the node", () => {
+    const small = bubbleAim({ ...t, r: 10 }, 70, 0, [t, far]);
+    const zoomed = bubbleAim({ ...t, r: 60 }, 20, 0, [t, far]);
+    expect(zoomed.want).toBeCloseTo(small.want);
+    expect(bubbleAim(t, 104, 0, [t, far]).want).toBe(0);
   });
 
   it("eases toward the aim, or jumps there under reduced motion", () => {

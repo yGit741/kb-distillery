@@ -72,9 +72,14 @@ export function stepBubble(b: Bubble, want: number, strength: number, still: boo
   return still ? { r: want, a: strength } : { r: b.r + (want - b.r) * 0.3, a: b.a + (strength - b.a) * 0.2 };
 }
 
-/** What the bubble aims for: it reaches past the target's rim and weakens toward the edge of its reach. */
+/** How far past the target's rim the bubble reaches, screen px: the same at every zoom. */
+export const BUBBLE_OVERLAP = 8;
+
+/** What the bubble aims for: it reaches just past the target's rim (never across the whole node, so it does not
+ *  grow with the zoom) and weakens toward the edge of the reach. Inside the node it shrinks away. */
 export function bubbleAim(t: ScreenNode, px: number, py: number, all: readonly ScreenNode[]): { want: number; strength: number } {
-  const want = Math.hypot(t.x - px, t.y - py) + t.r + 10;
+  const gap = rim(t, px, py);
+  const want = gap > 0 ? gap + BUBBLE_OVERLAP : 0;
   const strength = 1 - 0.55 * Math.min(1, Math.max(0, rim(t, px, py)) / reachOf(t, all));
   return { want, strength };
 }
@@ -88,23 +93,27 @@ export function drawBubble(
   b: Bubble,
   rgb: string,
 ): void {
-  if (b.a <= 0.02 || b.r <= 2) return;
-  const R = b.r * 1.12;
-  const g = ctx.createRadialGradient(px, py, 0, px, py, R);
-  g.addColorStop(0, `rgba(${rgb},${0.17 * b.a})`);
-  g.addColorStop(0.6, `rgba(${rgb},${0.11 * b.a})`);
-  g.addColorStop(1, `rgba(${rgb},0)`);
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(px, py, R, 0, Math.PI * 2);
-  ctx.fill();
+  if (b.a <= 0.02) return;
+  if (b.r > 2) {
+    const R = b.r * 1.12;
+    const g = ctx.createRadialGradient(px, py, 0, px, py, R);
+    g.addColorStop(0, `rgba(${rgb},${0.09 * b.a})`);
+    g.addColorStop(0.6, `rgba(${rgb},${0.05 * b.a})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, R, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (!target) return;
-  const g2 = ctx.createRadialGradient(target.x, target.y, target.r * 0.6, target.x, target.y, target.r + 16);
-  g2.addColorStop(0, `rgba(${rgb},${0.3 * b.a})`);
+  // a thin halo just outside the rim, screen px, so it keeps one size at every zoom
+  const outer = target.r + 10;
+  const g2 = ctx.createRadialGradient(target.x, target.y, target.r, target.x, target.y, outer);
+  g2.addColorStop(0, `rgba(${rgb},${0.18 * b.a})`);
   g2.addColorStop(1, `rgba(${rgb},0)`);
   ctx.fillStyle = g2;
   ctx.beginPath();
-  ctx.arc(target.x, target.y, target.r + 16, 0, Math.PI * 2);
+  ctx.arc(target.x, target.y, outer, 0, Math.PI * 2);
   ctx.fill();
 }
 

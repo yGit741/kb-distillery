@@ -956,7 +956,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const list: ScreenNode[] = [];
       for (const n of g.nodes()) {
         const s = g.screenOf(n);
-        if (s) list.push({ id: n.id, x: s.x, y: s.y, r: radius(n) * scale });
+        // the drawn size (semantic zoom grows marks slower than the zoom), so pointer, bubble and halo match the mark
+        if (s) list.push({ id: n.id, x: s.x, y: s.y, r: semanticRadius(radius(n), scale, rs.current.zr) * scale });
       }
       return list;
     };
