@@ -981,9 +981,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a shortest path (flag graph-algos) carries each page's full title over its dot: the top one keeps clear of the
     // search line and the chip row under it
     const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
-    // a view made of layers (a pressed source kind, "show only") has its chip row under the search line: every page
-    // of it is framed, the lone ones too, with the top title clear of that row
-    const layered = !mapped && !routed && useLayers.getState().stack.layers.length > 0 && !!live.current.ui.view && !!fg.current?.fitIn(() => true, 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
+    // a view a "show" layer picked (a pressed source kind, "show only") has its chip row under the search line:
+    // every page of it is framed, the lone ones too, with the top title clear of that row. A search or a style-only
+    // stack keeps the usual fit
+    const layered = !mapped && !routed && !multiKb.current && !rimRef.current && live.current.ui.view?.kind === "picked" && useLayers.getState().stack.layers.some((l) => l.kind === "show" && l.target === "nodes") && !!fg.current?.fitIn(() => true, 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
     if (!mapped && !routed && !layered) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {

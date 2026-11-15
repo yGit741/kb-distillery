@@ -80,7 +80,12 @@ export function Chips({ byId }: { byId: ReadonlyMap<string, GNode> }) {
   const live = useGraphUi((s) => stackCurrent(applied, marker(s)));
   // the pages a restricting stack draws, said next to its chips (never as a pill over the graph)
   // what the view draws: its own pages and the ones added to it by hand since (the node menu, "See sources")
-  const drawn = useGraphUi((s) => (s.view ? s.view.hits.size + [...s.revealed].filter((id) => !s.view!.shown.has(id)).length : null));
+  const drawn = useGraphUi((s) => {
+    if (!s.view) return null;
+    let n = s.view.hits.size;
+    for (const id of s.revealed) if (!s.view.shown.has(id)) n += 1;
+    return n;
+  });
   const [editing, setEditing] = useState<string | null>(null);
   const focus = [...selection];
   if (!focus.length && !layers.length && !canUndo) return null;

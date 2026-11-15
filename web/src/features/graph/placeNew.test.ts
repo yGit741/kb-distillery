@@ -28,6 +28,13 @@ describe("placing pages added by hand", () => {
     expect(nodes[2]!.x).toBeUndefined();
   });
 
+  it("a new page that hangs from another new page is placed after it, in the same step", () => {
+    const nodes: Spot[] = [{ id: "idea", x: 0, y: 0 }, { id: "leaf" }, { id: "mid" }];
+    const placed = placeNew(nodes, [{ source: "leaf", target: "mid" }, { source: "mid", target: "idea" }], new Set(["leaf", "mid"]));
+    expect(placed).toEqual(["mid", "leaf"]);
+    expect(Math.hypot(nodes[1]!.x! - nodes[2]!.x!, nodes[1]!.y! - nodes[2]!.y!)).toBeGreaterThanOrEqual(NEW_GAP - 1e-6);
+  });
+
   it("a page with no drawn neighbour is left to the layout; one with two starts between them", () => {
     const nodes: Spot[] = [{ id: "a", x: 0, y: 0 }, { id: "b", x: 200, y: 0 }, { id: "mid" }, { id: "lone" }];
     const placed = placeNew(nodes, [{ source: "mid", target: "a" }, { source: "b", target: "mid" }], new Set(["mid", "lone"]));

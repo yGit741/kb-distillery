@@ -29,8 +29,8 @@ export function placeNew(nodes: Spot[], links: readonly { source: string | { id:
     const idOf = (e: string | { id: string }) => (typeof e === "string" ? e : e.id);
     const [a, b] = [byId.get(idOf(l.source)), byId.get(idOf(l.target))];
     if (!a || !b) continue;
-    if (b.x != null && b.y != null) near.set(a.id, [...(near.get(a.id) ?? []), b]);
-    if (a.x != null && a.y != null) near.set(b.id, [...(near.get(b.id) ?? []), a]);
+    near.set(a.id, [...(near.get(a.id) ?? []), b]);
+    near.set(b.id, [...(near.get(b.id) ?? []), a]);
   }
   // taken spots, in a grid of gap-sized cells: a candidate checks its own cell and the eight around it
   const cells = new Map<string, { x: number; y: number }[]>();
@@ -47,23 +47,34 @@ export function placeNew(nodes: Spot[], links: readonly { source: string | { id:
   };
   for (const n of nodes) if (n.x != null && n.y != null) take(n.x, n.y);
   const placed: string[] = [];
-  for (const n of todo) {
-    const from = near.get(n.id);
-    if (!from?.length) continue;
-    const ax = from.reduce((s, p) => s + p.x!, 0) / from.length;
-    const ay = from.reduce((s, p) => s + p.y!, 0) / from.length;
-    let [x, y] = [ax, ay];
-    // a sunflower spiral: each step a little further out, so the first free spot is the nearest one
-    for (let i = 1; i <= MAX_STEPS; i++) {
-      const r = gap * Math.sqrt(i);
-      x = ax + r * Math.cos(i * GOLDEN);
-      y = ay + r * Math.sin(i * GOLDEN);
-      if (free(x, y)) break;
+  // in rounds: a page whose only neighbour is itself new (a source of a concept added in the same step) is placed
+  // once that neighbour has its spot
+  let left = todo;
+  while (left.length) {
+    const wait: Spot[] = [];
+    for (const n of left) {
+      const from = (near.get(n.id) ?? []).filter((p) => p.x != null && p.y != null);
+      if (!from.length) {
+        wait.push(n);
+        continue;
+      }
+      const ax = from.reduce((s, p) => s + p.x!, 0) / from.length;
+      const ay = from.reduce((s, p) => s + p.y!, 0) / from.length;
+      let [x, y] = [ax, ay];
+      // a sunflower spiral: each step a little further out, so the first free spot is the nearest one
+      for (let i = 1; i <= MAX_STEPS; i++) {
+        const r = gap * Math.sqrt(i);
+        x = ax + r * Math.cos(i * GOLDEN);
+        y = ay + r * Math.sin(i * GOLDEN);
+        if (free(x, y)) break;
+      }
+      n.x = x;
+      n.y = y;
+      take(x, y);
+      placed.push(n.id);
     }
-    n.x = x;
-    n.y = y;
-    take(x, y);
-    placed.push(n.id);
+    if (wait.length === left.length) break;
+    left = wait;
   }
   return placed;
 }
