@@ -12,6 +12,7 @@ import {
   Maximize,
   MessageSquare,
   Network,
+  Lightbulb,
   Pin,
   RefreshCw,
   Search,
@@ -38,7 +39,7 @@ import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { chatContextDraft } from "./chatContext";
 import { useVisibleTools } from "../tools";
-import type { GLink, GNode } from "../types";
+import { degreeOf, type GLink, type GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
@@ -616,6 +617,27 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           lead: <Pin aria-hidden className="size-4" strokeWidth={1.6} />,
           run: done(() => runView(v)),
         });
+      }
+      // lines to try: each fills the line, Enter runs it (only where the view can be changed)
+      if (intent && caps.sentences) {
+        // the best-linked concept that is not a person (a topic or an idea), never a source or a collection
+        // and whose title no other page shares, so the example runs without a "did you mean"
+        const titles = new Map<string, number>();
+        for (const n of nodes) titles.set((n.title || n.id).toLowerCase(), (titles.get((n.title || n.id).toLowerCase()) ?? 0) + 1);
+        const hub = nodes.filter((n) => n.layer === "concept" && n.type !== "person" && titles.get((n.title || n.id).toLowerCase()) === 1).reduce<GNode | null>((b, n) => (!b || degreeOf(n) > degreeOf(b) ? n : b), null);
+        for (const ex of LINE_COPY.examples.lines) {
+          if ("shape" in ex && !(live && caps.shape)) continue;
+          if (ex.line.includes("{hub}") && !hub) continue;
+          const line = ex.line.replace("{hub}", hub?.title || hub?.id || "");
+          out.push({
+            key: `example:${ex.line}`,
+            section: LINE_COPY.examples.heading,
+            label: line,
+            hint: ex.hint,
+            lead: <Lightbulb aria-hidden className="size-4" strokeWidth={1.6} />,
+            run: () => focusBar(line),
+          });
+        }
       }
       return out;
     }

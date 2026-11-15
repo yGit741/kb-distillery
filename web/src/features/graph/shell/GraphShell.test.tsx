@@ -120,7 +120,8 @@ describe("at rest", () => {
       listViews: async () => ({ views: [{ id: "v1", name: "Learning theory", created: "2026-11-01", spec: {} }] }),
     });
     await userEvent.click(box());
-    const opts = await screen.findAllByRole("option");
+    // the lines to try (their own section, after these) are left out
+    const opts = (await screen.findAllByRole("option")).filter((o) => !o.id || !o.closest("[role=group]")?.textContent?.startsWith("Try"));
     expect(opts.map((o) => o.textContent)).toEqual(["newest step", "oldest step", "Learning theory"]);
     expect(screen.getByText("Recent")).toBeInTheDocument();
     expect(screen.getByText("Pinned views")).toBeInTheDocument();
@@ -129,7 +130,7 @@ describe("at rest", () => {
   it("a pinned view records the request for the corner controls to open, with no notice", async () => {
     setup({ listViews: async () => ({ views: [{ id: "v1", name: "Learning theory", created: "2026-11-01", spec: {} }] }) });
     await userEvent.click(box());
-    await userEvent.click(await screen.findByRole("option", { name: /learning theory/i }));
+    await userEvent.click(await screen.findByRole("option", { name: /^learning theory$/i }));
     expect(useShellStore.getState().pendingView?.id).toBe("v1");
     expect(useShellStore.getState().notice).toBeNull();
   });
