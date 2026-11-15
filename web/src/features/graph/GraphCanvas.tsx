@@ -54,6 +54,7 @@ import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, NONE_GREY, semanticRadius, useAreaPalette, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 import { useChatFull } from "./shell/chatFullStore";
+import { drawGhostRing, GHOST_ALPHA, pairKey, PATH_WIDTH, pathGhosts, pathSimLinks, seedGhosts } from "./pathDraw";
 
 export interface CanvasHandle {
   screenOf: (id: string) => { x: number; y: number } | null;
@@ -248,6 +249,9 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
 /** Air between the search line and the cited pages a cite fit frames (a page mark and its label above it). */
 const CITE_FIT_AIR = 56;
+/** Flag graph-algos: room a shortest path keeps below it (its last page's title, the type strip) and around it. */
+const PATH_FIT_BOTTOM = 110;
+const PATH_AIR = 48;
 
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   { model, byId, neighbors, visible: baseVisible, sourcesView = false, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile, onClickNode },
@@ -320,7 +324,20 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [thinkView, byId, baseVisible, neighbors],
   );
   const popSet = useMemo(() => new Set(popped.pop), [popped]);
-  const visible = useMemo<ReadonlySet<string>>(() => (popped.pop.length ? new Set([...baseVisible, ...popped.pop]) : baseVisible), [baseVisible, popped]);
+  // flag graph-algos: a shortest path, previewed or applied, is drawn bold (./pathDraw); while it is previewed, a page on
+  // it the view hides (a source in the Concepts view) comes in as a faded ghost, so the path reads whole
+  const algosOn = useFlag("graph-algos");
+  const previewing = useLayers((st) => st.preview !== null);
+  const previewPath = useLayers((st) => (algosOn ? (st.preview?.pathLinks ?? null) : null));
+  const appliedPath = useLayers((st) => (algosOn ? st.pathLinks : null));
+  // a preview with a path shows its own; any other preview leaves the applied path drawn
+  const path = previewing && previewPath ? previewPath : appliedPath;
+  const ghosts = useMemo(() => (previewPath ? pathGhosts(previewPath, baseVisible) : []), [previewPath, baseVisible]);
+  const ghostSet = useMemo<ReadonlySet<string>>(() => new Set(ghosts), [ghosts]);
+  const visible = useMemo<ReadonlySet<string>>(
+    () => (popped.pop.length || ghosts.length ? new Set([...baseVisible, ...popped.pop, ...ghosts]) : baseVisible),
+    [baseVisible, popped, ghosts],
+  );
   // when each popped source first appeared: it scales in once from there
   const popAt = useRef(new Map<string, number>());
   useEffect(() => {
@@ -363,8 +380,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
   // a `>` sentence waiting for its second Enter (flag graph-intent): the pages it would keep light up, the rest dims
   const previewIds = useLayers((st) => st.preview?.ids ?? null);
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode });
-  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode };
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, ghosts: ghostSet, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, ghosts: ghostSet, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -395,7 +412,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   radiusRef.current = radiusOpts;
   // each layer sized on its own scale (./style layeredRadii), over the pages drawn
   // a popped source (flag show-thinking) never resizes the pages already drawn: sizes are scaled over the calm set
-  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id) && !popSet.has(n.id)), radiusOpts), [model, shown, radiusOpts, popSet]);
+  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id) && !popSet.has(n.id) && !ghostSet.has(n.id)), radiusOpts), [model, shown, radiusOpts, popSet, ghostSet]);
   const layeredRef = useRef(layered);
   layeredRef.current = layered;
   // uncited papers in a Citations-by-meaning clump are drawn smaller and quieter: context, not the subject
@@ -532,10 +549,78 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
 
   // ---- data: positions of nodes that stay are carried over
+  // a path ghost (flag graph-algos) is pinned between its neighbours on the path while previewed, and let go once the
+  // view draws it as its own page
+  const pinnedGhosts = useRef<string[]>([]);
   const data = useMemo(() => {
     const prev = new Map(fg.current?.nodes().map((n) => [n.id, { x: n.x, y: n.y, fx: n.fx, fy: n.fy }]) ?? []);
-    return buildGraphData(model, shown, prev);
-  }, [model, shown]);
+    for (const id of pinnedGhosts.current) {
+      const p = prev.get(id);
+      if (p && !ghostSet.has(id)) prev.set(id, { x: p.x, y: p.y, fx: undefined, fy: undefined });
+    }
+    if (!ghostSet.size) {
+      pinnedGhosts.current = [];
+      return buildGraphData(model, shown, prev);
+    }
+    pinnedGhosts.current = [...pinnedGhosts.current.filter((id) => ghostSet.has(id)), ...seedGhosts(prev, ghosts, previewPath ?? [], fg.current?.center())];
+    // the view is built without its ghosts (a ghost source must not turn the Concepts view's shared-source links off);
+    // each ghost then comes in with the path's links alone
+    const d = buildGraphData(model, new Set([...shown].filter((id) => !ghostSet.has(id))), prev);
+    const onPath = new Set((previewPath ?? []).map(([a, b]) => pairKey(a, b)));
+    for (const id of ghosts) {
+      const n = byId.get(id);
+      const p = prev.get(id);
+      if (n) d.nodes.push({ ...n, ...(p?.x != null ? { x: p.x, y: p.y, fx: p.fx, fy: p.fy } : {}) });
+    }
+    for (const l of model.links)
+      if ((ghostSet.has(l.source) || ghostSet.has(l.target)) && shown.has(l.source) && shown.has(l.target) && onPath.has(pairKey(l.source, l.target))) d.links.push({ ...l });
+    return d;
+  }, [model, shown, ghosts, ghostSet, previewPath, byId]);
+  // the path's links in the drawn data, and the pages they touch (their titles are drawn with the path)
+  const pathRef = useRef<{ links: SimLink[]; ends: ReadonlySet<string> }>({ links: [], ends: new Set() });
+  pathRef.current = useMemo(() => {
+    const links = path?.length ? pathSimLinks(data.links as SimLink[], path) : [];
+    return { links, ends: new Set(links.flatMap((l) => endsOf(l))) };
+  }, [path, data]);
+  useEffect(() => {
+    fg.current?.refresh();
+  }, [path]);
+  // a previewed path the line's own panels cover (or that runs off the canvas) is brought into view once, in one
+  // move: a pan when it fits at this zoom, else a frame around it
+  // (once per path: the same path previewed again, after Tab and Esc say, leaves the user's own pan alone)
+  const framedPath = useRef("");
+  useEffect(() => {
+    const key = previewPath?.map((l) => l.join(">")).join("|") ?? "";
+    if (!key || framedPath.current === key) return;
+    const timer = window.setTimeout(() => {
+      const g = fg.current;
+      const el = wrap.current;
+      if (!g || !el?.clientHeight || !previewPath) return;
+      framedPath.current = key;
+      const ids = new Set(previewPath.flat());
+      const box = el.getBoundingClientRect();
+      const pts = g.nodes().filter((n) => ids.has(n.id)).map((n) => g.screenOf(n)).filter((p): p is { x: number; y: number } => !!p).map((p) => ({ x: p.x - box.left, y: p.y - box.top }));
+      if (!pts.length) return;
+      const shell = document.querySelector("[data-testid=graph-shell]")?.getBoundingClientRect();
+      const top = Math.max(shell ? shell.bottom - box.top : 0, shellTopRef.current + SEARCH_LINE_H) + PATH_AIR;
+      const bottom = el.clientHeight - PATH_FIT_BOTTOM;
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      if (y0 >= top && y1 <= bottom && x0 >= PATH_AIR && x1 <= el.clientWidth - PATH_AIR) return;
+      const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450;
+      if (y1 - y0 > bottom - top || x1 - x0 > el.clientWidth - 2 * PATH_AIR) {
+        g.fitIn((n) => ids.has(n.id), 0, ms, PATH_AIR, top, PATH_FIT_BOTTOM);
+        return;
+      }
+      const k = g.zoom();
+      const c = g.center();
+      const dx = x0 < PATH_AIR || x1 > el.clientWidth - PATH_AIR ? el.clientWidth / 2 - (x0 + x1) / 2 : 0;
+      const dy = (top + bottom) / 2 - (y0 + y1) / 2;
+      g.centerOn(c.x - dx / k, c.y - dy / k, k, ms);
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [previewPath, data]);
 
   // the anchored layout pins topics on a ring and pulls every page toward its theme; free unpins them
   // the ring is sized once per vault and link distance (from the first drawn set), then stays where it is
@@ -876,7 +961,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
     const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, useCorners.getState().order.includes("legend") ? MAP_FIT_RIGHT : 0);
-    if (!mapped) fg.current?.fit(pick, ms);
+    // a shortest path (flag graph-algos) carries each page's full title over its dot: the top one keeps clear of the
+    // search line and the chip row under it
+    const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
+    if (!mapped && !routed) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
@@ -1216,7 +1304,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const tk = live.current.think;
       const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const r = semanticRadius(r0, scale, rs.current.zr);
-      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id)) * litFade(n.id);
+      const ghost = live.current.ghosts.has(n.id);
+      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id)) * litFade(n.id) * (ghost ? GHOST_ALPHA : 1);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
       if (halo) {
@@ -1253,6 +1342,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
       });
+      if (ghost) drawGhostRing(ctx, n.x, n.y, r, scale, colors);
       const sourcesBehind = !viewRef.current.sides && !tk && !live.current.replay && n.layer === "concept" ? viewRef.current.srcCount?.get(n.id) : undefined;
       if (sourcesBehind && r * scale >= COUNT_MIN_PX) drawSourceCount(ctx, n.x, n.y, r, sourcesBehind, scale, colors, alpha);
       if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
@@ -1376,7 +1466,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         // a quiet clump's papers carry no standing label (the clump is named); hover still names one. While a citation
         // is shown its two full titles are the only words on the canvas besides the clump names
         // (flag edge-select: only the lit pages' labels give way to their full titles; the rest dim)
-        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover || rs.current.selected.has(n.id)) && !(lit().links.length && (!edgeOnRef.current || lit().ends.has(n.id)))),
+        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover || rs.current.selected.has(n.id)) && !(lit().links.length && (!edgeOnRef.current || lit().ends.has(n.id))) && !pathRef.current.ends.has(n.id)),
         fitIds: coreRef.current,
         width: el.clientWidth,
         height: el.clientHeight,
@@ -1401,6 +1491,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       });
       placeKbLabels(res.plan.placed);
       const shown = lit().links;
+      const route = pathRef.current.links;
+      // (no words on a path's links: the arrows say which way each reads, and the titles stay clear)
+      if (route.length) drawEdges(ctx, route, g.zoom(), rs.current.colors, (n) => radius(n), () => "", directed, PATH_WIDTH);
       if (shown.length && edgeOnRef.current) drawEdges(ctx, shown, g.zoom(), rs.current.colors, (n) => radius(n), edgeWord, directed);
       else if (cite.current.link) drawCite(ctx, cite.current.link, g.zoom(), rs.current.colors, (n) => radius(n));
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
