@@ -1,3 +1,4 @@
+import { flag } from "@/flags";
 import { FAVORITES, FOCUS, makeLayer, type EdgeCond, type Layer, type NodeCond, type Op } from "./model";
 import { print } from "./grammar";
 import { algoClause } from "./algoWords";
@@ -208,7 +209,7 @@ function clauseLayers(clause: string): Layer[] | null {
 }
 
 /** Edit distance (insert, delete, substitute, swap two neighbours), stopping early past `max`. */
-function distance(a: string, b: string, max: number): number {
+export function distance(a: string, b: string, max: number): number {
   if (Math.abs(a.length - b.length) > max) return max + 1;
   const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 1; j <= b.length; j++) d[0]![j] = j;
@@ -251,7 +252,8 @@ const KNOWN = new Set([
 ]);
 function mendTypos(src: string): string {
   // a page name, a phrase or a quote follows these: nothing from there on is mended ("about Colorado" stays)
-  const cut = src.search(/\b(?:of|to|between|like|about|named?|text|mentioning)\b|["“]/i);
+  // flag graph-algos: "from", "near" and "around" take a page name too
+  const cut = src.search(flag("graph-algos") ? /\b(?:of|to|from|between|like|near|around|about|named?|text|mentioning)\b|["“]/i : /\b(?:of|to|between|like|about|named?|text|mentioning)\b|["“]/i);
   const head = cut < 0 ? src : src.slice(0, cut);
   const mended = head.replace(/[A-Za-z]+/g, (w) => {
     const lw = w.toLowerCase();
@@ -265,15 +267,31 @@ function mendTypos(src: string): string {
  * theme") or a second verb ("only papers and hide people"), so a line reads without commas. */
 const CLAUSE_BREAK = /\s*[,;]\s*|\s+then\s+|\s+(?:and\s+)?(?=(?:colou?r(?:ed)?|size|scale)\s+(?:the\s+)?(?:nodes\s+|pages\s+)?by\b)|\s+and\s+(?=(?:hide|show|only|exclude|don['’]?t show)\b)/i;
 
+/** Inside a quoted name ("Signal and noise", "Bias, variance"), the characters the rules split on stand in for
+ * themselves as private-use marks, so a quoted title stays one name; `unmask` puts them back in what was read
+ * (flag graph-algos). */
+const MASK: Record<string, string> = { " ": "\uE000", ",": "\uE001", ";": "\uE002" };
+const UNMASK = Object.fromEntries(Object.entries(MASK).map(([k, v]) => [v, k]));
+const maskQuotes = (s: string) => s.replace(/"[^"]*"|“[^”]*”/g, (q) => q.replace(/[ ,;]/g, (ch) => MASK[ch]!));
+const unmaskText = (s: string) => s.replace(/[\uE000-\uE002]/g, (ch) => UNMASK[ch]!);
+function unmask<T>(x: T): T {
+  if (typeof x === "string") return unmaskText(x) as T;
+  if (Array.isArray(x)) return x.map(unmask) as T;
+  if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, unmask(v)])) as T;
+  return x;
+}
+
 /** Casual English as layers. `op` is the prefix the line was typed with; every operation reads the words the same way. */
 export function fromSentence(text: string, op: "replace" | "stack" | "remove" = "replace"): Sentence {
   void op;
-  const src = mendTypos(text.trim().replace(/[.!?]+$/, "").replace(/\s+/g, " "));
+  const mended = mendTypos(text.trim().replace(/[.!?]+$/, "").replace(/\s+/g, " "));
+  // flag graph-algos: a quoted name is one name, whatever commas or "and" it holds
+  const src = flag("graph-algos") ? maskQuotes(mended) : mended;
   const layers: Layer[] = [];
   for (const clause of src.split(CLAUSE_BREAK).filter(Boolean)) {
     const ls = clauseLayers(clause);
     if (!ls) return { layers: [], lines: [], unknown: text.trim() };
-    layers.push(...ls);
+    layers.push(...ls.map(unmask));
   }
   if (!layers.length) return { layers: [], lines: [], unknown: text.trim() };
   return { layers, lines: layers.map(print) };

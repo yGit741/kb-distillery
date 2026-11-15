@@ -43,6 +43,8 @@ import { degreeOf, type GLink, type GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
+import { completeName, putName } from "../layers/nameComplete";
+import { readableLine, resolveNames, uniqueTitles } from "../layers/names";
 import { needsMeaning } from "../layers/meaning";
 import { anchorLayers, applyLayers, isAnchored, readyCard, specLayers, stackLines, type ReadyCard } from "../layers/readyViews";
 import { Gallery } from "../views/Gallery";
@@ -154,6 +156,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
   const intent = useFlag("graph-intent");
+  // flag graph-algos: the "Read as" row and page names completed inside a `>` line
+  const algos = useFlag("graph-algos");
   // the Concepts / Sources switch sits beside the line (flag graph-intent): the line makes room for it
   // (Corners draws it whenever graph-intent is on; both read the same place and the same graph-area width)
   const switchPlace = useViewSwitchPlace();
@@ -348,6 +352,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     input.current?.blur();
   }, []);
   const openPanel = useCallback(() => setOpen(true), []);
+  // who read the previewed line into layers: the "Read as" row says so (flag graph-algos)
+  const [readBy, setReadBy] = useState<"rules" | "model">("rules");
+  // titles that name one page each: a line shows and completes pages by these, the rest by slug
+  const unique = useMemo(() => (algos ? uniqueTitles(nodes) : new Set<string>()), [algos, nodes]);
+  const readable = useCallback((l: string) => readableLine(l, byId, unique), [byId, unique]);
   const focusBar = useCallback((value?: string) => {
     if (value !== undefined) setRaw(value);
     setOpen(true);
@@ -355,7 +364,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   }, []);
 
   // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
-  const llm = useLlmLayers({ nodes, onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}) });
+  const llm = useLlmLayers({
+    nodes,
+    onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}, "model"),
+  });
   // an answer on its way is dropped when the panel closes
   const cancelLlm = llm.cancel;
   useEffect(() => {
@@ -501,6 +513,20 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           selectLine();
         },
       });
+      // flag graph-algos: the line ends in a page name being typed ("near learning th"): the pages it may be, under
+      // the line's own row so Enter still runs the line; Tab or a pick puts the title in. A previewed line is done.
+      const previewed = preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`;
+      const named = algos && !previewed ? completeName(raw, nodes) : null;
+      if (named)
+        for (const [i, n] of named.pages.entries())
+          out.push({
+            key: `name:${n.id}`,
+            section: LINE_COPY.names.heading,
+            label: n.title || n.id,
+            hint: i === 0 ? LINE_COPY.names.hint : undefined,
+            lead: <NodeSwatch type={n.type} color={swatchColor(n, colorBy)} className="size-3.5" />,
+            run: () => focusBar(putName(raw, named.slot, n, unique)),
+          });
       return out;
     }
 
@@ -819,7 +845,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, routing, index, line, text, commands, linkKinds, caps.sentences, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
+  }, [slash, viewMode, intent, routing, index, line, text, commands, linkKinds, caps.sentences, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router, algos, raw, preview, unique]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -899,6 +925,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
     close();
   }
+  /** Written lines name pages by title or slug: each to its page, or why it cannot apply (flag graph-algos). */
+  function resolveWritten(layers: Layer[]): Layer[] | string {
+    const r = resolveNames(layers, nodes, { focus: focusOne(), slugFirst: true });
+    const a = r.ambiguous[0];
+    if (!a) return r.layers;
+    return a.options.length ? LINE_COPY.preview.whichPage(a.name, a.options.map((o) => o.title)) : LINE_COPY.preview.noPage(a.name);
+  }
   /** The one focused page; none when nothing or several are focused. */
   function focusOne(): string | undefined {
     const sel = useKb.getState().selection;
@@ -910,10 +943,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     settleSentence(planSentence(typed, nodes, { focus, chosen }), typed, op, { focus, chosen });
   }
 
-  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }) {
+  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }, by: "rules" | "model" = "rules") {
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
+      setReadBy(by);
       // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
       const key = `${op}:${typed}`;
       previewKey.current = key;
@@ -1031,6 +1065,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     }
   }
 
+  /** The page row Tab would put in: the highlighted one, else the first; none unless the caret is at the end. */
+  const nameRow = (el: HTMLInputElement): PanelRow | null => {
+    if (!open || el.selectionStart !== el.value.length) return null;
+    const at = rows[idx];
+    return at?.key.startsWith("name:") ? at : (rows.find((r) => r.key.startsWith("name:")) ?? null);
+  };
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -1060,6 +1100,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       const routed = routing && !e.shiftKey && !picked.current && idx === 0 && !suggested ? routableLine() : null;
       if (routed) lineRoute.route(routed);
       else rows[idx]?.run(e.shiftKey);
+    } else if (e.key === "Tab" && !e.shiftKey && nameRow(e.currentTarget)) {
+      // a page name being typed: Tab puts in the highlighted page, or the first one
+      e.preventDefault();
+      nameRow(e.currentTarget)!.run(false);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
       e.preventDefault();
       setEditingLine(true);
@@ -1117,7 +1161,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}
-      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} readAs={algos} by={readBy} display={algos ? readable : undefined} resolve={algos ? resolveWritten : undefined} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined)} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
