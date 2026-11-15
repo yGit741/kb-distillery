@@ -31,6 +31,7 @@ export function ResolvedLine({
   onApply,
   readAs = false,
   by = "rules",
+  note = "",
   display = (l) => l,
   resolve,
 }: {
@@ -45,6 +46,8 @@ export function ResolvedLine({
   readAs?: boolean;
   /** Who read the line into these layers. */
   by?: "rules" | "model";
+  /** The model's account of its reading (what it left out), shown under the lines when the model read them. */
+  note?: string;
   /** A resolved line as it is shown and edited (page titles for slugs). */
   display?: (line: string) => string;
   /** Written layers with their names looked up, or why they cannot apply. */
@@ -97,6 +100,11 @@ export function ResolvedLine({
               {l}
             </code>
           ))}
+          {by === "model" && note && (
+            <span className="block text-xs" data-testid="read-as-note">
+              {note}
+            </span>
+          )}
           <span className="block text-xs">
             {lines.length > READ_MAX && `${P.more(lines.length - READ_MAX)} · `}
             {P.count(count)}

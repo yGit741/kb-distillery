@@ -353,7 +353,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   }, []);
   const openPanel = useCallback(() => setOpen(true), []);
   // who read the previewed line into layers: the "Read as" row says so (flag graph-algos)
-  const [readBy, setReadBy] = useState<"rules" | "model">("rules");
+  // with the model's one-sentence account of its reading (what it left out, say); it belongs to the preview of `key`
+  // and to no other, so a preview reached another way is never labelled with an old reading
+  const [readInfo, setReadInfo] = useState<{ key: string; by: "rules" | "model"; note: string }>({ key: "", by: "rules", note: "" });
   // titles that name one page each: a line shows and completes pages by these, the rest by slug
   const unique = useMemo(() => (algos ? uniqueTitles(nodes) : new Set<string>()), [algos, nodes]);
   const readable = useCallback((l: string) => readableLine(l, byId, unique), [byId, unique]);
@@ -366,7 +368,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
   const llm = useLlmLayers({
     nodes,
-    onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}, "model"),
+    onPlan: (plan, typed, op, explanation) => settleSentence(plan, typed, op, {}, "model", explanation),
   });
   // an answer on its way is dropped when the panel closes
   const cancelLlm = llm.cancel;
@@ -677,6 +679,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         const hub = nodes.filter((n) => n.layer === "concept" && n.type !== "person" && titles.get((n.title || n.id).toLowerCase()) === 1).reduce<GNode | null>((b, n) => (!b || degreeOf(n) > degreeOf(b) ? n : b), null);
         for (const ex of LINE_COPY.examples.lines) {
           if ("shape" in ex && !(live && caps.shape)) continue;
+          if ("algos" in ex && !algos) continue;
           if (ex.line.includes("{hub}") && !hub) continue;
           const line = ex.line.replace("{hub}", hub?.title || hub?.id || "");
           out.push({
@@ -751,6 +754,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         wrap: s.whole,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
+          // the start of a line that needs page names: put it in the line, where the names complete
+          if (s.fill) {
+            setRoutedHint(null);
+            return focusBar(`> ${s.line}`);
+          }
           focusBar(`> ${s.line}`);
           // the typed line itself, read as a view: said the way the line routing says it
           setRoutedHint(s.line.toLowerCase() === text.toLowerCase() ? LINE_COPY.route.view(s.line) : null);
@@ -943,11 +951,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     settleSentence(planSentence(typed, nodes, { focus, chosen }), typed, op, { focus, chosen });
   }
 
-  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }, by: "rules" | "model" = "rules") {
+  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }, by: "rules" | "model" = "rules", explanation = "") {
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
-      setReadBy(by);
+      setReadInfo({ key: `${op}:${typed}`, by, note: by === "model" ? explanation : "" });
       // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
       const key = `${op}:${typed}`;
       previewKey.current = key;
@@ -1161,7 +1169,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}
-      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} readAs={algos} by={readBy} display={algos ? readable : undefined} resolve={algos ? resolveWritten : undefined} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} readAs={algos} by={readInfo.key === previewKey.current ? readInfo.by : "rules"} note={readInfo.key === previewKey.current ? readInfo.note : ""} display={algos ? readable : undefined} resolve={algos ? resolveWritten : undefined} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined)} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(

@@ -161,3 +161,53 @@ describe("flag graph-algos: the Read as row", () => {
     );
   });
 });
+
+describe("flag graph-algos: Try lines, View rows that fill, the model's note", () => {
+  it("on: the empty line offers the graph-theory Try lines", async () => {
+    await both(async () => {
+      setup();
+      await userEvent.click(box());
+      const tries = await screen.findByRole("group", { name: LINE_COPY.examples.heading });
+      expect(within(tries).getByText("> communities")).toBeInTheDocument();
+      expect(within(tries).getByText("> top 10 by betweenness")).toBeInTheDocument();
+    });
+  });
+
+  it("off: no graph-theory Try lines", async () => {
+    await withFlag("graph-intent", true, () =>
+      withFlag("graph-algos", false, async () => {
+        setup();
+        await userEvent.click(box());
+        const tries = await screen.findByRole("group", { name: LINE_COPY.examples.heading });
+        expect(within(tries).queryByText("> communities")).not.toBeInTheDocument();
+      }),
+    );
+  });
+
+  it("on: a View row for a line that needs names puts it in the line and runs nothing", async () => {
+    await both(async () => {
+      setup();
+      await userEvent.type(box(), "shortest path");
+      const row = await screen.findByText("> shortest path between");
+      await userEvent.click(row);
+      expect(box().value).toBe("> shortest path between ");
+      expect(useLayers.getState().preview).toBeNull();
+    });
+  });
+
+  it("on: the model's account of its reading shows under its lines", async () => {
+    await both(async () => {
+      const layersFromText = vi.fn(async () => ({
+        layers: [{ id: "x", kind: "show", target: "nodes", subgraph: { nodes: [{ t: "type", value: "paper" }] }, text: "" }],
+        lines: ["show nodes type paper"],
+        explanation: "Papers; a reading status is not something a view can filter.",
+        backend: "subscription",
+        usd: 0,
+        warnings: [],
+      }) as unknown as LayersResult);
+      setup({ layersFromText });
+      await userEvent.type(box(), "> the papers I still have to read{Enter}");
+      expect(await screen.findByTestId("read-as-note")).toHaveTextContent("a reading status is not something a view can filter");
+    });
+  });
+});

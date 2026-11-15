@@ -18,6 +18,10 @@ export const LINE_COPY = {
       { line: "> colour by maturity", hint: "style" },
       { line: "> size by links", hint: "style" },
       { line: "show me the papers with lots of links and hide the people", hint: "free text, read by the model", shape: true },
+      /** Flag graph-algos. */
+      { line: "> communities", hint: "colour each group of closely linked pages", algos: true },
+      { line: "> top 10 by betweenness", hint: "the pages that bridge the most", algos: true },
+      { line: "> near {hub}", hint: "a page and its neighbours", algos: true },
     ],
   },
   /** The key caps at the line's right end while it has the focus and nothing is typed yet. */

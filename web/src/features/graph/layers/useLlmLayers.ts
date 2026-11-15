@@ -17,8 +17,9 @@ interface Context {
 interface Options {
   /** The pages of the graph on screen: names in the model's answer are looked up here, like names the rules read. */
   nodes: readonly GNode[];
-  /** What came of the answer: the same outcomes as a sentence the rules read (ready, a name to pick, a name no page has). */
-  onPlan: (plan: Plan, typed: string, op: Op) => void;
+  /** What came of the answer: the same outcomes as a sentence the rules read (ready, a name to pick, a name no page has),
+   * with the model's one-sentence explanation of its reading. */
+  onPlan: (plan: Plan, typed: string, op: Op, explanation: string) => void;
 }
 
 /**
@@ -42,7 +43,7 @@ export function useLlmLayers(opts: Options): { request: (typed: string, op: Op, 
     const plan = planLayers(layers, res.lines, typed, o.current.nodes, ctx);
     // only a name left open needs the answer again (the pick); a fresh ask of the same sentence asks the model again
     if (plan.kind !== "ask") last.current = null;
-    o.current.onPlan(plan, typed, op);
+    o.current.onPlan(plan, typed, op, res.explanation ?? "");
   }, []);
 
   const request = useCallback(

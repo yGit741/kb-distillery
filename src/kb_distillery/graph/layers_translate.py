@@ -17,6 +17,7 @@ import re
 from pydantic import TypeAdapter, ValidationError
 
 from kb_distillery import llm
+from kb_distillery.config.flags import runtime
 from kb_distillery.graph import query as cypher
 from kb_distillery.graph.layers import Layer
 
@@ -52,7 +53,30 @@ People type fast: read past typos ("orphnas", "colur", "theams") and missing com
 two layers). The legend's colour names map to values: theme -> area, type or kind -> format, maturity -> status,
 digest status -> depth, date added -> added, recency -> recency, source count -> evidence, source support -> support.
 Never answer color "type" (it draws as the theme). Words for links counted on screen: orphans or isolated -> degree = 0,
-leaves -> degree = 1, hubs -> degree >= 8. "don't show", "exclude", "without", "no", "remove" mean hide."""
+leaves -> degree = 1, hubs -> degree >= 8. "don't show", "exclude", "without", "no", "remove" mean hide.
+Use favorite only when the request says favourite, starred or pinned. When the request asks for something no condition
+expresses (a reading status, a year, an author), answer the nearest condition that is still true to it, such as the page
+type, and say in the explanation what was left out."""
+
+# Flag graph-algos: the graph-theory conditions the browser computes on the drawn graph, and the words that call them.
+ALGO_GRAMMAR = """Graph-theory page conditions (computed on the pages drawn):
+  shortest path between "<page>" and "<page>" | all shortest paths between "<page>" and "<page>"
+  | common neighbours of "<page>" and "<page>" | largest component | component <n> | component of "<page>"
+  | clique >= <n> | core <k> | cut vertex | bridge end | top <n> by betweenness|pagerank|degree|closeness
+  | largest community | community <n> | community of "<page>"
+A show|hide nodes layer may end in "expand <n>": its pages and the pages up to n links from them.
+color by community|component colours each group of pages.
+Graph-theory words: neighbours, ego network, "and their neighbours" -> expand 1 (or within <n> hops of a page); near,
+close to, around a page -> within 1 hop of it; how two pages connect, the path from A to B -> shortest path;
+important, central, influential, bridging -> top 20 by betweenness; most cited, authority -> top 20 by pagerank;
+clusters, groups, communities -> color by community (or a community); dense part, core -> core 3; bottleneck, single
+point of failure, articulation point -> cut vertex; islands, disconnected parts -> color by component."""
+
+ALGO_SHAPES = """Graph-theory conditions: {"t":"shortest","a":"<page>","b":"<page>"} (add "all":true for all shortest paths)
+  {"t":"common","a":"<page>","b":"<page>"} {"t":"component","rank":1} {"t":"component","of":"<page>"}
+  {"t":"clique","min":3} {"t":"core","k":3} {"t":"cut"} {"t":"bridge"}
+  {"t":"top","by":"betweenness"|"pagerank"|"degree"|"closeness","n":20} {"t":"community","rank":1}
+  {"t":"community","of":"<page>"}; a show or hide layer on nodes may carry "expand": n."""
 
 # Layer objects as the browser holds them: "t" names the condition, the lines above are only for reading.
 SHAPES = """\
@@ -84,6 +108,22 @@ EXAMPLES = (
     ("what connects Learning theory and Compression",
      [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "paths", "a": "Learning theory",
                                                                    "b": "Compression", "n": 4}]}}]),
+    ("my starred papers from 2020",
+     [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "type", "value": "paper"}, {"t": "favorite"}]}}],
+     "Starred papers; the year is not a condition, so it is left out."),
+)
+
+ALGO_EXAMPLES = (
+    ("the most important ideas and their neighbors",
+     [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "type", "value": "idea"},
+                                                                   {"t": "top", "by": "betweenness", "n": 20}]},
+       "expand": 1}]),
+    ("how do i get from Learning theory to Compression, color the clusters",
+     [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "shortest", "a": "Learning theory",
+                                                                   "b": "Compression"}]}},
+      {"kind": "style", "target": "nodes", "subgraph": {}, "style": {"color": "community"}}]),
+    ("pages that would split the graph if removed",
+     [{"kind": "show", "target": "nodes", "subgraph": {"nodes": [{"t": "cut"}]}}]),
 )
 
 
@@ -126,8 +166,14 @@ def _counts(m):
     return ", ".join(f"{k} ({n})" for k, n in m.items()) or "none"
 
 
-def build_prompt(text, vocab, op="replace"):
-    shots = "\n\n".join(f"Request: {q}\n" + json.dumps({"layers": ls, "explanation": ""}) for q, ls in EXAMPLES)
+def build_prompt(text, vocab, op="replace", algos=None):
+    """The prompt for `text`. `algos` (default: flag graph-algos) adds the graph-theory conditions and words."""
+    algos = runtime.effective("graph-algos") if algos is None else algos
+    examples = EXAMPLES + ALGO_EXAMPLES if algos else EXAMPLES
+    # an example may carry its explanation (what was left out); the rest explain nothing
+    shots = "\n\n".join(f"Request: {q}\n" + json.dumps({"layers": ls, "explanation": ex[0] if ex else ""}) for q, ls, *ex in examples)
+    grammar = f"{GRAMMAR}\n{ALGO_GRAMMAR}" if algos else GRAMMAR
+    shapes = f"{SHAPES}\n{ALGO_SHAPES}" if algos else SHAPES
     titles = "; ".join(vocab.get("titles") or ()) or "none"
     intent = {"replace": "The layers replace the current view's show/hide layers.",
               "stack": "The layers are added on top of the current view.",
@@ -135,10 +181,10 @@ def build_prompt(text, vocab, op="replace"):
     return f"""You turn a request about a knowledge-base graph into layer objects: each layer shows pages or links, hides them, or styles them. Answer layers, never Cypher.
 
 QUERY LANGUAGE (one line per layer; every line is one layer)
-{GRAMMAR}
+{grammar}
 
 LAYER OBJECTS
-{SHAPES}
+{shapes}
 
 THIS KNOWLEDGE BASE
 Page types (count): {_counts(vocab.get("node_types") or {})}
@@ -228,7 +274,7 @@ def _node(c):
     if t == "degree":
         return f"degree {c.op} {c.n}"
     if t == "hops":
-        return f"within {c.n} hops of {_of(c.of)}"
+        return f"within {c.n} hop{'' if c.n == 1 else 's'} of {_of(c.of)}"
     if t == "paths":
         return f"paths between {_quote(c.a)} and {_quote(c.b)} up to {c.n} hops"
     if t == "shortest":
