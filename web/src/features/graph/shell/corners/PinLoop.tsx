@@ -8,10 +8,12 @@ import { GraphThumb, type ThumbKind } from "./Thumb";
 /** A card of the loop: the picture is 188 x 106. */
 export const LOOP_W = 188;
 export const LOOP_H = 106;
-/** the top of the first card, under the pin */
-export const LOOP_TOP = EDGE + BUTTON - 6;
-/** the loop's left edge, from the graph area's left border */
-const LOOP_LEFT = EDGE + 4;
+/**
+ * The loop hangs from the pin's centre (the Fan Design mockup): the top card's top-left corner sits exactly there, so
+ * the pin's disc covers a quarter of it, and the cards turned past swing up about the same point.
+ */
+export const LOOP_TOP = EDGE + BUTTON / 2;
+const LOOP_LEFT = EDGE + BUTTON / 2;
 /** px between solid cards along the arc; the two fading cards after them sit closer (54, then 36) */
 const STEP = 66;
 
@@ -113,8 +115,10 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
     ...tail.map(card),
   ];
   const n = list.length;
-  const solid = Math.min(n, loopSolid(areaHeight));
-  const looping = n > solid;
+  const base = loopSolid(areaHeight);
+  // more cards than the window's solid count: keep room for both ends, two fading below and one turned past above
+  const looping = n > base;
+  const solid = looping ? Math.max(2, Math.min(base, n - 3)) : n;
   const places = useMemo(() => arcPlaces(solid), [solid]);
   const [turn, setTurn] = useState(0);
   useEffect(() => setTurn(0), [n]);
@@ -133,7 +137,7 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
       <p
         role="status"
         className="pointer-events-auto absolute z-[16] w-[240px] rounded-xl border bg-card px-3 py-2 text-[12.5px] text-muted-foreground shadow-[var(--shadow)]"
-        style={{ left: EDGE + 5, top: LOOP_TOP + 12 }}
+        style={{ left: EDGE + 5, top: EDGE + BUTTON + 6 }}
       >
         {empty}
       </p>
@@ -144,12 +148,15 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
     const at = (q: number, opacity: number, z: number, end?: Slot["end"]): Slot => ({ solid: !end, end, ...places[q]!, opacity, z });
     if (j < solid) return at(j, 1, 40 - j);
     if (!looping) return null;
+    // below: the next card half there, the one after almost gone
     if (j === solid) return at(solid, 0.55, 30, "b1");
-    if (j === solid + 1 && n >= solid + 5) return at(solid + 1, 0.24, 29, "b2");
+    if (j === solid + 1 && j < n - 1) return at(solid + 1, 0.24, 29, "b2");
+    // above: the cards just turned past stay tilted about the pin, fading toward the top border
     const tilt = (deg: number, opacity: number, z: number, end: Slot["end"]): Slot => ({ solid: false, end, x: 0, y: 0, deg, opacity, z });
-    if (j === n - 1 && n >= solid + 3) return tilt(-6, 0.72, 33, "t1");
-    if (j === n - 2 && n >= solid + 5) return tilt(-12, 0.46, 32, "t2");
-    if (j === n - 3 && n >= solid + 6) return tilt(-18, 0.22, 31, "t3");
+    const after = solid + 1; // the last place taken below
+    if (j === n - 1 && j > after) return tilt(-6, 0.72, 33, "t1");
+    if (j === n - 2 && j > after) return tilt(-12, 0.46, 32, "t2");
+    if (j === n - 3 && j > after) return tilt(-18, 0.22, 31, "t3");
     return null;
   };
   const ease = "cubic-bezier(.32,.72,0,1)";
@@ -170,7 +177,7 @@ export function PinLoop({ open, views, lead = [], tail = [], onPick, active, are
         // closed, the first few tuck behind the pin as a small pile; the rest wait there unseen
         const q = Math.min(j, 4);
         const transform = !open
-          ? `translate(-30px,-40px) rotate(${q * 5}deg) scale(.6)`
+          ? `translate(-12px,-12px) rotate(${q * 5}deg) scale(.6)`
           : s
             ? `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) rotate(${s.deg.toFixed(2)}deg)`
             : `translate(${places[Math.min(solid, places.length - 1)]!.x.toFixed(1)}px,${(places[Math.min(solid, places.length - 1)]!.y + 20).toFixed(1)}px)`;

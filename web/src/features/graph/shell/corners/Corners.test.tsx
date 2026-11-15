@@ -930,7 +930,7 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
     expect(p[4]!.deg).toBeGreaterThan(p[1]!.deg);
     expect(p[4]!.x).toBeLessThan(0);
     const bottomLeftX = p[4]!.x - 106 * Math.sin((p[4]!.deg * Math.PI) / 180);
-    expect(Math.abs(bottomLeftX + 20)).toBeLessThan(1); // the loop's left edge (EDGE + 4) plus 2px, past the border
+    expect(Math.abs(bottomLeftX + 38)).toBeLessThan(1); // the loop hangs from the pin's centre (36px in); 2px past the border
   });
 
   it("pressing a card applies its view, and the view on screen has a blue dot and name", () =>
@@ -1015,6 +1015,21 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         await userEvent.click(pins());
         await waitFor(() => expect(document.querySelector("[data-view='view:sources']")).toHaveAttribute("aria-current", "true"));
         expect(document.querySelector("[data-view='view:concepts']")).not.toHaveAttribute("aria-current");
+      }),
+    ));
+
+  it("on: a few cards past the window's count keep both ends: two fading below and one turned past above the pin", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, async () => {
+        mount(fakeServer({ views: ["a", "b", "c", "d"].map((id) => ({ id, name: id })) }), {}, { kind: "http" });
+        await userEvent.click(pins());
+        await waitFor(() => expect(onScreen().length).toBeGreaterThan(3));
+        const ends = onScreen().map((b) => b.dataset.end).filter(Boolean);
+        expect(ends).toEqual(expect.arrayContaining(["b1", "b2", "t1"]));
+        // the top card hangs from the pin's centre: its corner is a quarter under the disc
+        const top = document.querySelector<HTMLElement>("[data-corners=pin-loop]")!;
+        expect(top.style.left).toBe("36px");
+        expect(top.style.top).toBe("36px");
       }),
     ));
 
