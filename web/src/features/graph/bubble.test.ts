@@ -12,7 +12,7 @@ describe("magnetic bubble", () => {
     expect(edge.strength).toBeCloseTo(0.45);
   });
 
-  it("keeps one screen size at every zoom and vanishes inside the node", () => {
+  it("reaches only the rim, whatever the node size, and vanishes inside the node", () => {
     const small = bubbleAim({ ...t, r: 10 }, 70, 0, [t, far]);
     const zoomed = bubbleAim({ ...t, r: 60 }, 20, 0, [t, far]);
     expect(zoomed.want).toBeCloseTo(small.want);

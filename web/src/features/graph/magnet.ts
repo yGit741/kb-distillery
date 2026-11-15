@@ -80,7 +80,7 @@ export const BUBBLE_OVERLAP = 8;
 export function bubbleAim(t: ScreenNode, px: number, py: number, all: readonly ScreenNode[]): { want: number; strength: number } {
   const gap = rim(t, px, py);
   const want = gap > 0 ? gap + BUBBLE_OVERLAP : 0;
-  const strength = 1 - 0.55 * Math.min(1, Math.max(0, rim(t, px, py)) / reachOf(t, all));
+  const strength = 1 - 0.55 * Math.min(1, Math.max(0, gap) / reachOf(t, all));
   return { want, strength };
 }
 

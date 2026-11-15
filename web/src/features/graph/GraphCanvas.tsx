@@ -956,8 +956,12 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const list: ScreenNode[] = [];
       for (const n of g.nodes()) {
         const s = g.screenOf(n);
-        // the drawn size (semantic zoom grows marks slower than the zoom), so pointer, bubble and halo match the mark
-        if (s) list.push({ id: n.id, x: s.x, y: s.y, r: semanticRadius(radius(n), scale, rs.current.zr) * scale });
+        if (!s) continue;
+        // the drawn size, so pointer, bubble and halo match the mark: a pile is drawn at its graph radius, a page
+        // through semantic zoom (it grows slower than the zoom), a third larger while its type is spotlit
+        const spot = live.current.ui.spotlight?.has(n.type) ? 1.3 : 1;
+        const r = isPile(n) ? radius(n) * scale : semanticRadius(radius(n) * spot, scale, rs.current.zr) * scale;
+        list.push({ id: n.id, x: s.x, y: s.y, r });
       }
       return list;
     };
