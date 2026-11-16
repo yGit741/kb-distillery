@@ -8,11 +8,14 @@
 export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection" | ConceptSymbol;
 /** Ring symbols handed to concept types the table does not name (a kit's own types), in this order. */
 export type ConceptSymbol = "equals" | "plus" | "triangle" | "diamond";
-const CONCEPT_POOL: readonly NodeMark[] = ["idea", "equals", "plus", "triangle", "diamond", "topic", "question"];
+/** `equals` comes last of the symbols: two bars in a ring read like a topic's three, so it is the last one handed out. */
+const CONCEPT_POOL: readonly NodeMark[] = ["idea", "plus", "triangle", "diamond", "equals", "topic", "question"];
 /** The engine's own page types (a scope, a distilled think-note proposal): they keep their mark, never a pool symbol. */
 const TOOL_TYPES: ReadonlySet<string> = new Set(["scope", "distilled-think"]);
 /** Marks given by `registerTypeMarks` to the types the table does not name. */
 let AUTO: Readonly<Record<string, NodeMark>> = {};
+/** Glyphs a kb's `kb.toml` names for its own source types (`mark = "code"`), set by `registerTypeMarks`. */
+let AUTO_GLYPH: Readonly<Record<string, SourceGlyph>> = {};
 
 const MARK: Readonly<Record<string, NodeMark>> = {
   person: "person",
@@ -34,18 +37,27 @@ export const markOf = (type: string): NodeMark => MARK[type] ?? AUTO[type] ?? "s
  * the mark it had (a source its glyph, the engine's own types theirs), so existing kbs look as before. Stable for a
  * given type list (it follows the list's order); called when a graph's schema loads.
  */
-export function registerTypeMarks(types: readonly { id: string; layer: string }[]): void {
+export function registerTypeMarks(types: readonly { id: string; layer: string; mark?: string }[]): void {
   const used = new Set<NodeMark>(types.map((t) => MARK[t.id]).filter((m): m is NodeMark => !!m));
   const next: Record<string, NodeMark> = {};
+  const glyphs: Record<string, SourceGlyph> = {};
+  const own = (t: { id: string }) => !MARK[t.id] && !TOOL_TYPES.has(t.id);
+  // first the marks the kb names itself (kb.toml `mark`), so no other type is handed one of them
   for (const t of types) {
-    if (MARK[t.id] || TOOL_TYPES.has(t.id)) continue;
-    if (t.layer === "concept") {
-      const m = CONCEPT_POOL.find((c) => !used.has(c)) ?? "idea";
-      used.add(m);
-      next[t.id] = m;
-    }
+    if (!own(t) || !t.mark) continue;
+    if (t.layer === "concept" && isConceptSymbol(t.mark as NodeMark)) {
+      next[t.id] = t.mark as ConceptSymbol;
+      used.add(next[t.id]!);
+    } else if (t.layer === "source" && Object.hasOwn(GLYPH_SVG, t.mark)) glyphs[t.id] = t.mark as SourceGlyph;
+  }
+  for (const t of types) {
+    if (!own(t) || next[t.id] || t.layer !== "concept") continue;
+    const m = CONCEPT_POOL.find((c) => !used.has(c)) ?? "idea";
+    used.add(m);
+    next[t.id] = m;
   }
   AUTO = next;
+  AUTO_GLYPH = glyphs;
 }
 
 /** The legend's mark key, in reading order. */
@@ -117,9 +129,10 @@ export const TYPE_LABEL_OVERRIDE: Readonly<Record<string, string>> = { conversat
 /**
  * A source's glyph, drawn white inside its dot (canvas) or in the text colour (SVG): page (paper), text lines
  * (article, blog post, the rest), sparkle (AI chat), envelope (mail), play (lecture, video), book (part), and the raw
- * formats a source comes from: scissors (web clip), slides, image, pen (handwritten).
+ * formats a source comes from: scissors (web clip), slides, image, pen (handwritten). Angle brackets (code) are for
+ * a kb's own source type that names them in `kb.toml`.
  */
-export type SourceGlyph = "paper" | "text" | "sparkle" | "mail" | "play" | "book" | "clip" | "slides" | "image" | "handwritten";
+export type SourceGlyph = "paper" | "text" | "sparkle" | "mail" | "play" | "book" | "clip" | "slides" | "image" | "handwritten" | "code";
 
 const GLYPH: Readonly<Record<string, SourceGlyph>> = {
   paper: "paper",
@@ -139,8 +152,8 @@ const GLYPH: Readonly<Record<string, SourceGlyph>> = {
   handwritten: "handwritten",
 };
 
-/** A source type's (or raw format's) glyph; anything unnamed reads as text lines. */
-export const glyphOf = (type: string): SourceGlyph => GLYPH[type] ?? "text";
+/** A source type's (or raw format's) glyph: the table's, else the one its kb names, else text lines. */
+export const glyphOf = (type: string): SourceGlyph => GLYPH[type] ?? AUTO_GLYPH[type] ?? "text";
 
 /** Every glyph with its plain name, for the legend's Sources row. */
 export const GLYPH_LABEL: Readonly<Record<SourceGlyph, string>> = {
@@ -154,6 +167,7 @@ export const GLYPH_LABEL: Readonly<Record<SourceGlyph, string>> = {
   slides: "Slides",
   image: "Image",
   handwritten: "Handwritten",
+  code: "Code",
 };
 
 /**
@@ -171,6 +185,7 @@ export const GLYPH_SVG: Readonly<Record<SourceGlyph, { d: string; fill?: boolean
   slides: { d: "M2.5 3h11v7.5h-11zM8 10.5v3M5.5 13.5h5" },
   image: { d: "M2.5 3h11v10h-11zM2.5 11l3.5-3.5 2.5 2.5 1.5-1.5 3.5 3.5" },
   handwritten: { d: "M5 10 12 3M2.5 13.5c1.5-1.5 3-1.5 4 0s3 1.5 6.5-.5" },
+  code: { d: "M6 4.5 2.5 8 6 11.5M10 4.5 13.5 8 10 11.5" },
 };
 
 /** A mark's radius in a 16 px icon box, so every mark (stroke included) fills about the same square. */

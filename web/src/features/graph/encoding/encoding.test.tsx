@@ -181,8 +181,8 @@ describe("automatic marks for a kit's own types", () => {
     ]);
     // idea keeps its own mark, so Concept takes the next symbol of the pool and Comparison the one after
     expect(markOf("idea")).toBe("idea");
-    expect(markOf("Concept")).toBe("equals");
-    expect(markOf("Comparison")).toBe("plus");
+    expect(markOf("Concept")).toBe("plus");
+    expect(markOf("Comparison")).toBe("triangle");
     expect(markOf("Series")).toBe("source");             // only concept types get a symbol; others keep their mark
     expect(markOf("Source")).toBe("source");
     expect(markOf("not-registered")).toBe("source");
@@ -193,9 +193,37 @@ describe("automatic marks for a kit's own types", () => {
     const c = render(<NodeMarkSvg type="Concept" />).container.querySelector("svg")!;
     expect(c.getAttribute("data-mark")).toBe("idea");
     const cmp = render(<NodeMarkSvg type="Comparison" />).container.querySelector("svg")!;
-    expect(cmp.getAttribute("data-mark")).toBe("equals");
+    expect(cmp.getAttribute("data-mark")).toBe("plus");
     expect(cmp.querySelectorAll("circle").length).toBe(1);
     expect(cmp.querySelector("path")).not.toBeNull();
+  });
+});
+
+describe("marks a kb names in kb.toml", () => {
+  afterEach(() => registerTypeMarks([]));
+
+  it("gives a concept type the symbol it names and keeps that symbol from the other types", () => {
+    registerTypeMarks([
+      { id: "idea", layer: "concept" },
+      { id: "flow", layer: "concept" },
+      { id: "component", layer: "concept", mark: "plus" },
+    ]);
+    expect(markOf("component")).toBe("plus");
+    expect(markOf("flow")).toBe("triangle");               // plus is taken, so the next free symbol
+  });
+
+  it("gives a source type the glyph it names, and ignores a name that is not a mark of its layer", () => {
+    registerTypeMarks([
+      { id: "ir-card", layer: "source", mark: "code" },
+      { id: "memo", layer: "source", mark: "diamond" },
+      { id: "paper", layer: "source", mark: "code" },
+      { id: "flow", layer: "concept", mark: "code" },
+    ]);
+    expect(glyphOf("ir-card")).toBe("code");
+    expect(glyphOf("memo")).toBe("text");
+    expect(glyphOf("paper")).toBe("paper");                // the engine's own types keep their glyph
+    expect(markOf("flow")).toBe("idea");                   // a glyph is not a ring symbol: the pool decides
+    expect(render(<NodeMarkSvg type="ir-card" />).container.querySelector("path")?.getAttribute("d")).toBe(GLYPH_SVG.code.d);
   });
 });
 

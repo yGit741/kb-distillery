@@ -59,7 +59,7 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, glyph: SourceGlyph, x: 
     ctx.quadraticCurveTo(x + r * 0.3, y - r * 0.45, x, y - r * 0.32);
     ctx.lineTo(x, y + r * 0.42);
     ctx.stroke();
-  } else if (glyph === "clip" || glyph === "slides" || glyph === "image" || glyph === "handwritten") {
+  } else if (glyph === "clip" || glyph === "slides" || glyph === "image" || glyph === "handwritten" || glyph === "code") {
     // the raw-format glyphs: the legend's SVG path (16 px box), scaled into the dot
     const k = r / 10;
     ctx.translate(x - 8 * k, y - 8 * k);

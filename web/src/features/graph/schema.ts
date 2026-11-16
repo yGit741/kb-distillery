@@ -4,6 +4,8 @@ export interface TypeInfo {
   id: string;
   label: string;
   layer: Layer;
+  /** The graph mark the kb's `kb.toml` names for the type (a ring symbol or a source glyph), when it names one. */
+  mark?: string;
 }
 
 export interface GraphSchema {
@@ -26,7 +28,7 @@ export function parseSchema(raw: unknown): GraphSchema {
   if (isObj(raw) && Array.isArray(raw["types"])) {
     for (const t of raw["types"] as unknown[]) {
       if (!isObj(t) || typeof t["id"] !== "string" || !isLayer(t["layer"])) continue;
-      types.push({ id: t["id"], label: typeof t["label"] === "string" ? t["label"] : title(t["id"]), layer: t["layer"] });
+      types.push({ id: t["id"], label: typeof t["label"] === "string" ? t["label"] : title(t["id"]), layer: t["layer"], ...(typeof t["mark"] === "string" ? { mark: t["mark"] } : {}) });
     }
   }
   if (!types.length) {

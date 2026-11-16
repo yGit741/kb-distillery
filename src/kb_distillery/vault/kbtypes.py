@@ -89,10 +89,19 @@ class Types:
     type_label: dict
     type_order: tuple
     type_color: dict
+    type_mark: dict      # type → the graph mark its kb.toml table names (only the types that name one)
     areas: frozenset
     deprecated_areas: frozenset
     source_fields: tuple
     spec: dict           # layer → type → its table, as loaded (for /api/kb)
+
+
+# The graph marks a type table may name with `mark`: a concept type a ring symbol, a source type a glyph in its dot.
+# The web app draws them (web/src/features/graph/encoding/spec.ts: ConceptSymbol, SourceGlyph); keep the two in step.
+MARKS = {
+    "concept": ("plus", "triangle", "diamond", "equals"),
+    "source": ("paper", "text", "code", "sparkle", "mail", "play", "book", "clip", "slides", "image", "handwritten"),
+}
 
 
 def _layer_tables(section: dict) -> dict:
@@ -127,7 +136,7 @@ def build(section: dict | None) -> Types:
     concepts = frozenset(tables["concept"])
 
     layer_of = {**seen, **AUX_LAYER}
-    status, prefix, label, color, yeared = {}, {}, {}, {}, set()
+    status, prefix, label, color, mark, yeared = {}, {}, {}, {}, {}, set()
     for layer in LAYERS:
         default_status = GROW_STATUS if layer == "concept" else READ_STATUS
         for name, t in tables[layer].items():
@@ -138,6 +147,11 @@ def build(section: dict | None) -> Types:
                 color[name] = str(t["color"])
             if t.get("yeared"):
                 yeared.add(name)
+            if t.get("mark"):
+                if str(t["mark"]) not in MARKS.get(layer, ()):
+                    allowed = ", ".join(MARKS[layer]) if layer in MARKS else "none: a collection has one mark"
+                    raise TypesError(f"[types.{layer}.{name}] mark {t['mark']!r} is not a {layer} mark ({allowed})")
+                mark[name] = str(t["mark"])
     for name in AUX_LAYER:
         status[name], prefix[name], label[name], color[name] = AUX_STATUS[name], AUX_PREFIX[name], AUX_LABEL[name], AUX_COLOR[name]
     used = set(color.values())
@@ -162,7 +176,7 @@ def build(section: dict | None) -> Types:
         source_types=sources, partition_collections=partition, contents_collections=contents,
         concept_types=concepts, layer_of=layer_of, type_status=status, yeared=yeared,
         slug_prefix={n: p for n, p in prefix.items() if p}, bare_types={n for n, p in prefix.items() if not p},
-        type_label=label, type_order=order, type_color=color,
+        type_label=label, type_order=order, type_color=color, type_mark=mark,
         areas=frozenset(section.get("areas") or ()), deprecated_areas=frozenset(section.get("deprecated_areas") or ()),
         source_fields=tuple(section.get("source_fields") or ()), spec=tables,
     )

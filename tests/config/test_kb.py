@@ -355,6 +355,19 @@ class TypesFromConfig(unittest.TestCase):
         self.assertTrue(t.type_color["company"].startswith("#"))                # palette fallback
         self.assertEqual(t.layer_of["company"], "concept")
         self.assertEqual(t.layer_of["scope"], "collection")                     # tool-owned types always there
+        self.assertEqual(t.type_mark, {})                                       # no type names a mark
+
+    def test_a_type_table_names_its_graph_mark(self):
+        base = {"order": ["component", "book", "notebook", "course", "series", "code-card"]}
+        t = types.build({**base, "concept": {"component": {"label": "Component", "mark": "diamond"}},
+                         "source": {"code-card": {"label": "Code card", "mark": "code"}}})
+        self.assertEqual(t.type_mark, {"component": "diamond", "code-card": "code"})
+        from kb_distillery.graph.schema import schema_payload
+        marks = {x["id"]: x.get("mark") for x in schema_payload(t)["types"]}
+        self.assertEqual((marks["component"], marks["code-card"], marks["book"]), ("diamond", "code", None))
+        with self.assertRaisesRegex(types.TypesError, "is not a concept mark"):     # a glyph on a concept type
+            types.build({**base, "concept": {"component": {"label": "Component", "mark": "code"}},
+                         "source": {"code-card": {"label": "Code card"}}})
 
     def test_collection_kind_decides_partition_or_contents_and_prefix_defaults_to_the_name(self):
         t = types.build({"collection": {"album": {"label": "Album", "kind": "partition"}, "playlist": {"label": "Playlist"}}})

@@ -72,6 +72,7 @@ A type table, for example `[types.source.paper]`:
 | `status` | Allowed status values. `[]` means none. |
 | `kind` | Collections only: `partition` (a page range of its own PDF) or `contents` (member files in a table). |
 | `color` | Optional. A palette color is chosen otherwise. |
+| `mark` | Optional. How the graph draws the type. A concept type names a ring symbol: `plus`, `triangle`, `diamond` or `equals`. A source type names the glyph in its dot: `paper`, `text`, `code`, `sparkle`, `mail`, `play`, `book`, `clip`, `slides`, `image` or `handwritten`. Without it a concept type takes the next free symbol and a source type shows text lines. |
 
 ## [edges]
 
