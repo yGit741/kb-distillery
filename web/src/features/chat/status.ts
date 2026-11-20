@@ -119,7 +119,7 @@ export interface BillingDetail {
 export function billingDetails(s: StatusView): Record<"subscription" | "api" | "batch", BillingDetail> {
   const sub = s.subscription;
   const api: BillingDetail = s.keyLoaded
-    ? { ok: true, hint: `Key ${s.keyHint} from ${apiKeyOrigin(s)}` }
+    ? { ok: true, hint: `Key ${s.keyHint ? `${s.keyHint} ` : ""}from ${apiKeyOrigin(s)}` }
     : { ok: false, hint: "No Anthropic API key", setup: { label: "Get a key", href: API_KEY_SETUP } };
   return {
     subscription: sub.loggedIn

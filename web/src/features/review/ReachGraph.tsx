@@ -32,6 +32,9 @@ const R_INNER = 70;
 const R_OUTER = 115;
 const R_FOUND = 138;
 const NODE = 5;
+/** A ring label stops at this many characters (its full title is the tooltip): the found ring (R_FOUND) plus the 9px
+ * offset plus 16 characters at 9px (about 80px) fits the viewBox's 230px half-width, so no label runs out of the panel. */
+const LABEL_MAX = 16;
 
 const REL_LINE: Record<ReachRel, string> = {
   added: "This change adds the link",
@@ -285,7 +288,7 @@ export const ReachGraph = forwardRef<ReachGraphHandle, {
         )}
       </div>
 
-      <svg viewBox="-150 -150 300 300" className="h-[280px] w-full overflow-visible" role="group" aria-label={`The page and the ${plural(nodes.length, "page")} around it`}>
+      <svg viewBox="-230 -150 460 300" className="h-[280px] w-full overflow-visible" role="group" aria-label={`The page and the ${plural(nodes.length, "page")} around it`}>
         {nodes.map((n) => (
           <line
             key={`e-${n.slug}`}
@@ -328,7 +331,7 @@ export const ReachGraph = forwardRef<ReachGraphHandle, {
               </g>
               {label && (
                 <text x={right ? 9 : -9} y={3} textAnchor={right ? "start" : "end"} className={cn("text-[9px]", sel ? "fill-blue-700 font-medium" : "fill-foreground")}>
-                  {n.title.length > 22 ? `${n.title.slice(0, 21)}…` : n.title}
+                  {n.title.length > LABEL_MAX ? `${n.title.slice(0, LABEL_MAX - 1)}…` : n.title}
                 </text>
               )}
             </g>

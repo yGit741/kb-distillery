@@ -63,11 +63,56 @@ def test_a_bad_stars_file_reads_as_none(bases):
     assert _stars(bases) == ["alpha"]
 
 
-def test_stats_answers_a_size_per_loadable_kb(bases):
+def test_stats_answers_at_once_and_counts_the_rest_in_the_background(bases, monkeypatch):
+    import time
+
+    from kb_distillery.services import kb as svc
+    monkeypatch.setattr(svc, "_SIZES", {})
+    monkeypatch.setattr(svc, "_PENDING", {})
+    monkeypatch.setattr(svc, "_SIZES_WORKER", None)
     with TestClient(create_app()) as c:
-        r = c.get("/api/kb/stats")
-    assert r.status_code == 200, r.text
-    sizes = r.json()["kbs"]
+        first = c.get("/api/kb/stats")
+        assert first.status_code == 200, first.text
+        sizes = first.json()["kbs"]
+        for _ in range(100):                         # the background count lands; the menu asks again until then
+            if {"alpha", "beta"} <= set(sizes):
+                break
+            time.sleep(0.05)
+            sizes = c.get("/api/kb/stats").json()["kbs"]
     assert {"alpha", "beta"} <= set(sizes), sizes
+    if svc._SIZES_WORKER is not None:
+        svc._SIZES_WORKER.join(5)
     for size in sizes.values():
         assert set(size) == {"concepts", "sources", "edges"}
+
+
+def test_a_size_is_reused_until_the_folder_changes(bases, monkeypatch):
+    from kb_distillery.services import kb as svc
+    monkeypatch.setattr(svc, "_SIZES", {})
+    monkeypatch.setattr(svc, "_PENDING", {})
+    calls = []
+    real = svc._size_of
+    monkeypatch.setattr(svc, "_size_of", lambda kb_id, root: (calls.append(kb_id), real(kb_id, root))[1])
+    assert {"alpha", "beta"} <= set(svc.graph_sizes(wait=True)["kbs"])
+    n = len(calls)
+    svc.graph_sizes(wait=True)
+    assert len(calls) == n                           # nothing changed: no count again
+    (bases / "alpha" / "wiki" / "new.md").write_text("---\ntitle: New\ntype: idea\n---\n# New\n", encoding="utf-8")
+    again = svc.graph_sizes()                        # changed: counted in the background, the last size stays
+    assert again["pending"] == ["alpha"] and "alpha" in again["kbs"]
+    svc.graph_sizes(wait=True)
+    assert calls[n:] == ["alpha"]                    # only the changed one is counted again
+
+
+def test_a_kb_whose_graph_fails_is_left_out_and_not_retried(bases, monkeypatch):
+    from kb_distillery.services import kb as svc
+    monkeypatch.setattr(svc, "_SIZES", {})
+    monkeypatch.setattr(svc, "_PENDING", {})
+    from kb_distillery.graph import cache
+
+    def boom(*_a, **_k):
+        raise RuntimeError("no graph")
+
+    monkeypatch.setattr(cache, "cached_graph_snapshot", boom)
+    out = svc.graph_sizes(wait=True)
+    assert out == {"kbs": {}, "pending": []}         # nothing to wait for: the menu stops asking

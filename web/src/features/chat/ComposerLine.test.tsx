@@ -123,7 +123,7 @@ describe("composer line (agent-mode on)", () => {
       setup();
       const user = userEvent.setup();
       await user.click(within(await line()).getByRole("button", { name: "Billing" }));
-      const menu = await screen.findByRole("listbox", { name: "Billing" });
+      const menu = await screen.findByRole("group", { name: "Billing" });
       expect(within(menu).getByRole("button", { name: /^API/ })).toHaveTextContent('Key sk-ant-…abcd from saved key "personal"');
       const sub = within(menu).getByRole("button", { name: /^Subscription/ });
       expect(sub).toBeDisabled();
@@ -142,7 +142,7 @@ describe("composer line (agent-mode on)", () => {
       });
       const user = userEvent.setup();
       await user.click(within(await line()).getByRole("button", { name: "Billing" }));
-      const menu = await screen.findByRole("listbox", { name: "Billing" });
+      const menu = await screen.findByRole("group", { name: "Billing" });
       expect(within(menu).getByRole("button", { name: /^Subscription/ })).toHaveTextContent("me@example.com · MAX");
       expect(within(menu).getByRole("button", { name: /^API/ })).toBeDisabled();
       expect(within(menu).getByRole("button", { name: /^Batch/ })).toBeDisabled();

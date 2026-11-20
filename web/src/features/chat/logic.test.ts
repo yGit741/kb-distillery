@@ -111,3 +111,11 @@ describe("status", () => {
     expect(backendLabel(v).text).toBe("Direct · subscription (max)");
   });
 });
+
+describe("billingDetails", () => {
+  it("names the key by its hint and source, with no stray space when the hint is empty", async () => {
+    const { billingDetails } = await import("./status");
+    expect(billingDetails(parseStatus(chatStatus())).api.hint).toBe('Key sk-ant-…abcd from saved key "personal"');
+    expect(billingDetails(parseStatus(chatStatus({ key_hint: "" }))).api.hint).toBe('Key from saved key "personal"');
+  });
+});
