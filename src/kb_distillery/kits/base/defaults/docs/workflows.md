@@ -70,6 +70,13 @@ Catalog creates the Source page at `depth: listed` for papers (`paper-`) and tag
 (`blog-`) — emails, chats, handwriting and slides stay corpus rows until something is digested from them. Every outcome,
 including a refusal and its reason, is logged in `meta/.catalog/` (the dashboard's Ingestion status).
 
+**Chats** (`raw/llm-chats/`) are digested per conversation, not per clip: `distill ingest chat-digest` rebuilds the
+`meta/chats/` trees (re-clips of one thread fold together, 0 LLM), adds clips to the page that already owns their
+conversation, marks byte-identical copies `dupe:` and writes one `ai-chat` page for each conversation that has none
+(`kb_distillery.llm`, tier standard, `--backend subscription|api|batch`; a reply that fails its checks is asked once
+more, then reported and left for the next run). Two pages on one conversation are reported, never merged.
+`--dry-run` prints the plan and the cost; `--only <clip|conv|slug>` and `--limit N` narrow a run; `--max-usd` caps it.
+
 During `full-digest` / `deep-digest`, `src/kb_distillery/git/guard.py` blocks direct writes to session-owned wiki paths — use `draft` + `finalize`.
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.

@@ -25,7 +25,7 @@ A row's identity is its raw paths; `#` is display order. The collection's `matur
 **Digesting a collection row:** `full-digest|deep-digest <collection-slug> --row N`. The page type follows the
 format: `presentations/`, `handwritten/` → `lecture-`; `emails/` → `mail-`; `web-clips/`
 or non-PDF `printed-docs/` → `article-`; `printed-docs/` PDF → `paper-`. LLM chats become `chat-`
-pages through the chat pipeline instead. `finalize` ticks the row; `easy-digest` ticks it too and
+pages through `distill ingest chat-digest` instead (one page per conversation). `finalize` ticks the row; `easy-digest` ticks it too and
 sets `maturity: digested`. A raw path that is a collection member auto-scopes to its row.
 
 ## Books and parts

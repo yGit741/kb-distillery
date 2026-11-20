@@ -157,7 +157,7 @@ Sources:
 - **part** — as paper, plus a `> Part of [Book title](book-slug.md) · pp. A–B` line under the title
 - **lecture** — `> Lecture of [Course title](course-slug.md)` line → Setup & assumptions → Key equations → Takeaways → Connections → Links out
 - **article / mail** — Key claims → Key equations → Takeaways → Connections → Links out (mail = an email thread)
-- **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
+- **ai-chat** — one page per conversation, written by `distill ingest chat-digest` from its `meta/chats/` tree (`conversation:` names the tree; `raw:` lists every clip of it)
 - **blog-post** — rendered by `src/kb_distillery/ingest/sources/web/blog.py`: Blog Post Summary → Key concepts → Post
 - **video** — Key ideas → Key equations → Takeaways → Connections → Links out
 

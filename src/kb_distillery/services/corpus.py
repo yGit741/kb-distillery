@@ -190,17 +190,19 @@ def build_preview(rel):
 
 
 def run_action(action, rel):
-    """Run easy-digest on one raw file; (result, error)."""
+    """Run easy-digest on one raw file (chat-digest for a chat clip: a chat is digested per conversation)."""
     err = validate_action(action, rel)
     if err:
         return None, err
-    cmd = [sys.executable, "-m", "kb_distillery.ingest", "easy-digest", rel]
+    from kb_distillery.vault.schema import RAW_CHATS
+    step = ["chat-digest", "--only", rel] if rel.split("/")[1] == RAW_CHATS else ["easy-digest", rel]
+    cmd = [sys.executable, "-m", "kb_distillery.ingest", *step]
     try:
         p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=ACTION_TIMEOUT)
     except subprocess.TimeoutExpired:
         return {"exit": -1, "stdout": "", "stderr": f"timed out after {ACTION_TIMEOUT}s", "command": " ".join(cmd[2:])}, None
     return {"exit": p.returncode, "stdout": p.stdout[-2000:], "stderr": p.stderr[-2000:],
-            "command": "python3 -m kb_distillery.ingest easy-digest " + rel}, None
+            "command": "python3 -m kb_distillery.ingest " + " ".join(step)}, None
 
 
 def build_citations():
