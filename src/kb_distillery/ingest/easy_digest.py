@@ -239,6 +239,9 @@ def prepare(arg, into=None, tick=True):
     """Extract the abstract (0 LLM), deepen the page to easy and tick its row → {slug, wiki_path, abstract, abstract_path}."""
     raw_rel = _resolve_raw(arg)
     page_type = unit_type_for_raw(raw_rel)
+    if page_type == "ai-chat":
+        raise ValueError(f"{raw_rel}: a chat is digested per conversation — "
+                         f"distill ingest chat-digest --only {raw_rel}")
     if page_type == "video" and not raw_rel.endswith("/video.md"):
         raise ValueError(f"{raw_rel}: a video bundle is digested through its video.md")
     from kb_distillery.ingest.sources.books import book as book_mod

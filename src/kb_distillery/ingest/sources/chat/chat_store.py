@@ -18,12 +18,12 @@ INDEX_PATH = os.path.join(CHATS_ABS, "index.json")
 INDEX_SCHEMA = "conversation-index/1"
 
 
-def _ensure_dir():
-    os.makedirs(CHATS_ABS, exist_ok=True)
+def _ensure_dir(base=None):
+    os.makedirs(base or CHATS_ABS, exist_ok=True)
 
 
-def _path(conv_id):
-    return os.path.join(CHATS_ABS, conv_id + ".json")
+def _path(conv_id, base=None):
+    return os.path.join(base or CHATS_ABS, conv_id + ".json")
 
 
 def new_id(root_hash):
@@ -45,11 +45,11 @@ def load(conv_id):
         return json.load(f)
 
 
-def save(conv):
-    """Atomic (tmp + os.replace), deterministic (sort_keys) write."""
-    _ensure_dir()
+def save(conv, base=None):
+    """Atomic (tmp + os.replace), deterministic (sort_keys) write. `base`: another kb's meta/chats/."""
+    _ensure_dir(base)
     conv["schema"] = CHAT_TREE_SCHEMA
-    path = _path(conv["id"])
+    path = _path(conv["id"], base)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(conv, f, sort_keys=True, indent=2, ensure_ascii=False)
@@ -57,9 +57,9 @@ def save(conv):
     os.replace(tmp, path)
 
 
-def all_conversations():
-    _ensure_dir()
-    for path in sorted(glob.glob(os.path.join(CHATS_ABS, "conv-*.json"))):
+def all_conversations(base=None):
+    _ensure_dir(base)
+    for path in sorted(glob.glob(os.path.join(base or CHATS_ABS, "conv-*.json"))):
         with open(path, encoding="utf-8") as f:
             yield json.load(f)
 
@@ -74,8 +74,9 @@ def load_index():
     return idx
 
 
-def rebuild_index():
-    _ensure_dir()
+def rebuild_index(base=None):
+    _ensure_dir(base)
+    index_path = os.path.join(base, "index.json") if base else INDEX_PATH
     idx = {
         "schema": INDEX_SCHEMA,
         "by_turn": {},
@@ -83,7 +84,7 @@ def rebuild_index():
         "by_url": {},
         "by_wiki": {},
     }
-    for conv in all_conversations():
+    for conv in all_conversations(base):
         cid = conv["id"]
         for node in conv.get("nodes", {}).values():
             idx["by_turn"].setdefault(node["hash"], [])
@@ -95,9 +96,9 @@ def rebuild_index():
             idx["by_url"][url] = cid
         if conv.get("wiki"):
             idx["by_wiki"][conv["wiki"]] = cid
-    tmp = INDEX_PATH + ".tmp"
+    tmp = index_path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(idx, f, sort_keys=True, indent=2, ensure_ascii=False)
         f.write("\n")
-    os.replace(tmp, INDEX_PATH)
+    os.replace(tmp, index_path)
     return idx

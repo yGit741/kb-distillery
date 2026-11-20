@@ -131,7 +131,7 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 ## ingest
 
 ```
-usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
+usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,chat-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
 ```
 
 | Subcommand | Does | Model |
@@ -146,6 +146,7 @@ usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-dige
 | `catalog` | Inbox file to `raw/<format>/`, plus membership. `--collection`, `--format`, `--title`, `--year`. | none |
 | `drain-inbox` | Catalog all inbox files. | none |
 | `easy-digest` | Abstract skim. `--into`, `--no-tick`, `--no-lint`, `--fill`, `--backend`, `--model`. | light |
+| `chat-digest` | One `ai-chat` page per conversation in `raw/llm-chats/` (trees first, 0 LLM). `--dry-run`, `--only`, `--limit`, `--max-usd`, `--backend`, `--model`. | standard |
 | `easy-spotcheck` | About 5% of easy digests re-read by a stronger model. | none here |
 | `full-digest` | Standard note. `--part`, `--pages`, `--section`, `--whole-book`, `--row`. | medium |
 | `digest-many` | Fill claims for many sources, then full-digest each. | yes |

@@ -22,6 +22,7 @@ INGEST = {
     ("catalog", None): ("catalog", True),
     ("drain-inbox", None): ("catalog", True),
     ("finalize", None): ("digest", True),
+    ("chat-digest", None): ("digest", True),
     ("backfill-authors", None): ("refine", False),
     ("index-researcher", "finalize"): ("catalog", True),
     ("index-researcher", "relink"): ("refine", False),
@@ -40,6 +41,7 @@ SUMMARY = {
     "backfill-authors": "authors and arXiv URLs ({n} pages)",
     "index-researcher": "{target} researcher profile",
     "apply": "{target} distill",
+    "chat-digest": "{n} chat conversations",
 }
 
 

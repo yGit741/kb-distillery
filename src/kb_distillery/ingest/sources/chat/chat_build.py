@@ -17,7 +17,7 @@ import shutil
 from . import chat, chat_merge, chat_store
 from kb_distillery.ingest.paths import ROOT
 from kb_distillery.storage import for_kb
-from kb_distillery.vault.schema import RAW_CHATS
+from kb_distillery.vault.schema import CHATS_DIR, RAW_CHATS
 
 ASSETS = "assets"
 
@@ -26,6 +26,12 @@ def load_clip(clip_rel, root=ROOT):
     text = for_kb(root=root).get(clip_rel).decode("utf-8")
     fm, turns = chat.parse_clip(text)
     return fm or {}, turns, hashlib.sha1(text.encode("utf-8")).hexdigest()
+
+
+def clip_date(fm):
+    """When a clip was taken: `clipped`, else the web clipper's `created`, else `published` ("" when none).
+    Clips are merged oldest first, so a later re-clip extends or branches the earlier one, not the reverse."""
+    return str(fm.get("clipped") or fm.get("created") or fm.get("published") or "").strip()
 
 
 def clip_paths(root=ROOT):
@@ -49,7 +55,7 @@ def build(clip_rels, root=ROOT):
     for rel in clip_rels:
         fm, turns, sha1 = load_clip(rel, root)
         if turns:
-            clips.append((str(fm.get("clipped") or ""), rel, fm, turns, sha1))
+            clips.append((clip_date(fm), rel, fm, turns, sha1))
     clips.sort(key=lambda c: (c[0], c[1]))
 
     convs, rows, n = {}, [], 0
@@ -166,14 +172,15 @@ def run(out=None, apply=False, root=ROOT):
         extract_artifacts(conv, out_root, root)
     preserve_pngs(convs, root)
     if apply:
-        stale = [p for p in glob.glob(os.path.join(chat_store.CHATS_ABS, "conv-*.json"))
+        base = os.path.join(root, CHATS_DIR)
+        stale = [p for p in glob.glob(os.path.join(base, "conv-*.json"))
                  if os.path.basename(p)[:-5] not in convs]
         for conv in convs.values():
-            chat_store.save(conv)
+            chat_store.save(conv, base)
         for p in stale:
             os.remove(p)
         _move_pngs(convs, root)
-        chat_store.rebuild_index()
+        chat_store.rebuild_index(base)
     else:
         os.makedirs(os.path.join(out, "meta", "chats"), exist_ok=True)
         for conv in convs.values():
@@ -196,7 +203,7 @@ def _move_pngs(convs, root):
                 if art["png"] != want:
                     shutil.copy2(os.path.join(root, art["png"]), os.path.join(root, want))
                     art["png"] = want
-        chat_store.save(conv)
+        chat_store.save(conv, os.path.join(root, CHATS_DIR))
 
 
 def tree_ascii(conv, label=None):

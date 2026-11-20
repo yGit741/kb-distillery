@@ -95,7 +95,7 @@ distill ingest full-digest course-runi-rl --row 3
 The page type follows the raw format: `presentations/`, `handwritten/` → `lecture-`;
 `emails/` → `mail-`; `web-clips/` or non-PDF `printed-docs/` → `article-` (a tagged blog
 post → `blog-`); `printed-docs/` PDF → `paper-`. LLM chats (`llm-chats/`) are not digested here —
-they become `chat-` pages through the chat pipeline, which needs their `meta/chats/` tree.
+they become `chat-` pages, one per conversation, through `distill ingest chat-digest` (builds the `meta/chats/` trees first).
 `finalize` ticks the row (`full`) and links the new page. Passing a raw path that is a collection
 member auto-scopes to its row.
 

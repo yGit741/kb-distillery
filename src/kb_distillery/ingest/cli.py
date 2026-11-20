@@ -227,6 +227,15 @@ def main(argv=None):
     ed.add_argument("--fill", action="store_true", help="kb_distillery.llm writes Problem + Main result (else the agent does)")
     _add_llm_flags(ed, default_model="light")
 
+    cd = sub.add_parser("chat-digest", help="one ai-chat page per conversation in raw/llm-chats/ (LLM; trees 0 LLM)")
+    cd.add_argument("--only", nargs="+", default=None, metavar="CLIP|CONV|SLUG",
+                    help="only these clips (raw/llm-chats/…), conversation ids or pages")
+    cd.add_argument("--limit", type=int, default=None, help="write at most N new pages (a trial run)")
+    cd.add_argument("--dry-run", action="store_true", help="print the plan and the estimate; write nothing")
+    cd.add_argument("--max-usd", type=float, default=None, help="refuse when the estimate is above this")
+    cd.add_argument("--no-lint", action="store_true", help="skip the lint run at the end")
+    _add_llm_flags(cd, default_model="standard")
+
     sc = sub.add_parser("easy-spotcheck", help="~5%% of easy digests re-read by a stronger model (0 LLM here)")
     sc_sub = sc.add_subparsers(dest="sc_cmd", required=True)
     sc_pick = sc_sub.add_parser("pick", help="which of these slugs to re-read (deterministic)")
@@ -392,6 +401,9 @@ def main(argv=None):
         _, rows, failed = easy_digest.easy_digest_many(args.target, tick=not args.no_tick, lint=not args.no_lint,
                                                        **llm_kw)
         return 1 if failed or any(r.get("error") for r in rows) else 0
+    if args.cmd == "chat-digest":
+        from .sources.chat import chat_digest
+        return chat_digest.main(args)
     if args.cmd == "easy-spotcheck":
         from . import spotcheck
         if args.sc_cmd == "pick":
