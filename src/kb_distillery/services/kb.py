@@ -5,6 +5,7 @@ in `<bases dir>/.stars.json` (a dotfile, so discovery skips it; never inside a k
 base is a relaunch (`distill launch --kb <id|path>`): ROOT is resolved when the process starts.
 """
 import contextlib
+import fcntl
 import json
 import os
 import subprocess
@@ -87,14 +88,17 @@ _STARS_LOCK = threading.Lock()
 
 def set_star(kb_id: str, starred: bool) -> set[str]:
     """Star (or unstar) `kb_id` -> the new star set. An id that is no longer discovered is kept: it may come back."""
-    with _STARS_LOCK:     # FastAPI runs sync routes in a thread pool: two stars at once must not lose one
+    # FastAPI runs sync routes in a thread pool, and several app instances may share one bases dir: the thread lock
+    # and a file lock beside the stars keep two stars at once from losing one
+    path = _stars_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with _STARS_LOCK, open(path + ".lock", "a", encoding="utf-8") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
         ids = stars()
         if starred:
             ids.add(kb_id)
         else:
             ids.discard(kb_id)
-        path = _stars_path()
-        os.makedirs(os.path.dirname(path), exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=STARS_FILE, suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:

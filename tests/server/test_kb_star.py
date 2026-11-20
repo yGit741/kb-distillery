@@ -16,6 +16,7 @@ def _kb(bases, kb_id):
     os.makedirs(root)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
         f.write(f'[kb]\nid = "{kb_id}"\nname = "{kb_id.title()}"\nschema_version = "1.5"\n')
+    os.makedirs(os.path.join(root, "wiki"))
 
 
 @pytest.fixture
@@ -66,5 +67,7 @@ def test_stats_answers_a_size_per_loadable_kb(bases):
     with TestClient(create_app()) as c:
         r = c.get("/api/kb/stats")
     assert r.status_code == 200, r.text
-    for size in r.json()["kbs"].values():
+    sizes = r.json()["kbs"]
+    assert {"alpha", "beta"} <= set(sizes), sizes
+    for size in sizes.values():
         assert set(size) == {"concepts", "sources", "edges"}

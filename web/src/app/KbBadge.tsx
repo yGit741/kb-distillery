@@ -40,7 +40,7 @@ export function KbBadge() {
       {id && <span className="rounded-full border px-1.5 py-px text-[11px] font-normal text-muted-foreground">{id}</span>}
     </>
   );
-  if (kbView && q.data) return <KbMenu title={title} active={id} activeName={name} />;
+  if (kbView && q.data) return <KbMenu title={title} active={id} activeName={name} readOnly={q.data.read_only} />;
   const link = (
     <Link
       to={"/system" as never}
@@ -86,7 +86,7 @@ type MenuRow = { id: string; name: string; root: string; error: string; active: 
  * or id (Enter shows the first match alone); starred ones (kept by the server, so every browser sees them) lead the
  * menu; the rest follow largest graph first, each with its size in small print, red when it is too small or unlinked.
  */
-function KbMenu({ title, active, activeName }: { title: React.ReactNode; active: string | null; activeName: string }) {
+function KbMenu({ title, active, activeName, readOnly }: { title: React.ReactNode; active: string | null; activeName: string; readOnly: boolean }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -119,8 +119,10 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
 
   const star = useMutation({
     mutationFn: (v: { id: string; starred: boolean }) => ds.starKb(v.id, v.starred),
-    onMutate: (v) =>
-      qc.setQueryData<KbList>(["kb-list"], (old) => old && { ...old, kbs: old.kbs.map((r) => (r.id === v.id ? { ...r, starred: v.starred } : r)) }),
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ["kb-list"] });
+      qc.setQueryData<KbList>(["kb-list"], (old) => old && { ...old, kbs: old.kbs.map((r) => (r.id === v.id ? { ...r, starred: v.starred } : r)) });
+    },
     onSuccess: (data) => qc.setQueryData(["kb-list"], data),
     onError: () => void qc.invalidateQueries({ queryKey: ["kb-list"] }),
   });
@@ -167,7 +169,7 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
         <KbSizeChip size={sizeOf(r)} />
         <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
       </label>
-      {r.listed && <StarToggle name={r.name || r.id} on={r.starred} onToggle={() => star.mutate({ id: r.id, starred: !r.starred })} />}
+      {r.listed && !readOnly && <StarToggle name={r.name || r.id} on={r.starred} onToggle={() => star.mutate({ id: r.id, starred: !r.starred })} />}
     </div>
   );
 
@@ -198,7 +200,7 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
           className="absolute left-0 top-full z-50 mt-1 w-[28rem] max-w-[calc(100vw-1rem)] rounded-lg border bg-card p-2 text-sm font-normal shadow-[var(--shadow)]"
         >
           <p className="px-1.5 pb-1 text-xs text-muted-foreground">Shown on the graph. Other knowledge bases are view only.</p>
-          <KbSearch value={query} onChange={setQuery} onEnter={() => first && only(first.id)} autoFocus className="mb-1" />
+          <KbSearch value={query} onChange={setQuery} onEnter={() => query.trim() && first && only(first.id)} autoFocus className="mb-1" />
           {list.isPending && <p className="px-1.5 py-1 text-muted-foreground">Loading…</p>}
           <StarredRows
             starred={starredRows}

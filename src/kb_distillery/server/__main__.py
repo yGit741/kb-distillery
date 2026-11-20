@@ -30,6 +30,8 @@ def free_port(host: str, wanted: int, tries: int = 10) -> int:
     import socket
     for port in range(wanted, wanted + tries):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if os.name != "nt":      # uvicorn binds with SO_REUSEADDR: a port left in TIME_WAIT by the last run is free
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((host, port))
             except OSError:
