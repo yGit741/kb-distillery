@@ -30,7 +30,12 @@ export function figureUrl(src: string): string | null {
 export function chatVizPath(src: string): string | null {
   const m = /^\/api\/assets\/chat\?path=([^&#]+)$/.exec(src);
   if (!m) return null;
-  const path = decodeURIComponent(m[1]!);
+  let path: string;
+  try {
+    path = decodeURIComponent(m[1]!);
+  } catch {
+    return null; // a malformed escape: leave it to the plain image path
+  }
   return /\.html?$/i.test(path) ? path : null;
 }
 

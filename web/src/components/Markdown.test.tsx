@@ -149,6 +149,7 @@ describe("Markdown doubt tag on display formulas", () => {
 describe("chat visualizations", () => {
   it("draws an html chat asset as a sandboxed frame, leaves other images alone", async () => {
     expect(chatVizPath("/api/assets/chat?path=meta%2Fchats%2Fassets%2Fc%2Fv.png")).toBeNull();
+    expect(chatVizPath("/api/assets/chat?path=%E0%A4%A.html")).toBeNull();
     const { container } = await renderMd("![Visualization](/api/assets/chat?path=meta%2Fchats%2Fassets%2Fc%2Fv.html)");
     const frame = container.querySelector(".kb-viz iframe");
     expect(frame?.getAttribute("src")).toBe("/api/assets/chat?path=meta%2Fchats%2Fassets%2Fc%2Fv.html");

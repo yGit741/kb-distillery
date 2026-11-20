@@ -88,6 +88,10 @@ def chat_asset(path: str = ""):
     ctype = {".html": "text/html; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png"}[ext]
     with open(full, "rb") as f:
         body = f.read()
+    headers = {}
+    if ext in (".html", ".svg"):
+        # model-written code: even opened as its own tab it runs sandboxed, never with the app's origin (and its API)
+        headers["Content-Security-Policy"] = "sandbox allow-scripts"
     if ext == ".html":
         body = body.replace(b"</body>", VIZ_REPORTER + b"</body>") if b"</body>" in body else body + VIZ_REPORTER
-    return Response(body, media_type=ctype)
+    return Response(body, media_type=ctype, headers=headers)
