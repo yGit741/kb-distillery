@@ -105,6 +105,9 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     nameEmbedding: (backend) => run(() => client.POST("/api/embedding/names", { body: backend ? { backend } : {} }), "/api/embedding/names"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
+    getKbStats: () => run(() => client.GET("/api/kb/stats"), "/api/kb/stats"),
+    starKb: (id, starred) =>
+      run(() => client.PUT("/api/kb/{kb_id}/star", { params: { path: { kb_id: id } }, body: { starred } }), `/api/kb/${id}/star`),
     previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
     importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
     getKbLibrary: () => run(() => client.GET("/api/kb/library"), "/api/kb/library"),

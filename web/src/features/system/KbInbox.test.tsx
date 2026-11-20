@@ -8,7 +8,7 @@ import type { KbInbox, KbInboxItem, KbInfo, KbList } from "@/api/types";
 import { mockDataSource } from "@/test/datasource";
 
 const git = { repo: true, branch: "main" } as KbList["kbs"][number]["git"];
-const list: KbList = { bases_dir: "/b", think_root: "/t", active: "alpha", kbs: [{ id: "alpha", name: "Alpha", root: "/b/alpha", schema_version: "1.3", error: "", active: true, git }] };
+const list: KbList = { bases_dir: "/b", think_root: "/t", active: "alpha", kbs: [{ id: "alpha", name: "Alpha", root: "/b/alpha", schema_version: "1.3", error: "", active: true, starred: false, git }] };
 const info = { id: "alpha", name: "Alpha", root: "/b/alpha", git, bases_dir: "/b", relaunch: "x", types: [], digest: [], areas: [], source_fields: [], meta_overrides: [], flags_registry: "kb", schema_version: "1.3", config: null, think_root: "/t", think_git: git } as unknown as KbInfo;
 
 const item = (over: Partial<KbInboxItem>): KbInboxItem => ({ item: "20260102T030405Z-aaaaaaaa", status: "pending", kind: "zip", at: "2026-01-02T03:04:05Z", uploader: "me@example.com", kb_id: "notes", pages: 3, warnings: 0, size: 10, ...over });

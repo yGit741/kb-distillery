@@ -114,9 +114,7 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
     kind, target = cmd.kind, cmd.target
     if kind == "launch":
         if repo_root() is None:                 # an installed package has no scripts/: serve the app in the foreground
-            kind, target = "module", "kb_distillery.server"
-            if not any(a == "--port" or a.startswith("--port=") for a in rest):
-                rest = ["--port", "8765", *rest]
+            kind, target = "module", "kb_distillery.server"     # no --port: 8765, or the next free one
         else:
             kind = "script"
     if kind == "script":

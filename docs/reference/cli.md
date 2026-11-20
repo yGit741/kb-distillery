@@ -83,7 +83,7 @@ distill kb inbox list|pull   uploads parked in the deployed site's inbox: list t
 usage: distill launch [args…]
 ```
 
-Starts the app on `127.0.0.1:8765`. Arguments go to `scripts/launch.sh`: `--kb <id|path>` and `--port N`. Outside a checkout, it serves the app in the foreground.
+Starts the app on `127.0.0.1:8765`. Arguments go to `scripts/launch.sh`: `--kb <id|path>` and `--port N`. Outside a checkout, it serves the app in the foreground: without `--port` it takes 8765, or the next free port when another instance has it; `--open-path /app/graph` picks the page the browser opens. `KB_CHAT_SETTINGS=<file>` points the chat settings (default `~/.config/kb-distillery/chat.json`) at another file.
 
 ## hooks and hook
 

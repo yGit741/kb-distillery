@@ -18,3 +18,9 @@ export function formatKbs(ids: readonly string[], active: string | null): string
   if (ids.length === 1 && ids[0] === active) return undefined;
   return ids.join(",");
 }
+
+/** The knowledge base menus' search line: every whitespace-separated term of `query` is in the name or id (any case). */
+export function matchesKb(kb: { id: string; name: string }, query: string): boolean {
+  const hay = `${kb.name} ${kb.id}`.toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((t) => hay.includes(t));
+}

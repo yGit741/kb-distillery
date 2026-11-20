@@ -281,7 +281,8 @@ class DispatchTests(TempHome):
     def test_launch_outside_a_checkout_serves_the_app_in_the_foreground(self):
         with patch.object(tree, "repo_root", return_value=None):
             _, seen = self.run_with_fake(["launch"])
-            self.assertEqual((seen["module"], seen["argv"][1:]), ("kb_distillery.server", ["--port", "8765"]))
+            # no --port: the server takes 8765, or the next free one
+            self.assertEqual((seen["module"], seen["argv"][1:]), ("kb_distillery.server", []))
             _, seen = self.run_with_fake(["launch", "--port", "9000"])
             self.assertEqual(seen["argv"][1:], ["--port", "9000"])
 

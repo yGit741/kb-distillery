@@ -51,7 +51,8 @@ CACHE_WRITE_5M = 1.25
 CACHE_WRITE_1H = 2.0
 
 CONFIG_DIR = userdir.config_dir()
-SETTINGS_FILE = os.path.join(CONFIG_DIR, "chat.json")     # key name, monthly credit, reset day
+# key name, monthly credit, reset day; KB_CHAT_SETTINGS points one app (a demo, a shared checkout) at its own file
+SETTINGS_FILE = os.environ.get("KB_CHAT_SETTINGS") or os.path.join(CONFIG_DIR, "chat.json")
 LEDGER_FILE = os.path.join(CONFIG_DIR, "usage.jsonl")     # one line per answered request
 BACKENDS = ("agent", "direct")   # agent: read-only research agent (chat_agent.py); direct: this module
 AUTH_MODES = ("api_key", "subscription")   # subscription = the `claude login` account; agent backend only

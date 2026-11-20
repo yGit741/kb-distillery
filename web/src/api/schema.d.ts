@@ -895,6 +895,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Graph size of every knowledge base: concepts, sources, concept-to-concept edges */
+        get: operations["kb_stats_api_kb_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kb/{kb_id}/star": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Star (or unstar) a knowledge base: starred ones lead the header menu */
+        put: operations["star_kb_api_kb__kb_id__star_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/lifecycle": {
         parameters: {
             query?: never;
@@ -4401,6 +4435,26 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** KbGraphSize */
+        KbGraphSize: {
+            /** Concepts */
+            concepts: number;
+            /** Edges */
+            edges: number;
+            /** Sources */
+            sources: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbGraphSizes */
+        KbGraphSizes: {
+            /** Kbs */
+            kbs: {
+                [key: string]: components["schemas"]["KbGraphSize"];
+            };
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * KbImportPreview
          * @description The dry run: what an import would do. Errors block it, warnings do not.
@@ -4648,6 +4702,15 @@ export interface components {
             root: string;
             /** Schema Version */
             schema_version: string;
+            /** Starred */
+            starred: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbStarPut */
+        KbStarPut: {
+            /** Starred */
+            starred: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -9940,6 +10003,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KbList"];
+                };
+            };
+        };
+    };
+    kb_stats_api_kb_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbGraphSizes"];
+                };
+            };
+        };
+    };
+    star_kb_api_kb__kb_id__star_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kb_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KbStarPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbList"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

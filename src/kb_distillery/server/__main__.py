@@ -25,18 +25,41 @@ def limit_blas_threads(environ=None):
     return "numpy" not in sys.modules
 
 
+def free_port(host: str, wanted: int, tries: int = 10) -> int:
+    """`wanted` when it is free, else the next free port (another app instance is the usual reason it is taken)."""
+    import socket
+    for port in range(wanted, wanted + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if os.name != "nt":      # uvicorn binds with SO_REUSEADDR: a port left in TIME_WAIT by the last run is free
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, port))
+            except OSError:
+                continue
+        if port != wanted:
+            print(f"port {wanted} is in use (another app instance?); using {port} instead", flush=True)
+        return port
+    raise SystemExit(f"ports {wanted}-{wanted + tries - 1} are all in use; pass --port")
+
+
 def main(argv=None):
     if not limit_blas_threads():
         print("note: numpy was imported before the server started; BLAS thread caps not applied", flush=True)
     parser = argparse.ArgumentParser(description="kb-distillery app server")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--port", type=int, default=None,
+                        help=f"default {DEFAULT_PORT}, or the next free one when it is taken; a port given here is used as is")
     parser.add_argument("--host", default="127.0.0.1",
                         help="loopback only, unless KB_AUTH=proxy (self-hosting behind an identity-aware proxy)")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser tab")
     parser.add_argument("--no-build", action="store_true", help="serve src/kb_distillery/_webapp as is (skip the rebuild check)")
     parser.add_argument("--kb", default=None, help="knowledge base id or folder path (else $KB; see `distill kb list`)")
+    parser.add_argument("--open-path", default="/app/start", help="the page the browser tab opens (default /app/start)")
     args = parser.parse_args(argv)
     assert_loopback_bind(args.host)
+    if not args.open_path.startswith("/"):
+        parser.error("--open-path must start with /")
+    if args.port is None:
+        args.port = free_port(args.host, DEFAULT_PORT)
 
     import uvicorn
     from kb_distillery.server.app import create_app
@@ -54,7 +77,7 @@ def main(argv=None):
         print(f"{name:<11} {base}{path}")
     print("(Ctrl+C to stop)", flush=True)
     if not args.no_open:
-        webbrowser.open(f"{base}/app/start")
+        webbrowser.open(f"{base}{args.open_path}")
     from kb_distillery.graph.cache import start_refresher
     start_refresher()                 # warm the graph snapshot in a daemon thread and keep it fresh (KB_GRAPH_WARM=0: off)
     # proxy_headers=False: the ASGI client stays the TCP peer, never an X-Forwarded-For value (the trusted-header

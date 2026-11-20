@@ -54,6 +54,11 @@ class KbRow(ApiModel):
     error: str
     git: KbGitState
     active: bool
+    starred: bool                   # pinned to the top of the header menu (<bases dir>/.stars.json)
+
+
+class KbStarPut(ApiModel):
+    starred: bool
 
 
 class KbList(ApiModel):
@@ -61,3 +66,13 @@ class KbList(ApiModel):
     think_root: str
     active: str | None
     kbs: list[KbRow]
+
+
+class KbGraphSize(ApiModel):
+    concepts: int                   # concept-layer nodes
+    sources: int                    # source-layer nodes
+    edges: int                      # concept-to-concept pairs, one per pair
+
+
+class KbGraphSizes(ApiModel):
+    kbs: dict[str, KbGraphSize]     # by knowledge base id; one that does not load is absent

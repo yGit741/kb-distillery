@@ -44,10 +44,11 @@ def test_distill_launch_from_a_wheel_serves_with_the_port_and_no_open(monkeypatc
     seen = {}
     monkeypatch.setattr(tree, "repo_root", lambda: None)
     monkeypatch.setattr(tree.runpy, "run_module", lambda target, **k: seen.update(target=target, argv=list(sys.argv)))
-    for extra in ([], ["--port=9001"]):
+    # no --port: the server takes 8765, or the next free one (kb_distillery.server.free_port); a given one passes once
+    for extra, ports in (([], 0), (["--port=9001"], 1)):
         assert tree.main(["launch", "--no-open", *extra]) == 0
         assert seen["target"] == "kb_distillery.server" and "--no-open" in seen["argv"]
-        assert sum(a.startswith("--port") or a == "--port" for a in seen["argv"]) == 1
+        assert sum(a.startswith("--port") or a == "--port" for a in seen["argv"]) == ports
 
 
 def test_qmd_server_creates_the_index_folder_before_opening_the_db():
