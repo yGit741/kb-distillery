@@ -170,6 +170,34 @@ export function drawEdges(
   ctx.restore();
 }
 
+/**
+ * The standing words of a sparse graph's edges (./edgeWords): each edge's word at its curve's middle, small and
+ * muted, along no edge shorter than the word. A word that would overlap one already written is left out.
+ */
+export function drawEdgeWords(ctx: CanvasRenderingContext2D, links: readonly SimLink[], scale: number, colors: CanvasColors, word: (l: SimLink) => string): void {
+  const px = (v: number) => v / scale;
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  ctx.save();
+  ctx.font = `500 ${px(10)}px ${colors.font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = withAlpha(colors.text, 0.55);
+  for (const l of links) {
+    const a = at(l.source);
+    const b = at(l.target);
+    const mid = linkPoint(l, 0.5);
+    const text = word(l);
+    if (!a || !b || !mid || !text) continue;
+    const w = ctx.measureText(text).width;
+    if (Math.hypot(b.x - a.x, b.y - a.y) < w + px(24)) continue;
+    const box = { x0: mid.x - w / 2 - px(2), y0: mid.y - px(7), x1: mid.x + w / 2 + px(2), y1: mid.y + px(7) };
+    if (placed.some((q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0)) continue;
+    placed.push(box);
+    halo(ctx, colors, scale, text, mid.x, mid.y);
+  }
+  ctx.restore();
+}
+
 /** Text with a background halo, so it reads over edges and dots. */
 function halo(ctx: CanvasRenderingContext2D, colors: CanvasColors, scale: number, text: string, x: number, y: number): void {
   ctx.lineJoin = "round";
