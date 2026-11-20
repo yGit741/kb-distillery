@@ -155,6 +155,44 @@ def test_a_forced_pull_that_cannot_land_puts_the_old_bundle_back(tmp_path, monke
     assert os.listdir(tmp_path / ".cache" / "wandb-build") == []
 
 
+@pytest.mark.parametrize("key, value", [
+    ("hfToken", "hf_x"), ("accessToken", "abc"), ("openaiApiKey", "sk-x"), ("clientSecret", "x"), ("db_pass", "x"),
+    ("api_keys", ["a", "b"]), ("authorization", "Bearer x"), ("auth_token", "abc123"), ("token", "hunter2"),
+    ("credentials", {"user": "octocat", "pw": "x"}), ("APIKey", "x"), ("secret-key", "x")])
+def test_secret_keys_are_redacted(key, value):
+    assert wp._is_secret(key, value)
+
+
+@pytest.mark.parametrize("key, value", [
+    ("max_tokens", 512), ("maxTokens", "512"), ("n_keys", 4), ("key_dim", "8"), ("pad_token", "<pad>"),
+    ("eosToken", "</s>"), ("secret", 3), ("password", ""), ("tokenizer", "gpt2"), ("num_tokens", "1000")])
+def test_settings_are_kept(key, value):
+    assert not wp._is_secret(key, value)
+
+
+def test_a_forced_pull_keeps_the_old_bundle_when_it_cannot_step_aside(tmp_path, monkeypatch):
+    root = str(tmp_path)
+    rel = wp.pull_run(FakeRun(), root=root)
+    real = wp.shutil.move
+
+    def fail_aside(src, dst):
+        if dst.endswith(".old"):
+            raise OSError("busy")
+        return real(src, dst)
+    monkeypatch.setattr(wp.shutil, "move", fail_aside)
+    with pytest.raises(OSError, match="busy"):
+        wp.pull_run(FakeRun(name="renamed"), force=True, root=root)
+    assert json.loads((tmp_path / rel / "run.json").read_text())["name"] == "Ratio sweep | gaussian"
+    assert os.listdir(tmp_path / ".cache" / "wandb-build") == []
+
+
+def test_a_table_file_that_is_not_an_object_is_skipped(tmp_path, capsys):
+    art = FakeArtifact("odd:v0", "result-grid", {"odd.table.json": json.dumps([1, 2, 3])})
+    rel = wp.pull_run(FakeRun(artifacts=[art]), root=str(tmp_path))
+    assert "odd.csv" not in os.listdir(tmp_path / rel)
+    assert "odd:v0/odd.table.json is not a readable table, skipped" in capsys.readouterr().err
+
+
 def test_history_is_capped(tmp_path):
     rel = wp.pull_run(FakeRun(steps=10, artifacts=[]), max_rows=4, root=str(tmp_path))
     data = json.loads((tmp_path / rel / "run.json").read_text())

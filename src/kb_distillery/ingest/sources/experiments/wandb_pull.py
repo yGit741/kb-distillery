@@ -26,11 +26,14 @@ INBOX_PREFIX = "run-"
 TABLE_SUFFIX = ".table.json"
 LISTED_ONLY = {"code", "job", "wandb-history"}     # artifact types never downloaded
 PROJECT_PAGES = {"workspace", "table", "overview", "sweeps", "reports", "artifacts", "jobs"}   # tabs of a project URL
-# Config keys whose string value is not kept. The name must end in the word, so `max_tokens`, `n_keys` and
-# `key_dim` stay; a `*_token` is a secret only when it is long (`pad_token: "<pad>"` stays).
-SECRET = re.compile(r"(?:^|[_.\-])(api[_-]?key|access[_-]?key|private[_-]?key|secret[_-]?key|secret|password|passwd|"
-                    r"credentials?|token)$", re.I)
-TOKEN_MIN = 16
+# Config keys whose value is not kept. A key is split into words (snake, kebab, dotted and camelCase), and
+# it is a secret when its last word, or its last two words joined, name one: `hfToken`, `db_pass`, `api_keys`
+# and `clientSecret` are secrets, `max_tokens`, `n_keys` and `key_dim` are not. A special-token setting
+# (`pad_token: "<pad>"`) is not a secret either.
+SECRET_WORDS = {"password", "passwd", "pass", "pwd", "secret", "secrets", "credential", "credentials", "token",
+                "authorization", "auth", "bearer", "apikey", "apikeys"}
+SECRET_PAIRS = {"apikey", "apikeys", "accesskey", "privatekey", "secretkey", "clientsecret", "authtoken"}
+SPECIAL_TOKENS = {"pad", "eos", "bos", "unk", "sep", "cls", "mask", "start", "end"}
 REDACTED = "(redacted)"
 CELL = 160                                          # longest value shown in a run.md table cell
 
@@ -87,11 +90,24 @@ def existing(entity, project, run_id, root=ROOT):
     return hits
 
 
+def _words(key):
+    return [w for w in re.split(r"[_.\-\s]+", re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key).lower()) if w]
+
+
 def _is_secret(key, value):
-    m = SECRET.search(key)
-    if not m or not isinstance(value, str) or not value:
+    """True when the key names a secret and the value holds something: a non-empty string, dict or list.
+    Numbers and booleans are kept (`secret: 3` is a setting, not a secret)."""
+    if not value or not isinstance(value, (str, dict, list, tuple)):
         return False
-    return len(value) >= TOKEN_MIN or m.group(1).lower() != "token"
+    words = _words(key)
+    if not words:
+        return False
+    last, pair = words[-1], "".join(words[-2:])
+    if last not in SECRET_WORDS and pair not in SECRET_PAIRS:
+        return False
+    if last == "token" and len(words) > 1 and words[-2] in SPECIAL_TOKENS:
+        return False                                                  # pad_token, eos_token: a model setting
+    return True
 
 
 def _plain(value, media=False, redact=False):
@@ -157,6 +173,8 @@ def _table_csv(src, dest):
         with open(src, encoding="utf-8") as f:
             t = json.load(f)
     except (OSError, ValueError):
+        return None
+    if not isinstance(t, dict):
         return None
     cols, data = t.get("columns"), t.get("data")
     if not isinstance(cols, list) or not isinstance(data, list):
@@ -287,15 +305,18 @@ def pull_run(run, force=False, max_rows=100_000, max_mb=50, root=ROOT, quiet=Fal
     os.makedirs(os.path.dirname(final), exist_ok=True)
     old = f"{dest}.old"
     shutil.rmtree(old, ignore_errors=True)
-    if os.path.isdir(final):
-        shutil.move(final, old)                                       # --force: this run's own inbox bundle steps aside
+    had = os.path.isdir(final)
     try:
+        if had:
+            shutil.move(final, old)                                   # --force: this run's own inbox bundle steps aside
         shutil.move(dest, final)
     except BaseException:
-        shutil.rmtree(final, ignore_errors=True)                      # a move across devices may stop half way
-        if os.path.isdir(old):
+        if not had:
+            shutil.rmtree(final, ignore_errors=True)                  # only a partial copy of the new bundle
+        elif os.path.isdir(old):
+            shutil.rmtree(final, ignore_errors=True)                  # a move across devices may stop half way
             shutil.move(old, final)                                   # the old bundle comes back
-        shutil.rmtree(dest, ignore_errors=True)
+        shutil.rmtree(dest, ignore_errors=True)                       # else the old bundle never moved: keep it
         raise
     shutil.rmtree(old, ignore_errors=True)
     print(f"scrap (wandb) → {rel}/ — {history[0]} history rows, {len(tables)} tables, {len(arts)} artifacts")
