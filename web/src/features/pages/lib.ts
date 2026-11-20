@@ -143,8 +143,10 @@ export function prepareMarkdown(md: string, titleFor?: (slug: string) => string 
     });
   s = s.replace(
     /```dataviewjs\n[\s\S]*?const path = "([^"]+)";[\s\S]*?```/g,
-    (_m, p: string) => `[Open the visualization](/api/assets/chat?path=${encodeURIComponent(p)})`,
+    (_m, p: string) => `![Visualization](/api/assets/chat?path=${encodeURIComponent(p)})`,
   );
+  // the "Rendered from the chat — `path`" note under a visualization: the frame itself says where it comes from
+  s = s.replace(/^> \[!info\] Rendered from the chat — `[^`\n]+`[ \t]*\n?/gm, "");
   // `![alt](../raw/…)` (an image in raw/, written relative to wiki/ as Obsidian reads it) → the vault image route
   s = s.replace(/!\[([^\]]*)\]\(\.\.\/(raw\/[^)\s]+)\)/g, (_m, alt: string, path: string) =>
     `![${alt}](/api/assets/vault?name=${encodeURIComponent(path)})`);

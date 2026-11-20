@@ -1,7 +1,7 @@
 import "katex/dist/katex.min.css";
 import { Link } from "@tanstack/react-router";
 import type { Link as MdLink, Root, Text } from "mdast";
-import { useMemo, useRef, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
@@ -26,6 +26,49 @@ export function figureUrl(src: string): string | null {
   const m = FIGURE_REF.exec(src.slice(FIGURE.length));
   return m ? `/api/figures/${m[1]}/${m[2]}/${m[3]}` : null;
 }
+/** A chat visualization `![Visualization](/api/assets/chat?path=…html)`: the asset path when `src` is one, else null. */
+export function chatVizPath(src: string): string | null {
+  const m = /^\/api\/assets\/chat\?path=([^&#]+)$/.exec(src);
+  if (!m) return null;
+  let path: string;
+  try {
+    path = decodeURIComponent(m[1]!);
+  } catch {
+    return null; // a malformed escape: leave it to the plain image path
+  }
+  return /\.html?$/i.test(path) ? path : null;
+}
+
+/** A chat visualization drawn live in a sandboxed frame (scripts, no same-origin); it grows to the height the page reports. */
+function ChatViz({ src, path }: { src: string; path: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(480);
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      const h = (e.data as { vizHeight?: unknown } | null)?.vizHeight;
+      if (e.source === ref.current?.contentWindow && typeof h === "number" && h > 0) setHeight(Math.min(h + 4, 4000));
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+  return (
+    <span className="kb-viz my-3 block">
+      <iframe
+        ref={ref}
+        src={src}
+        title={`Visualization ${path}`}
+        sandbox="allow-scripts"
+        loading="lazy"
+        className="block w-full rounded-lg border border-border bg-white"
+        style={{ height }}
+      />
+      <a href={src} target="_blank" rel="noopener noreferrer" className="mt-1 block text-xs text-muted-foreground">
+        Open in a new tab
+      </a>
+    </span>
+  );
+}
+
 /** A page link `slug.md` or `slug.md#heading` (flat, no folder or scheme): `[Title](slug.md)` is how pages link. */
 const PAGE_HREF = /^([^/:#?]+)\.md(#.*)?$/;
 
@@ -251,6 +294,8 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
         );
       },
       img({ src, alt, node: _node }) {
+        const viz = typeof src === "string" ? chatVizPath(src) : null;
+        if (viz) return <ChatViz src={src as string} path={viz} />;
         const fig = typeof src === "string" ? figureUrl(src) : null;
         if (fig) return <img src={fig} alt={alt ?? "Figure"} loading="lazy" className="kb-figure" />;
         const url = typeof src === "string" ? (transformUrl ? transformUrl(src) : src) : undefined;

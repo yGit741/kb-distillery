@@ -104,6 +104,7 @@ def test_chat_asset_injects_height_reporter(client, tmp_path, monkeypatch):
     r = client.get("/api/assets/chat", params={"path": "x.html"})
     assert r.status_code == 200 and "vizHeight" in r.text
     assert r.headers["content-type"].startswith("text/html")
+    assert r.headers["content-security-policy"] == "sandbox allow-scripts"
 
 
 def test_vault_asset_serves_image(client, tmp_path, monkeypatch):

@@ -79,7 +79,12 @@ describe("markdown prep", () => {
     expect(out).not.toContain("hide");
     expect(out).not.toMatch(/^# Title/);
     expect(out).toContain("![fig 1.png](/api/assets/vault?name=fig%201.png)");
-    expect(out).toContain("/api/assets/chat?path=meta%2Fchats%2Fassets%2Fv.html");
+    expect(out).toContain("![Visualization](/api/assets/chat?path=meta%2Fchats%2Fassets%2Fv.html)");
+  });
+  it("drops the 'Rendered from the chat' note under a visualization", () => {
+    const out = prepareMarkdown("a\n\n> [!info] Rendered from the chat — `meta/chats/assets/c/v.html`\n\nb");
+    expect(out).not.toContain("Rendered from the chat");
+    expect(out).toContain("b");
   });
 });
 
