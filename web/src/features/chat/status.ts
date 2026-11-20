@@ -96,6 +96,40 @@ export function backendLabel(s: StatusView): { text: string; ok: boolean } {
   return { text: `${be} · no API key`, ok: false };
 }
 
+export const SUBSCRIPTION_SETUP = "https://code.claude.com/docs/en/setup";
+export const API_KEY_SETUP = "https://console.anthropic.com/settings/keys";
+
+/** Where the API-key mode's key comes from, in the words the person set it up with. */
+export function apiKeyOrigin(s: StatusView): string {
+  if (s.keyOrigin === "env") return "env ANTHROPIC_API_KEY";
+  if (s.keyOrigin === "default") return s.keyFile;
+  return `saved key "${s.keyOrigin}"`;
+}
+
+export interface BillingDetail {
+  /** this way of paying can run now */
+  ok: boolean;
+  /** exactly which login or key pays, or what is missing */
+  hint: string;
+  /** where to set it up, when it cannot run */
+  setup?: { label: string; href: string };
+}
+
+/** Per way of paying: which account or key exactly (never the key, only its last four characters), or a link to set one up. */
+export function billingDetails(s: StatusView): Record<"subscription" | "api" | "batch", BillingDetail> {
+  const sub = s.subscription;
+  const api: BillingDetail = s.keyLoaded
+    ? { ok: true, hint: `Key ${s.keyHint} from ${apiKeyOrigin(s)}` }
+    : { ok: false, hint: "No Anthropic API key", setup: { label: "Get a key", href: API_KEY_SETUP } };
+  return {
+    subscription: sub.loggedIn
+      ? { ok: true, hint: `claude login · ${[sub.email, sub.plan && sub.plan.toUpperCase()].filter(Boolean).join(" · ") || "signed in"}` }
+      : { ok: false, hint: "Not signed in to Claude Code", setup: { label: "Set up", href: SUBSCRIPTION_SETUP } },
+    api,
+    batch: api.ok ? { ok: true, hint: `Half price, later, no tools · ${api.hint}` } : api,
+  };
+}
+
 /** Value of the Account select: "subscription" or "key:<name>". */
 export function authValue(s: StatusView): string {
   if (s.authMode === "subscription") return "subscription";

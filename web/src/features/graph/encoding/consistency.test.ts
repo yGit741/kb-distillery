@@ -23,6 +23,7 @@ const count = (text: string, re: RegExp) => (text.match(re) ?? []).length;
 /** Files that draw a circle that is not a page's node: the exact count, and why. A new circle needs a new reason. */
 const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/graph/ForceGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
+  "features/review/ReachGraph.tsx": { n: 2, why: "the selection ring and the keyboard focus ring around a page of a card's reach (state around a mark, never a mark)" },
   "features/edit-preview/TouchedGraph.tsx": { n: 1, why: "the ring around the page being read and the keyboard focus ring (state around a mark, never a mark)" },
   "features/home/SampleGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
   "features/graph/GraphCanvas.tsx": { n: 2, why: "experiment halos (tools/decor) under a node, and the soft glow under an open uncited clump's outer dots (Citations by meaning): not nodes" },
@@ -146,6 +147,7 @@ describe("graph consistency guard", () => {
     "features/home/SampleGraph.tsx": { host: "features/home/ConceptExplorer.tsx", component: "SampleGraph", legend: "GraphLegend" },
     "features/pages/MiniGraph.tsx": { host: "features/pages/MiniGraph.tsx", component: "NodeMarkG", legend: "GraphLegend" },
     "features/edit-preview/TouchedGraph.tsx": { host: "features/edit-preview/TouchedGraph.tsx", component: "NodeMarkG", legend: "GraphLegend" },
+    "features/review/ReachGraph.tsx": { host: "features/review/ReachGraph.tsx", component: "NodeMarkG", legend: "GraphLegend" },
   };
 
   it("lists every graph surface, and each host renders it beside the shared legend", () => {

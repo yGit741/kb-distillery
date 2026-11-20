@@ -45,6 +45,11 @@ This table is generated from the schema on `main`.
 | `POST /api/graph/queries/{name}` | Run a named graph query. |
 | `GET /api/citations` | Citation graph among cataloged papers. |
 | `GET /api/relations/proposals` | Relation proposals in a confidence range, best first. |
+| `GET /api/review/deck` | The Review deck (flag `ui.review-deck`): one card per hunk of every open proposal, with its context and blast radius. |
+| `POST /api/review/apply` | Apply the deck's decisions per proposal in one batch: applied, rejected, or left waiting. |
+| `POST /api/review/{pid}/hunks/{hid}/rewrite` | Rewrite one card's text from the owner's sentence (one model call through the shared LLM tool, `backend` per call). |
+| `POST /api/review/{pid}/revert` | Back to a proposal's previous revision, as a new revision. |
+| `POST /api/review/split` | Split a page where the model suggests; the parts arrive as a restructure proposal. |
 | `GET /api/corpus` | Raw files of one format with digest columns. |
 | `GET /api/raw/{path}` | Manifest facts and a text excerpt. |
 | `GET /api/raw/{path}/card` | One raw file as a Home pipeline card. |

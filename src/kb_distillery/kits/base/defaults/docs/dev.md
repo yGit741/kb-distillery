@@ -56,6 +56,7 @@ forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
 | `distill ops …` / `ship …` | `kbd ops` / `ship` | knowledge operations / tooling PRs (`ship` only inside a checkout) |
 | `distill ingest …` / `digest easy\|full\|deep\|many` | `pixi run ingest` | scrap, catalog and digest sources |
 | `distill send <note> --to a,b` | `kbd distill` | send a think note into knowledge bases |
+| `distill code …` | | code to citable fact cards, `cite --check`, `check-cites` (`docs/guides/code-kb.md`; package `src/kb_distillery/codekb/`) |
 | `distill llm …` / `share …` / `propose …` | `pixi run llm` / `share` / graph.propose | the LLM door / the site / relation proposals |
 
 Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distillery/` (`config/userdir.py`). If only an
@@ -69,6 +70,14 @@ then the only kb there is. `$KB_ROOT` is internal (tools set it to hand a resolv
 start, e.g. the share build, qmd, the hooks); users never do. `$KB_BASES_DIR` replaces the bases dir for tests only.
 `examples/demo` is the one kb tracked by this repo (a made-up job search, public); every other kb is its own git
 repo and never enters this one. The hooks in a kb repo (`src/kb_distillery/kits/base/hooks/`, installed by `distill hooks install --kb <id|path>`) run `distill hook <name>` on `$PATH` with `$KB_ROOT` set to that repo; they never look for the engine and fail closed (exit 2) when `distill` is missing or cannot import. The git hooks follow the kit through `core.hooksPath`; the two Claude guards are copied into `.claude/hooks/`, so they update on `distill hooks install`. A kb whose `core.hooksPath` still names a retired hook folder of this repo has no hooks: run `distill hooks install --kb <id|path>`.
+
+**`distill mcp`: let Claude read your kbs.** A read-only MCP server (stdio, `src/kb_distillery/kb_mcp/`) over the bases dir (`$KB_DISTILLERY_HOME`) plus every `--kb <path>` (repeatable). Tools: `list_kbs` (title, page and source counts, last change), `find_kb` (which kb answers a question), `search` (the kb's own full-text index, `kb_distillery.search.fts`, pages only), `get_index`, `get_page`, `get_sources` (the raw files a page cites, read through the storage connector: metadata, plus the first characters of a text file), `whats_new` (`wiki/log.md` entries, else `kb(op)` commits). It serves `wiki/` and the cited `raw/` files only, never `think/`, and writes nothing to a kb except the machine-local search cache `.cache/search/`. It needs the `mcp` package (>= 2; the `mcp` extra, `pip install 'kb-distillery[mcp]'`; the pixi env has it through the Claude SDK). Register it once:
+
+```sh
+claude mcp add --scope user kb-distillery -- distill mcp                                  # distill on PATH (see below)
+claude mcp add --scope user kb-distillery -- distill mcp --kb /Users/jdoe/notes/my-kb     # one more kb outside the bases dir
+claude mcp add --scope user kb-distillery -- env PYTHONPATH=/Users/jdoe/kb-distillery/src /Users/jdoe/kb-distillery/.pixi/envs/default/bin/python -m kb_distillery mcp
+```
 
 **`distill` on PATH, for a kb outside the repo.** The kb hooks (`distill hooks install`) call `distill hook …` and fail closed when it is missing, so a kb outside this checkout needs `distill` on `$PATH`. The pixi env deliberately holds no install of this package (a path dependency in `pixi.toml` was re-pointed at whichever worktree ran `pixi run`, breaking the shared env; `tests/test_pixi_env.py` guards it), so there is no `distill` script in `.pixi/`. Put a launcher on `$PATH` instead, e.g. `~/.local/bin/distill` (`chmod +x`):
 
