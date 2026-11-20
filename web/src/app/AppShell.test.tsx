@@ -18,7 +18,7 @@ const ds: DataSource = mockDataSource({
 });
 
 describe("AppShell", () => {
-  it("has one nav of six tabs, one theme toggle, and a palette that reaches every screen", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", false, async () => {
+  it("has one nav of six tabs, one theme toggle, and a palette that reaches every screen", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", false, () => withFlag("ui.review-deck", false, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
@@ -34,7 +34,7 @@ describe("AppShell", () => {
     await userEvent.type(box, "pages");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
-  }))));
+  })))));
 
   it("flag graph-corners drops the share chip from the bar; off, it shows", async () => {
     const shared = mockDataSource({ ...ds, getShareStatus: async () => ({ status: null, chip: { label: "kb-1.5.0 · 3 h ago", cls: "ok", title: "", href: "" } }) } as Partial<DataSource>);
@@ -52,12 +52,25 @@ describe("AppShell", () => {
     }
   });
 
-  it("flag ui.ingest adds an Ingest tab after What is it?, and only then", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", true, async () => {
+  it("flag ui.ingest adds an Ingest tab after What is it?, and only then", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", true, () => withFlag("ui.review-deck", false, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
     expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Graph", "System", "Chat", "Think", "What is it?", "Ingest"]);
-  }))));
+  })))));
+
+  it("flag ui.review-deck adds a Review tab, and only then", async () => {
+    for (const on of [true, false]) {
+      await withFlag("graph-intent", false, () => withFlag("views-panel", false, () => withFlag("ui.ingest", false, () => withFlag("ui.review-deck", on, async () => {
+        const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
+        const { unmount } = render(<App source={ds} router={router} />);
+        const nav = await screen.findByRole("navigation", { name: "Main" });
+        const tabs = [...nav.querySelectorAll("a")].map((a) => a.textContent);
+        expect(tabs.includes("Review")).toBe(on);
+        unmount();
+      }))));
+    }
+  });
 
   it("flag views-panel: on the graph the theme toggle moves to the pinned panel; other screens keep it", async () => {
     for (const on of [true, false]) {
