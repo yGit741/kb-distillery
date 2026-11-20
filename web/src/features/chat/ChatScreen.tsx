@@ -16,7 +16,7 @@ import { PromptPanel } from "./PromptPanel";
 import { STATUS_KEY, SessionPanel } from "./SessionPanel";
 import { isCustom, parsePrompts, pick, setEdit, systemFor, type Edits } from "./prompts";
 import { NeedsClaudeBadge } from "./NeedsClaudeBadge";
-import { authPayload, authValue, backendLabel, effectiveBackend, parseStatus } from "./status";
+import { authPayload, authValue, backendLabel, effectiveBackend, parseStatus, billingDetails } from "./status";
 import { readJson, writeJson } from "./storage";
 import { canSave, chatTitle, savableMessages } from "./thread";
 import { useChatSession, type SendOptions } from "./useChatSession";
@@ -280,6 +280,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
           {agentMode && effectiveBackend(view) === "agent" && (
             <ComposerLine
               account={view.authMode === "api_key" && view.keyLoaded ? "api" : "subscription"}
+              details={billingDetails(view)}
               models={view.models}
               model={model}
               onModel={(id) => {

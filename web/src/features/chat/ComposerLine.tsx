@@ -6,12 +6,16 @@ import {
   answerCap, capLabel, useComposer, usd, type Billing, type Effort,
 } from "./composer";
 import { fmtNum } from "./format";
-import type { Model } from "./status";
+import type { BillingDetail, Model } from "./status";
 
 interface Option {
   value: string;
   label: string;
   hint?: string;
+  /** cannot be picked now (nothing set up for it) */
+  disabled?: boolean;
+  /** where to set it up, shown next to a disabled choice */
+  setup?: { label: string; href: string };
 }
 
 /** A setting written as plain text; clicking opens its few choices just above it. */
@@ -49,22 +53,28 @@ function Choice({ name, value, options, onPick }: { name: string; value: string;
       {open && (
         <ul id={id} role="listbox" aria-label={name} className="absolute bottom-full left-0 z-20 mb-1 min-w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-sm">
           {options.map((o) => (
-            <li key={o.value} role="option" aria-selected={o.value === value}>
+            <li key={o.value} role="option" aria-selected={o.value === value} aria-disabled={o.disabled || undefined} className="flex items-baseline gap-1">
               <button
                 type="button"
                 title={o.hint}
+                disabled={o.disabled}
                 onClick={() => {
                   onPick(o.value);
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-baseline justify-between gap-3 whitespace-nowrap rounded px-2 py-1 text-left hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring",
+                  "flex min-w-0 flex-1 items-baseline justify-between gap-3 whitespace-nowrap rounded px-2 py-1 text-left hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
                   o.value === value && "font-medium",
                 )}
               >
                 {o.label}
                 {o.hint && <span className="text-[11px] font-normal text-muted-foreground">{o.hint}</span>}
               </button>
+              {o.setup && (
+                <a href={o.setup.href} target="_blank" rel="noreferrer" className="shrink-0 whitespace-nowrap rounded px-1.5 py-1 text-[11px] font-medium text-primary underline-offset-2 hover:underline">
+                  {o.setup.label}
+                </a>
+              )}
             </li>
           ))}
         </ul>
@@ -104,13 +114,15 @@ export function ContextRing({ used, max }: { used: number; max: number }) {
 interface Props {
   /** who pays until the user picks in the line: the Session panel's account */
   account: Billing;
+  /** per way of paying: which login or key exactly, or a link to set it up (`billingDetails`) */
+  details?: Record<Billing, BillingDetail>;
   models: Model[];
   model: string;
   onModel: (id: string) => void;
 }
 
 /** Flag `agent-mode`: model, effort, who pays and the per-turn cap as one quiet line, the context ring at its end. */
-export function ComposerLine({ account, models, model, onModel }: Props) {
+export function ComposerLine({ account, details, models, model, onModel }: Props) {
   const prefs = useComposer((s) => s.prefs);
   const setPrefs = useComposer((s) => s.setPrefs);
   const capPrompt = useComposer((s) => s.capPrompt);
@@ -137,7 +149,10 @@ export function ComposerLine({ account, models, model, onModel }: Props) {
         <Choice
           name="Billing"
           value={prefs.billing ?? account}
-          options={BILLINGS.map((b) => ({ value: b, label: BILLING_LABEL[b], hint: BILLING_HINT[b] }))}
+          options={BILLINGS.map((b) => {
+            const d = details?.[b];
+            return { value: b, label: BILLING_LABEL[b], hint: d?.hint ?? BILLING_HINT[b], disabled: d ? !d.ok && b !== (prefs.billing ?? account) : false, setup: d && !d.ok ? d.setup : undefined };
+          })}
           onPick={(v) => setPrefs({ billing: v as Billing })}
         />
         {SEP}

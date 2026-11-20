@@ -118,6 +118,40 @@ describe("composer line (agent-mode on)", () => {
       expect(calls[0]!.body).not.toHaveProperty("billing");
     }));
 
+  it("says which key pays for each choice, and links to setting up what is missing", () =>
+    withFlag("agent-mode", true, async () => {
+      setup();
+      const user = userEvent.setup();
+      await user.click(within(await line()).getByRole("button", { name: "Billing" }));
+      const menu = await screen.findByRole("listbox", { name: "Billing" });
+      expect(within(menu).getByRole("button", { name: /^API/ })).toHaveTextContent('Key sk-ant-…abcd from saved key "personal"');
+      const sub = within(menu).getByRole("button", { name: /^Subscription/ });
+      expect(sub).toBeDisabled();
+      expect(sub).toHaveTextContent("Not signed in to Claude Code");
+      expect(within(menu).getByRole("link", { name: /Set up/ })).toHaveAttribute("href", "https://code.claude.com/docs/en/setup");
+    }));
+
+  it("names the subscription login and disables API and batch when no key is set", () =>
+    withFlag("agent-mode", true, async () => {
+      setup({
+        getChatStatus: async () =>
+          chatStatus({
+            key: false, key_origin: null, key_hint: "",
+            auth: { ...chatStatus().auth, mode: "subscription", keys: [], subscription: { logged_in: true, email: "me@example.com", plan: "max" } },
+          }),
+      });
+      const user = userEvent.setup();
+      await user.click(within(await line()).getByRole("button", { name: "Billing" }));
+      const menu = await screen.findByRole("listbox", { name: "Billing" });
+      expect(within(menu).getByRole("button", { name: /^Subscription/ })).toHaveTextContent("me@example.com · MAX");
+      expect(within(menu).getByRole("button", { name: /^API/ })).toBeDisabled();
+      expect(within(menu).getByRole("button", { name: /^Batch/ })).toBeDisabled();
+      expect(within(menu).getAllByRole("link", { name: /Get a key/ }).map((a) => a.getAttribute("href"))).toEqual([
+        "https://console.anthropic.com/settings/keys",
+        "https://console.anthropic.com/settings/keys",
+      ]);
+    }));
+
   it("starts from the saved picks", () =>
     withFlag("agent-mode", true, async () => {
       window.localStorage.setItem("kbchat.composer", JSON.stringify({ effort: "max", billing: "batch", cap: 2 }));
