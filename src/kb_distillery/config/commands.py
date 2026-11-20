@@ -76,6 +76,8 @@ COMMANDS: dict[str, Cmd] = {
                 forward_help=True),
     "lint": Cmd("lint the selected knowledge base (the schema is the linter); --health adds the summary",
                 target="kb_distillery.lint.lint", config_check=False),
+    "mcp": Cmd("serve the local knowledge bases to Claude over MCP (stdio, read-only; --kb <path> may repeat)",
+               target="kb_distillery.kb_mcp", forward_help=True, config_check=False),
     "llm": Cmd("the one door to Claude: ask, submit, status, collect", target="kb_distillery.llm", forward_help=True),
     "parse": Cmd("PDF pages to a checked transcript: run, check, sample, transcribe, marks (dark: parsed-pdf flag)",
                  target="kb_distillery.parse.cli", forward_help=True),
@@ -85,6 +87,8 @@ COMMANDS: dict[str, Cmd] = {
     }),
     "share": Cmd("publish the wiki graph + explorer as a site (build, snapshot, status, …)", target="kb_distillery.publish.cloudflare",
                  forward_help=True),
+    "code": Cmd("code to citable fact cards: build, cards (C++ needs the `code` extra)",
+                target="kb_distillery.codekb", forward_help=True),
     "propose": Cmd("typed relation proposals between wiki pages: submit, collect, review, apply", target="kb_distillery.graph.propose",
                    forward_help=True),
 }

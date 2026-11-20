@@ -91,6 +91,9 @@ export function registerTypeMarks(types: readonly { id: string; layer: string }[
   AUTO = next;
 }
 
+/** Whether a graph's schema has given the kb's own types their marks yet (a screen without the schema may seed them). */
+export const typeMarksRegistered = (): boolean => Object.keys(AUTO).length > 0;
+
 /** The legend's mark key, in reading order. */
 export const MARK_KEY: readonly { mark: NodeMark; label: string }[] = [
   { mark: "source", label: "Source" },

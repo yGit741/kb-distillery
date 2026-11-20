@@ -269,6 +269,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.review-deck"
+description = "Review deck: every pending proposal hunk as a card (accept, reject, rewrite in words, /merge, /split), applied in one batch"
+owner = "maintainer"
+created = 2026-11-20
+expires = 2027-02-15
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.page-history"
 description = "Pages: how a page changed over time. Lists its versions and compares any two with the proposal diff. Read-only: edits start from the page, not from its history."
 owner = "maintainer"

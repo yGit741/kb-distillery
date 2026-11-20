@@ -148,3 +148,9 @@ export const AREA_PALETTES: Readonly<Record<"field" | "clear", { light: readonly
     dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#0ca30c", "#9085e9", "#e66767"],
   },
 };
+
+/** The Review deck's reach graph: how each page relates to the card's change (status hues for added/removed). */
+export const REACH_COLORS = { added: "#16a34a", removed: "#ef4444", in: "#64748b", out: "#94a3b8", found: "#f59e0b" } as const;
+
+/** The Review deck's marked passages (CSS custom highlight): a soft amber wash under the text. */
+export const MARK_HIGHLIGHT = "rgb(254 243 199)";
