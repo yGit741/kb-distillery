@@ -165,7 +165,9 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
     const source: LayerGroup | null = read.length
       ? { layer: "source", rows: read, total: read.reduce((s, r) => s + r.total, 0), state: on === 0 ? "none" : on === read.length ? "all" : "some" }
       : null;
-    return [concept, source].filter((g): g is LayerGroup => !!g);
+    // flag graph.artifacts: a template's intermediate layer is its own group, between the concepts and the sources
+    const artifact = groups.find((g) => g.layer === "artifact");
+    return [concept, artifact, source].filter((g): g is LayerGroup => !!g);
   }, [groups]);
   const filtered = ui.rules.length > 0;
   const q = ui.quick;
