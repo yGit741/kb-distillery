@@ -10,9 +10,9 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 
 | Layer | Types | What it is |
 |-------|-------|------------|
-| **source** | paper, part, lecture, article, video, mail, ai-chat, blog-post | the digest of one raw item, faithful to it; carries `depth:` |
-| **collection** | book, notebook (page partition table) · course, series (Contents table) · aux `scope` | a table grouping sources |
-| **concept** | idea, topic, question, person · aux `distilled-think` | knowledge across sources; ends with `## My notes` |
+| **source** | paper, part, lecture, article, video, mail, ai-chat, blog-post, run | the digest of one raw item, faithful to it; carries `depth:` |
+| **collection** | book, notebook (page partition table) · course, series, experiment (Contents table) · aux `scope` | a table grouping sources |
+| **concept** | idea, topic, question, conjecture, result, method, person · aux `distilled-think` | knowledge across sources; ends with `## My notes` |
 
 `depth:` (sources only, ordered) — what each depth means, and which depths each source type reaches:
 
@@ -32,6 +32,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 | article | easy · full | easy |
 | mail, ai-chat | easy · full | easy |
 | video | easy · full | easy or full |
+| run | easy · full · deep (one experiment run, `raw/experiments/<run>/run.md`) | full |
 
 Retired names (schema 1.0, no read compatibility — lint errors and names the replacement):
 `type: theme` → `topic`, `type: concept` → `idea`, `digestion-status` → `depth`, depth `catalog` →
@@ -81,11 +82,21 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `video-` | video (source) | `theme-` | topic (concept) — exactly the 10 TOPIC_SLUGS |
 | `mail-` | mail (source; email thread) | `q-` | question (concept) |
 | `chat-` | ai-chat (source; LLM chat) | *(bare)* | idea, person (concept) |
-| `distilled-think-` | distilled-think (concept, aux) | | |
+| `distilled-think-` | distilled-think (concept, aux) | `exp-` | experiment (collection; the design and its runs) |
+| `run-` | run (source; one experiment run) | `conj-` | conjecture (concept; sketch, partial, proved, refuted) |
+| `result-` | result (concept; supports, refutes, inconclusive) | `method-` | method (concept; a model, learner or procedure) |
+
+**Empirical work (schema 1.6, research kit).** A `conjecture` states a claim and its predictions. An `experiment`
+is the collection that tests one prediction: its text is the design (axes, fixed parameters, methods), its Contents
+table lists the `run` sources that executed it. A `result` is one finding, with the runs and cells behind it; its
+`maturity:` says what it means for the claim (supports, refutes, inconclusive). A `method` is what the experiment
+uses. The relations `tests` (experiment or run → claim), `supports` and `refutes` (result, experiment, run or paper →
+claim) connect them, so a claim's evidence can be walked in the graph.
 
 **`relations:`** (schema 1.4, `src/kb_distillery/graph/relations.py`) — typed links a page states about other pages: `to`
 (a slug), `kind` and a `note`. The kinds a knowledge base accepts are its `kb.toml` `[edges] types` (the thesis kb:
-extends, uses, contradicts, example-of, open-problem-in, addresses, student-of); `symmetric` kinds (contradicts) are
+extends, uses, contradicts, example-of, open-problem-in, addresses, discusses, student-of, and since schema 1.6
+tests, supports, refutes); `symmetric` kinds (contradicts) are
 stored once, and `note_required` kinds need a one-sentence note. Lint errors on an undeclared kind, a missing or
 self target, a missing note, a repeated (kind, target), a malformed block, and on a source page that is not depth
 `full` or `deep` (a concept page may always state relations). Relations are proposed by `python -m kb_distillery.graph.propose`

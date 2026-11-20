@@ -82,7 +82,10 @@ def test_type_gates():
     assert propose.gate_ok("open-problem-in", "question", "paper") and not propose.gate_ok("open-problem-in", "paper", "question")
     assert propose.gate_ok("addresses", "blog-post", "question") and not propose.gate_ok("addresses", "idea", "question")
     assert propose.gate_ok("student-of", "person", "person") and not propose.gate_ok("student-of", "paper", "person")
-    assert propose.gate_ok("refutes", "anything", "else")                       # a declared kind without a gate
+    assert propose.gate_ok("inspired-by", "anything", "else")                   # a declared kind without a gate
+    assert propose.gate_ok("tests", "experiment", "conjecture") and not propose.gate_ok("tests", "paper", "conjecture")
+    assert propose.gate_ok("supports", "result", "conjecture") and propose.gate_ok("refutes", "paper", "question")
+    assert not propose.gate_ok("supports", "result", "paper")
     assert propose.kinds_for("question", KC) == ["open-problem-in"]
     assert set(propose.kinds_for("paper", KC, easy=True)) == {"example-of", "addresses"}
 

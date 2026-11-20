@@ -19,16 +19,21 @@ export const TYPE_COLORS: Record<PageType, string> = {
   mail: "#73daca",
   "ai-chat": "#ff9e64",
   "blog-post": "#ff79c6",
+  run: "#c3e88d",
   // collection
   book: "#d16bd8",
   notebook: "#c099ff",
   course: "#2ac3de",
   series: "#7dcfff",
+  experiment: "#41a6b5",
   scope: "#e6c07b",
   // concept
   topic: "#9ece6a",
   idea: "#7aa2ff",
   question: "#f6c177",
+  conjecture: "#ff966c",
+  result: "#b4f9f8",
+  method: "#82aaff",
   person: "#bb9af7",
   "distilled-think": "#e0af68",
 };

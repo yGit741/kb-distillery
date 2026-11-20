@@ -159,12 +159,17 @@ RAW_EMAILS = "emails"                # emails/<YYYY-MM-DD-thread>/ thread.md + a
 RAW_WEB = "web-clips"                # Web Clipper pages (md, html)
 RAW_IMAGES = "images"                # screenshots, figures
 RAW_VIDEOS = "videos"                # videos/<dir>/ video.md + video.json + transcript + frames (scrap-youtube)
+RAW_EXPERIMENTS = "experiments"      # experiments/<run>/ run.md + config, summary, history (scrap-wandb)
 RAW_SUBDIRS = [RAW_INBOX, RAW_PRINTED, RAW_HANDWRITTEN, RAW_PRESENTATIONS, RAW_CHATS,
-               RAW_EMAILS, RAW_WEB, RAW_IMAGES, RAW_VIDEOS]
-# Only emails/ and videos/ nest (one folder per thread / video); every other format folder is flat.
-RAW_NESTED = {RAW_EMAILS, RAW_VIDEOS}
+               RAW_EMAILS, RAW_WEB, RAW_IMAGES, RAW_VIDEOS, RAW_EXPERIMENTS]
+# emails/, videos/ and experiments/ nest (one folder per thread / video / run); every other format folder is flat.
+RAW_NESTED = {RAW_EMAILS, RAW_VIDEOS, RAW_EXPERIMENTS}
 # A video bundle's raw item; every other file in its folder is an `asset:` of it.
 VIDEO_ITEM = "video.md"
+# An experiment run bundle's raw item; every other file in its folder is an `asset:` of it.
+RUN_ITEM = "run.md"
+# nested format folder -> the one file of a bundle that is the raw item
+BUNDLE_ITEMS = {RAW_VIDEOS: VIDEO_ITEM, RAW_EXPERIMENTS: RUN_ITEM}
 # Flat format folders: lowercase ascii kebab names, unique across the vault.
 RAW_NAME = r"^[a-z0-9]+([._-][a-z0-9]+)*\.[a-z0-9]+$"
 
@@ -183,6 +188,8 @@ def unit_type_for_raw(raw_rel):
         return "mail"
     if fmt == RAW_VIDEOS:
         return "video"
+    if fmt == RAW_EXPERIMENTS:
+        return "run"
     if fmt == RAW_PRINTED and ext == "md" and parts[-1].startswith("blog-"):
         return "blog-post"
     if fmt == RAW_WEB or (fmt == RAW_PRINTED and ext != "pdf"):
@@ -383,7 +390,7 @@ def is_kb_tooling(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See src/kb_distillery/git/commit_policy.py.
-SCHEMA_VERSION = (1, 5)     # 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
+SCHEMA_VERSION = (1, 6)     # 1.6: empirical work in the research kit: source type `run` (raw/experiments/<run>/), collection `experiment`, concepts `conjecture`, `method`, `result`, edges tests / supports / refutes (migration 0016); 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
 from kb_distillery.config.kb import SCHEMA_VERSION as _KB_SCHEMA_VERSION
 assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.config.kb.SCHEMA_VERSION must follow this value"
 

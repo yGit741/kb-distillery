@@ -34,12 +34,15 @@ ROOT = paths.ROOT
 MODEL = "sonnet"
 EASY_MODEL = "haiku"
 DEFAULT_BACKEND = "batch"     # this tool's default when neither --backend nor $KB_LLM_BACKEND is set
-KINDS = ("extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of")
+KINDS = ("extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of",
+         "tests", "supports", "refutes")
 EASY_KINDS = frozenset({"example-of", "addresses", "open-problem-in"})
 SYMMETRIC = frozenset({"contradicts"})
 NOTE_REQUIRED = frozenset({"contradicts"})
 PAPER_LIKE = frozenset({"paper", "blog-post", "article", "part", "lecture", "video"})
 WORK = PAPER_LIKE | {"idea"}
+CLAIMS = frozenset({"conjecture", "question", "idea"})          # what empirical work is about
+EVIDENCE = frozenset({"result", "experiment", "run"}) | PAPER_LIKE
 GATES = {           # kind → (from types, to types); a declared kind without a gate takes any two distinct pages
     "extends": (WORK, WORK),
     "uses": (WORK, WORK),
@@ -49,6 +52,9 @@ GATES = {           # kind → (from types, to types); a declared kind without a
     "addresses": (PAPER_LIKE, frozenset({"question"})),
     "discusses": (PAPER_LIKE, frozenset({"idea", "topic", "question"})),
     "student-of": (frozenset({"person"}), frozenset({"person"})),
+    "tests": (frozenset({"experiment", "run"}), CLAIMS),
+    "supports": (EVIDENCE, CLAIMS),
+    "refutes": (EVIDENCE, CLAIMS),
 }
 MEANING = {
     "extends": "builds on, generalises or strengthens the target's result or idea",
@@ -59,6 +65,9 @@ MEANING = {
     "addresses": "answers or makes progress on the target question",
     "discusses": "is substantially ABOUT the target (its main subject or one of them), whether or not it links the target; a passing mention, a list entry or a navigation link is not enough",
     "student-of": "is a student (PhD or postdoc) of the target person",
+    "tests": "is an experiment or run designed to check a prediction of the target claim",
+    "supports": "reports evidence in favour of the target claim",
+    "refutes": "reports evidence against the target claim",
 }
 CONCEPT_SUBJECTS = frozenset({"idea", "question"})
 DEEP = frozenset({"full", "deep"})

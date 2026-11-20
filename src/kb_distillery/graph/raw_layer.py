@@ -16,7 +16,7 @@ from kb_distillery.vault.hubs import parse_contents
 from kb_distillery.lint.lint import collections_of, raw_paths, read_manifest
 
 ROOT = vault_root()
-FORMATS = ("printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos", "inbox")
+FORMATS = ("printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos", "experiments", "inbox")
 COMPANIONS = ("asset", "ink", "dupe")
 from kb_distillery.vault.schema import COLLECTION_TYPES
 _YEAR = re.compile(r"^((?:18|19|20)\d{2})-")

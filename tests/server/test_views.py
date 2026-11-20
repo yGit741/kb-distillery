@@ -100,7 +100,7 @@ def two_kbs(kb, tmp_path_factory):
     other = str(tmp_path_factory.mktemp("other-kb"))
     os.makedirs(os.path.join(other, "wiki"))
     with open(os.path.join(other, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "beta"\nname = "Beta"\nschema_version = "1.5"\n')
+        f.write('[kb]\nid = "beta"\nname = "Beta"\nschema_version = "1.6"\n')
     os.makedirs(os.path.join(other, "meta"))
     with open(os.path.join(other, "meta", "views.json"), "w", encoding="utf-8") as f:
         json.dump([{"id": "theirs", "name": "Theirs", "created": "2026-01-01T00:00:00Z", "spec": {"a": 1}}], f)

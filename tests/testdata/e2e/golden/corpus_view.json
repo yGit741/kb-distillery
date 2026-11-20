@@ -56,6 +56,41 @@
    }
   ]
  },
+ "experiments": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   }
+  ],
+  "count": 0,
+  "format": "experiments",
+  "rows": []
+ },
  "handwritten": {
   "columns": [
    {
