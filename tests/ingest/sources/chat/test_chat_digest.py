@@ -178,6 +178,30 @@ class TestRun(ChatDigestCase):
         self.assertEqual(fake.calls, [])
         self.assertEqual(cd.raw_list(self.page("chat-dual")[1]), ["raw/llm-chats/a.md", "raw/llm-chats/b.md"])
 
+    def test_a_non_chat_page_citing_a_clip_does_not_own_it(self):
+        self.put("raw/llm-chats/a.md", clip(TURNS_A))
+        self.put("wiki/course-x.md", "---\ntype: course\nraw: raw/llm-chats/a.md\n---\n\n# X\n")
+        convs, _ = chat_build.build(chat_build.clip_paths(self.root), self.root)
+        self.assertEqual([i["action"] for i in cd.plan(convs, self.root)], ["new"])
+
+    def test_a_comma_in_a_clip_name_is_skipped_not_mangled(self):
+        self.put("raw/llm-chats/dual, part 2.md", clip(TURNS_A))
+        convs, _ = chat_build.build(chat_build.clip_paths(self.root), self.root)
+        [item] = cd.plan(convs, self.root)
+        self.assertEqual(item["action"], "skip")
+        self.assertIn("rename", item["why"])
+
+    def test_a_raised_llm_error_keeps_the_zero_llm_work(self):
+        self.put("raw/llm-chats/a.md", clip(TURNS_A))
+        self.put("raw/llm-chats/b.md", clip([("You", "Graph coloring?"), ("Gemini", "Assign colors.")]))
+        self.put("wiki/chat-dual.md", "---\ntype: ai-chat\nlegacy: true\nraw: raw/llm-chats/a.md\n---\n\n# D\n")
+
+        def boom(reqs, backend=None, **kw):
+            raise llm.LLMError("batch timed out")
+        res = self.run_cd(boom)
+        self.assertEqual((res["written"], len(res["failed"])), ([], 1))
+        self.assertTrue(os.path.isdir(os.path.join(self.root, "meta", "chats")))
+
     def test_bad_reply_is_asked_again_with_the_problem(self):
         self.put("raw/llm-chats/a.md", clip(TURNS_A))
         fake = FakeLLM(reply(title="New chat"), reply())
@@ -228,6 +252,9 @@ class TestReply(unittest.TestCase):
     def test_slug_is_sanitised(self):
         vals, _ = cd.check_reply(json.loads(reply(slug="Chat: AdamW vs. Muon!")))
         self.assertEqual(cd.unique_slug(vals["slug"], set()), "chat-adamw-vs-muon")
+        long = cd.slugify("word " * 40)
+        first = cd.unique_slug(long, set())
+        self.assertLessEqual(len(cd.unique_slug(long, {first})), cd.SLUG_MAX)
 
     def test_clamp_keeps_head_and_tail(self):
         text = "A" * 100 + "B" * 100

@@ -38,6 +38,7 @@ OUT_TOKENS = 1_200                # expected reply size, for the estimate only
 LIVE = ("", "queued", "source", "partial")        # corpus dispositions whose clips a page may cite
 PREFIX = SLUG_PREFIX.get("ai-chat", "chat-")
 SLUG_MAX = 60
+UNSAFE_PATH = re.compile(r"[,\[\]]")
 PROVIDER_LABEL = {"gemini": "Gemini", "claude": "Claude"}
 
 PROMPT = """Below is one conversation between the owner of a personal research wiki and an AI model ({provider}).
@@ -90,7 +91,7 @@ def is_live(disposition):
 
 
 def raw_list(fm):
-    """A page's `raw:` as a list (scalar, flow list or block list)."""
+    """A page's `raw:` as a list (scalar or flow list: the frontmatter parser, like lint, reads no block lists)."""
     v = fm.get("raw")
     if isinstance(v, list):
         items = v
@@ -115,9 +116,11 @@ def wiki_pages(root=ROOT):
 
 
 def cited_by(pages):
-    """raw path -> sorted slugs of the pages that cite it (`raw:` or a chat page's `clips:`)."""
+    """raw path -> sorted slugs of the ai-chat pages that cite it (`raw:` or `clips:`)."""
     out = {}
     for slug, (_, fm) in pages.items():
+        if fm.get("type") != "ai-chat":          # a hub or note that cites a chat clip does not own the chat
+            continue
         clips = raw_list(fm) + raw_list({"raw": fm.get("clips")})
         for rel in clips:
             out.setdefault(rel, set()).add(slug)
@@ -138,7 +141,10 @@ def plan(convs, root=ROOT, pages=None):
         owners = sorted({s for c in clips for s in cited.get(c, [])})
         live, dupes = _split_copies(conv, [c for c in clips if is_live(disp.get(c, ""))], cited)
         item = {"conv": cid, "clips": live, "dupes": dupes, "page": None, "missing": [], "why": ""}
-        if not live:
+        unsafe = [c for c in live if UNSAFE_PATH.search(c)]
+        if unsafe:
+            item.update(action="skip", why=f"{unsafe[0]}: a comma or bracket in a raw path breaks `raw:` — rename it")
+        elif not live:
             item.update(action="skip", why="every clip is skip or dupe in corpus.tsv")
         elif len(owners) > 1:
             item.update(action="conflict", why="cited by " + ", ".join(owners) + " — merge them by hand")
@@ -199,7 +205,7 @@ def mark_dupes(dupes, root=ROOT):
 def select(items, only=None, limit=None):
     """--only: clip paths, conversation ids or page slugs; --limit: at most N new pages."""
     if only:
-        want = {o.replace(os.sep, "/").lstrip("./").removesuffix(".md") for o in only}
+        want = {o.replace(os.sep, "/").removeprefix("./").removesuffix(".md") for o in only}
         items = [it for it in items if it["conv"] in want or it["page"] in want
                  or any(c.removesuffix(".md") in want for c in it["clips"])]
     if limit is not None:
@@ -347,10 +353,11 @@ def check_reply(vals):
 
 
 def unique_slug(stem, taken):
-    slug = PREFIX + stem.removeprefix(PREFIX.rstrip("-") + "-")
-    base, k = slug, 2
+    base = PREFIX + stem.removeprefix(PREFIX.rstrip("-") + "-")
+    slug, k = base, 2
     while slug in taken:
-        slug, k = f"{base}-{k}", k + 1
+        suffix = f"-{k}"
+        slug, k = base[:SLUG_MAX - len(suffix)].rstrip("-") + suffix, k + 1
     return slug
 
 
@@ -381,16 +388,16 @@ def render(conv, clips, vals, model, root=ROOT):
         text = f.read()
     url = conv["source_urls"][0] if conv.get("source_urls") else ""
     fill = {
-        "provider": conv.get("provider") or "gemini", "conversation": conv["id"], "raw": _raw_value(clips),
+        "provider": conv.get("provider") or "unknown", "conversation": conv["id"], "raw": _raw_value(clips),
         "url": url, "title": vals["title"], "shape": shape(conv, clips), "scope": vals["scope"],
         "positions": _bullets(vals["positions"], "_None recorded._"),
         "suggestions": _bullets(vals["suggestions"], "_None recorded._"),
         "takeaways": _bullets(vals["takeaways"], "_None yet._"),
     }
     text = fmlib.fill_conventions(text)
-    for k, v in fill.items():
+    text = re.sub(r"\{\{([a-z_]+)\}\}", lambda m: m.group(0) if m.group(1) in fill else "", text)
+    for k, v in fill.items():                     # values last: a reply's own {{…}} text stays as written
         text = text.replace("{{" + k + "}}", v)
-    text = re.sub(r"\{\{[a-z_]+\}\}", "", text)
     text = re.sub(r"^url:[ \t]*\n", "", text, count=1, flags=re.M)          # no source url recorded
     text = wikiio.set_key(text, "description", '"' + vals["description"] + '"')
     text = wikiio.set_key(text, "summary_from", summary_lib.summary_hash(text), after="description")
@@ -414,11 +421,12 @@ def attach(item, pages, conv):
 
 
 # --- run ----------------------------------------------------------------------------------------------------
-def estimate_usd(prompts, model=MODEL):
+def estimate_usd(prompts, model=MODEL, batch=True):
+    """List price of these prompts (input at ~3.5 chars a token, a fixed reply size), halved for a batch."""
     from kb_distillery import llm
     tokens_in = sum(len(p) for p in prompts) / 3.5
     return llm.cost(model, {"input_tokens": tokens_in, "output_tokens": OUT_TOKENS * len(prompts)},
-                    batch=True)
+                    batch=batch)
 
 
 def report_plan(items, out=sys.stdout):
@@ -476,10 +484,12 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
     report_plan(items)
     todo = [it for it in items if it["action"] == "new"]
     prompts = {it["conv"]: prompt(convs[it["conv"]], root) for it in todo}
-    est = estimate_usd(prompts.values(), model) if prompts else 0.0
+    from kb_distillery import llm
+    batch = llm.resolve_backend(backend) == "batch"
+    est = estimate_usd(prompts.values(), model, batch) if prompts else 0.0
     if prompts:
-        print(f"{len(prompts)} new page(s) to write · estimate ${est:.2f} on {model} at batch prices "
-              f"(about double on the standard API)")
+        print(f"{len(prompts)} new page(s) to write · estimate ${est:.2f} on {model} at "
+              f"{'batch' if batch else 'list'} prices")
     result = {"items": items, "written": [], "failed": [], "usd": 0.0}
     if dry_run:
         return result
@@ -489,15 +499,22 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
         return result
 
     dupes = {c: k for it in items if it["action"] != "conflict" for c, k in it.get("dupes", {}).items()}
-    if mark_dupes(dupes, root):
+    changed = bool(mark_dupes(dupes, root))
+    if changed:
         print(f"  marked {len(dupes)} byte-identical clip(s) dupe in corpus.tsv")
     for it in items:
         if it["action"] == "attach":
             attach(it, pages, convs[it["conv"]])
+            changed = True
             print(f"  attached {len(it['missing'])} clip(s) to {it['page']}")
 
+    replies = {}
     if todo:
-        replies = ask(todo, prompts, system(root), backend, model, result)
+        try:
+            replies = ask(todo, prompts, system(root), backend, model, result)
+        except Exception as e:  # noqa: BLE001 — a batch timeout or a missing backend: keep what is done, lint it
+            print(f"  LLM step failed: {type(e).__name__}: {e}", file=sys.stderr)
+            replies = {it["conv"]: ({}, f"LLM step failed: {e}", "") for it in todo}
         taken = set(pages)
         for it in todo:
             conv = convs[it["conv"]]
@@ -510,12 +527,13 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
             taken.add(slug)
             path = os.path.join(root, "wiki", f"{slug}.md")
             wikiio.write_page(path, render(conv, it["clips"], vals, used, root))
+            changed = True
             result["written"].append(slug)
             print(f"  wrote {slug} ({len(it['clips'])} clip(s))")
         print(f"chat-digest: {len(result['written'])}/{len(todo)} page(s) written · ${result['usd']:.4f}")
         if result["failed"]:
             print("re-run chat-digest to retry the failed ones (pages already written are kept)")
-    if lint and (todo or any(it["action"] == "attach" for it in items)):
+    if lint and changed:
         subprocess.run([sys.executable, "-m", "kb_distillery.lint.lint"], cwd=root)
     return result
 
