@@ -42,7 +42,8 @@ import { meaningPositions, topicIndex } from "./embedding/model";
 import { useEmbedding } from "./embedding/EmbeddingLayer";
 import { clumpAt, rimLayout, type RimLabel, type RimLayout } from "./citationRim";
 import { useRimList } from "./rimListStore";
-import { CITE_DWELL_MS, CITE_HOLD_MS, drawCite, drawEdges, pickCite } from "./citeHover";
+import { CITE_DWELL_MS, CITE_HOLD_MS, drawCite, drawEdges, drawEdgeWords, pickCite } from "./citeHover";
+import { wordedEdges } from "./edgeWords";
 import { clickEdge as applyEdgeClick, directed, edgeKey, edgeWord, endsOf, lightable as canLight, useEdgeSelect } from "./edgeSelect";
 import { useEmbedView } from "./embedding/store";
 import { useCorners } from "./shell/corners/cornersStore";
@@ -240,6 +241,11 @@ function drawCandidates(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[]
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
 
 const DOUBLE_MS = 380;
+/** px of air beside the docked chat panel: a page's title is centred on its dot and would run under the panel */
+const PANEL_LABEL_AIR = 40;
+/** The whole-graph fit beside the docked chat: air round the pages, and room under them for the lowest labels */
+const DOCKED_FIT_PAD = 28;
+const DOCKED_FIT_BOTTOM = 96;
 
 /**
  * The graph itself: force-graph plus the mouse scheme. Modeless: hover always labels a node and a click
@@ -310,6 +316,17 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   shellTopRef.current = shellTop;
   // the full chat gives the canvas its own box (the right pane): frame inside it, with room for the labels
   const { full: fullChat } = useFullChat();
+  // the docked chat panel lies over the canvas's left strip: every fit frames the pages right of it
+  const chatDocked = useRef(false);
+  chatDocked.current = sparkOpen && !fullChat;
+  const chatLeft = () => (chatDocked.current ? Math.min(useChatFull.getState().panelW + PANEL_LABEL_AIR, (wrap.current?.clientWidth ?? Infinity) * 0.4) : 0);
+  // the open colour legend covers the canvas's right edge by its own width (a long title widens it)
+  const legendRight = () => {
+    if (!useCorners.getState().order.includes("legend")) return 0;
+    const card = document.querySelector('[data-corners="legend"]')?.getBoundingClientRect();
+    const area = wrap.current?.getBoundingClientRect();
+    return card && area && card.width ? Math.max(0, area.right - card.left) : MAP_FIT_RIGHT;
+  };
   const sparkChat = useFlag("spark-chat");
   // flag show-thinking: the answer on screen's pages come back in colour on a grey graph (./shell/thinkingStore);
   // a source it found or opened that the calm graph hides pops in, with only its links to the answer's pages
@@ -768,6 +785,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     resolve(useEdgeSelect.getState().edges);
     return useEdgeSelect.subscribe((s, prev) => s.edges !== prev.edges && resolve(s.edges));
   }, [edgeOn, data, ui.hiddenLinkKinds]);
+  // a sparse graph with edges of two types or more writes every edge's word, not only the lit one's (./edgeWords)
+  const worded = useMemo(() => (edgeOn ? wordedEdges(data.links as SimLink[], ui.hiddenLinkKinds) : []), [edgeOn, data, ui.hiddenLinkKinds]);
+  const wordedRef = useRef(worded);
+  wordedRef.current = worded;
   useEffect(() => {
     if (!rim && !edgeOn) setCite(null);
   }, [rim, edgeOn, setCite]);
@@ -935,6 +956,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     recompute();
   }, [recompute, theme, areaHues, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.spotIds, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
 
+  // another knowledge base picked in the header menu is a changed set of pages too
+  const kbSig = model.kbs?.map((k) => k.id).join(",") ?? "";
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
   // Panning or zooming in between cancels the settled fit, so it never takes the view away from the user.
@@ -944,7 +967,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (pendingFit.current) fitRef.current();
     }, 1600);
     return () => window.clearTimeout(t);
-  }, [ui.shownTypes, ui.shownDepths, ui.view]);
+  }, [ui.shownTypes, ui.shownDepths, ui.view, kbSig]);
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
@@ -977,15 +1000,19 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
-    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, useCorners.getState().order.includes("legend") ? MAP_FIT_RIGHT : 0);
+    const left = chatLeft();
+    const right = legendRight();
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, 96, MAP_FIT_BOTTOM, right);
     // a shortest path (flag graph-algos) carries each page's full title over its dot: the top one keeps clear of the
     // search line and the chip row under it
-    const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
+    const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM, right);
     // a view a "show" layer picked (a pressed source kind, "show only") has its chip row under the search line:
     // every page of it is framed, the lone ones too, with the top title clear of that row. A search or a style-only
     // stack keeps the usual fit
-    const layered = !mapped && !routed && !multiKb.current && !rimRef.current && live.current.ui.view?.kind === "picked" && useLayers.getState().stack.layers.some((l) => l.kind === "show" && l.target === "nodes") && !!fg.current?.fitIn(() => true, 0, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM);
-    if (!mapped && !routed && !layered) fg.current?.fit(pick, ms);
+    const layered = !mapped && !routed && !multiKb.current && !rimRef.current && live.current.ui.view?.kind === "picked" && useLayers.getState().stack.layers.some((l) => l.kind === "show" && l.target === "nodes") && !!fg.current?.fitIn(() => true, left, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM, right);
+    // beside the docked chat the whole graph is framed right of the panel, clear of the legend
+    const docked = !mapped && !routed && !layered && left > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, DOCKED_FIT_PAD, shellTopRef.current + SEARCH_LINE_H + 8, DOCKED_FIT_BOTTOM, right);
+    if (!mapped && !routed && !layered && !docked) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
@@ -1009,7 +1036,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const ids = live.current.cited;
       if (!ids.size) return;
       pendingFit.current = false;
-      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? useChatFull.getState().panelW : 0, 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
+      if (fg.current?.fitIn((n) => ids.has(n.id), chatLeft(), 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
         window.setTimeout(() => {
           k.current = fg.current?.zoom() ?? 1;
           recompute();
@@ -1527,6 +1554,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const drawnR = (n: SimNode) => drawnRadius(n, zs);
       const ringed = (n: SimNode) => rs.current.selected.has(n.id);
       const route = pathRef.current.links;
+      if (!route.length && wordedRef.current.length) {
+        const lit = new Set(edgeOnRef.current ? shown : []);
+        drawEdgeWords(ctx, lit.size ? wordedRef.current.filter((l) => !lit.has(l)) : wordedRef.current, zs, rs.current.colors, edgeWord);
+      }
       // (no words on a path's links: the arrows say which way each reads, and the titles stay clear)
       if (route.length) drawEdges(ctx, route, zs, rs.current.colors, drawnR, () => "", directed, PATH_WIDTH, ringed);
       if (shown.length && edgeOnRef.current) drawEdges(ctx, shown, zs, rs.current.colors, drawnR, edgeWord, directed, 1.5, ringed);
