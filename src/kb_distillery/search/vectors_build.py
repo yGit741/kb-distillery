@@ -7,7 +7,8 @@ model; this does it with a local model and no node.
     distill search vectors-build --all                                     every knowledge base in the bases dir
     distill search vectors-build --status                                  what is built, what is behind
 
-Only cards whose text changed are re-embedded; a card that is gone loses its row; rows made by another model are
+This and `scripts/qmd/vectors.mjs` write the same table but with different models, so use one of them per kb: the other
+re-embeds every page and replaces its rows. Only cards whose text changed are re-embedded; a card that is gone loses its row; rows made by another model are
 dropped first (the reader refuses a file that mixes models). The embedding model is an optional dependency, imported
 only when something has to be embedded:  pip install 'kb-distillery[vectors]'  (bge-small, ONNX, CPU)  or
 'kb-distillery[vectors-qwen]'  (the Qwen3 models, sentence-transformers + torch).
@@ -106,7 +107,7 @@ def build(root, model=DEFAULT_MODEL, make=None):
         gone = sorted(set(have) - set(texts))
         if todo:
             emb = (make or Embedder)(model)
-            vecs = emb.passages([texts[s] for s in todo])
+            vecs = emb.passages([texts[s].strip() for s in todo])
             now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             con.executemany(
                 "INSERT OR REPLACE INTO vectors (slug, hash, model, dim, vec, at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -122,7 +123,10 @@ def status(root, model=DEFAULT_MODEL):
     db = os.path.join(root, ".cache", "vectors.sqlite")
     ok, line = vectors.status(db, os.path.join(root, ".cache", "qmd-cards"))
     if ok:
-        have = vectors.load(db).model
+        try:
+            have = vectors.load(db).model
+        except ValueError as e:         # a half-rebuilt store that mixes models
+            return "behind  " + str(e)
         if have != MODELS[model][1]:
             ok, line = False, f"{line}, built with {have}, not {MODELS[model][1]}"
     return ("ok      " if ok else "behind  ") + line
@@ -133,6 +137,8 @@ def targets(every):
     if every:
         return sorted(kbconfig.discover().items())
     root = kbconfig.vault_root()
+    if not os.path.isfile(os.path.join(root, kbconfig.CONFIG_NAME)):      # never build into the checkout or the current folder
+        raise kbconfig.KbConfigError(f"vectors-build needs a knowledge base, but {root} has no kb.toml — pass --kb <id|path> or --all")
     return [(os.path.basename(os.path.realpath(root)), root)]
 
 
@@ -142,7 +148,11 @@ def main(argv=None):
     ap.add_argument("--model", choices=sorted(MODELS), default=DEFAULT_MODEL)
     ap.add_argument("--status", action="store_true", help="report only")
     a = ap.parse_args(argv)
-    found = targets(a.all)
+    try:
+        found = targets(a.all)
+    except kbconfig.KbConfigError as e:
+        print(f"vectors-build: {e}", file=sys.stderr)
+        return 1
     if not found:
         print(f"no knowledge base found under {kbconfig.bases_dir()}", file=sys.stderr)
         return 1
@@ -164,7 +174,7 @@ def main(argv=None):
         except EmbedderMissing as e:        # the same for every kb: stop
             print(f"vectors-build: {e}", file=sys.stderr)
             return 1
-        except NothingToEmbed as e:         # this kb only: go on with the others
+        except (NothingToEmbed, sqlite3.Error) as e:      # this kb only: go on with the others
             print(f"{name:30s} skipped: {e}", file=sys.stderr)
             failed += 1
         except Exception as e:              # noqa: BLE001 - a model download or runtime failure: a clean line, not a traceback

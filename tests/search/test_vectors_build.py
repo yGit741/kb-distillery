@@ -131,3 +131,19 @@ def test_main_all_builds_every_kb_and_reports_missing_package(tmp_path, monkeypa
     monkeypatch.setattr(vectors_build, "Embedder", missing)
     assert vectors_build.main(["--all"]) == 1
     assert "install it" in capsys.readouterr().err
+
+
+def test_without_a_kb_it_refuses_instead_of_building_in_the_current_folder(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(vectors_build.kbconfig, "vault_root", lambda: str(tmp_path))
+    assert vectors_build.main([]) == 1
+    assert "no kb.toml" in capsys.readouterr().err and not (tmp_path / ".cache").exists()
+
+
+def test_status_of_a_mixed_model_store_is_a_line_not_a_traceback(tmp_path):
+    root = _kb(tmp_path, {"alpha": ("Alpha", "First."), "beta": ("Beta", "Second.")})
+    _build(root, Fake())
+    con = sqlite3.connect(tmp_path / ".cache" / "vectors.sqlite")
+    con.execute("UPDATE vectors SET model = 'other' WHERE slug = 'beta'")
+    con.commit()
+    con.close()
+    assert "mixes models" in vectors_build.status(root)
