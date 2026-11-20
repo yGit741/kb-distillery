@@ -11,8 +11,8 @@ Steps, all re-runnable:
    does not list yet join its `raw:` (0 LLM). Two pages citing one conversation is a conflict, reported and
    left alone. Clips marked skip or dupe in corpus.tsv are never added.
 3. The rest get a new page: kb_distillery.llm reads the transcript (main thread, then each branch) and returns
-   title, slug, description and the page sections as JSON. A reply that fails the checks writes nothing and
-   is reported; the next run asks again. A transcript above MAX_TRANSCRIPT keeps its head and tail.
+   title, slug, description and the page sections as JSON. A reply that fails the checks is asked again (twice),
+   then reported and left for the next run; the pages that did get written are kept and committed. A transcript above MAX_TRANSCRIPT keeps its head and tail.
 """
 import os
 import re
@@ -27,7 +27,7 @@ from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault import frontmatter as fmlib
 from kb_distillery.vault import summary as summary_lib
 from kb_distillery.vault import wikiio
-from kb_distillery.vault.schema import PLACEHOLDER_TITLE, SLUG_PREFIX
+from kb_distillery.vault.schema import CHATS_DIR, PLACEHOLDER_TITLE, SLUG_PREFIX
 
 MODEL = "standard"                # a synthesis of a whole conversation, not a skim
 PRODUCER = "chat-digest"
@@ -297,6 +297,7 @@ def system(root=ROOT):
 # --- the reply ----------------------------------------------------------------------------------------------
 LIMITS = {"positions": (1, 6), "suggestions": (0, 8), "takeaways": (0, 4)}
 BULLET_MAX = 400
+TITLE_MAX = 90                    # the prompt asks for 70; a few characters over is still a good title
 
 
 def _one_line(v):
@@ -325,8 +326,8 @@ def check_reply(vals):
         return {}, ["reply is not a JSON object"]
     out, bad = {}, []
     title = _one_line(vals.get("title")).strip(" #")
-    if not 3 <= len(title) <= 70:
-        bad.append(f"title: {len(title)} chars, want 3-70")
+    if not 3 <= len(title) <= TITLE_MAX:
+        bad.append(f"title: {len(title)} chars, want 3-70 (at most {TITLE_MAX})")
     elif re.match(PLACEHOLDER_TITLE, title):
         bad.append(f"title: {title!r} is a clipper placeholder")
     out["title"] = title
@@ -445,9 +446,9 @@ def report_plan(items, out=sys.stdout):
             print(f"  {it['action']} {it['conv']}: {it['why']}", file=out)
 
 
-def ask(todo, prompts, sys_prompt, backend, model, result, retries=1):
+def ask(todo, prompts, sys_prompt, backend, model, result, retries=2):
     """conv -> (values, why it failed or "", model id). One kb_distillery.llm run for all; the replies that fail the
-    checks are asked once more in a second run, with what was wrong. A call error is not retried here (the backend
+    checks are asked again (up to `retries` more runs), with what was wrong. A call error is not retried here (the backend
     retries its own transient errors); the next chat-digest run asks again."""
     from kb_distillery import llm
     out, pending = {}, {it["conv"]: prompts[it["conv"]] for it in todo}
@@ -473,8 +474,22 @@ def ask(todo, prompts, sys_prompt, backend, model, result, retries=1):
     return out
 
 
+def _tree_state(root):
+    """{file: sha1} of meta/chats/ — to tell whether rebuilding the trees changed anything on disk."""
+    import hashlib
+    base = os.path.join(root, CHATS_DIR)
+    out = {}
+    for dirpath, _, files in os.walk(base):
+        for name in files:
+            path = os.path.join(dirpath, name)
+            with open(path, "rb") as f:
+                out[os.path.relpath(path, base)] = hashlib.sha1(f.read()).hexdigest()
+    return out
+
+
 def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd=None, lint=True, root=ROOT):
-    """→ {items, written, failed, usd}. Exit code for the CLI: 1 when a page could not be written."""
+    """→ {items, written, failed, usd, changed}."""
+    trees_before = _tree_state(root)
     if dry_run:
         convs, _ = chat_build.build(chat_build.clip_paths(root), root)
     else:
@@ -490,16 +505,17 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
     if prompts:
         print(f"{len(prompts)} new page(s) to write · estimate ${est:.2f} on {model} at "
               f"{'batch' if batch else 'list'} prices")
-    result = {"items": items, "written": [], "failed": [], "usd": 0.0}
+    result = {"items": items, "written": [], "failed": [], "usd": 0.0, "changed": False}
     if dry_run:
         return result
     if max_usd is not None and est > max_usd:
         print(f"refused: estimate ${est:.2f} is above --max-usd {max_usd}", file=sys.stderr)
         result["failed"] = [it["conv"] for it in todo]
-        return result
+        return result                                     # changed stays False: a refusal exits 1
 
     dupes = {c: k for it in items if it["action"] != "conflict" for c, k in it.get("dupes", {}).items()}
-    changed = bool(mark_dupes(dupes, root))
+    changed = _tree_state(root) != trees_before          # new or moved trees are worth a commit on their own
+    changed = bool(mark_dupes(dupes, root)) or changed
     if changed:
         print(f"  marked {len(dupes)} byte-identical clip(s) dupe in corpus.tsv")
     for it in items:
@@ -533,13 +549,16 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
         print(f"chat-digest: {len(result['written'])}/{len(todo)} page(s) written · ${result['usd']:.4f}")
         if result["failed"]:
             print("re-run chat-digest to retry the failed ones (pages already written are kept)")
+    result["changed"] = changed
     if lint and changed:
         subprocess.run([sys.executable, "-m", "kb_distillery.lint.lint"], cwd=root)
     return result
 
 
-def main(args):
+def main(args, root=ROOT):
     res = run(dry_run=args.dry_run, only=args.only or None, limit=args.limit, backend=args.backend,
-              model=args.model, max_usd=args.max_usd, lint=not args.no_lint)
-    return 1 if res["failed"] else 0
+              model=args.model, max_usd=args.max_usd, lint=not args.no_lint, root=root)
+    # partial success exits 0, so the ops wrapper commits what was written; the failures are printed and the
+    # next run retries them. 1 only when it failed with nothing to keep.
+    return 1 if res["failed"] and not res["changed"] else 0
 
