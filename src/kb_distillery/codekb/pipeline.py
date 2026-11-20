@@ -53,7 +53,7 @@ def drift(p: Project, g: Graph) -> list[str]:
             out.append(f"{r.name}: no facts in layer(s) {', '.join(empty)} (the repo has none, or its language is not in `tiers`)")
         h = g.meta.get("history", {}).get(r.name, {})
         if r.git and h.get("commits", 0) <= 1:
-            out.append(f"{r.name}: {h.get('commits', 0)} commit(s) in history: the checkout is shallow; clone deeper for history and co-change")
+            out.append(f"{r.name}: {h.get('commits', 0)} commit(s) in history: a shallow checkout (or a new repo) gives little history and co-change; clone deeper")
     return out
 
 

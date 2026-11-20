@@ -41,7 +41,10 @@ def cmd_build(args) -> int:
 
 def cmd_cards(args) -> int:
     from kb_distillery.codekb import pipeline
-    pipeline.cards(_project(args, need_checkouts=False))
+    p = _project(args, need_checkouts=False)
+    if not (p.out / "ir.json").is_file():
+        raise SystemExit(f"{p.out}/ir.json not found: run `distill code build` first")
+    pipeline.cards(p)
     return 0
 
 

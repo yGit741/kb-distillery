@@ -194,7 +194,10 @@ def from_dict(raw: dict, base: Path, source: str = "the project", default_name: 
     raw = _merge(DEFAULTS, raw or {})
     rel = lambda p: (base / Path(p).expanduser()).resolve()  # noqa: E731
     repos_dir = rel(os.environ.get("KB_CODE_REPOS") or raw.get("repos_dir") or ".")
-    override = dict(kv.split("=", 1) for kv in os.environ.get("KB_CODE_REPO_OVERRIDE", "").split(",") if "=" in kv)
+    entries = [kv for kv in os.environ.get("KB_CODE_REPO_OVERRIDE", "").split(",") if kv.strip()]
+    if any("=" not in kv for kv in entries):
+        raise SystemExit('KB_CODE_REPO_OVERRIDE must be "repo=/path,repo=/path" (a path cannot contain a comma)')
+    override = dict(kv.split("=", 1) for kv in entries)
     if not raw.get("repos"):
         raise SystemExit(f"{source}: no `repos:` (name each repository or folder to index)")
     repos = []
