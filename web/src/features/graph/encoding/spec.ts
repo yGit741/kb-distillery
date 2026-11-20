@@ -30,10 +30,13 @@ const MARK: Readonly<Record<string, NodeMark>> = {
   part: "collection",
 };
 
-/** A type's mark: the table's, else the one `registerTypeMarks` gave it, else a source. */
-export const markOf = (type: string): NodeMark => ARTIFACT[type] ?? MARK[type] ?? AUTO[type] ?? "source";
+/** A type's mark: the table's, else an artifact type's, else the one `registerTypeMarks` gave it, else a source. */
+export const markOf = (type: string): NodeMark => MARK[type] ?? ARTIFACT[type] ?? AUTO[type] ?? "source";
 
-/** The artifact layer's types and the mark each template names (anything else: a plain dot). */
+/**
+ * The artifact layer's types and the mark each names (anything else: a plain dot); {} when the graph has no layer.
+ * A built-in type's mark never changes: the table wins over an artifact type of the same name.
+ */
 export function registerArtifactMarks(types: Readonly<Record<string, { mark?: string | null }>>): void {
   ARTIFACT = Object.fromEntries(Object.entries(types).map(([id, t]) => [id, (ARTIFACT_MARKS.has(t.mark ?? "") ? t.mark : "dot") as NodeMark]));
 }

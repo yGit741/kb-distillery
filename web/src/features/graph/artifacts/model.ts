@@ -102,10 +102,15 @@ function areaOf(n: ArtifactNode, by: string | null | undefined): string[] {
 /** The code location of an artifact at its source host (its repository's `web` address, pinned commit), or null. */
 export function permalink(graph: ArtifactGraph, n: ArtifactNode | undefined): string | null {
   if (!n) return null;
-  if (typeof n.url === "string" && n.url) return n.url;
+  if (typeof n.url === "string" && n.url) return webOnly(n.url);
   const web = n.repo ? graph.repos?.[n.repo]?.web : undefined;
   if (!web || !n.path) return null;
-  return `${web}${n.path.split("/").map(encodeURIComponent).join("/")}${typeof n.line === "number" ? `#L${n.line}` : ""}`;
+  return webOnly(`${web}${n.path.split("/").map(encodeURIComponent).join("/")}${typeof n.line === "number" ? `#L${n.line}` : ""}`);
+}
+
+/** A builder writes the addresses, and a share build publishes them: only an http(s) address is ever a link. */
+function webOnly(href: string): string | null {
+  return /^https?:\/\//i.test(href.trim()) ? href : null;
 }
 
 /** Where an artifact sits, for a hover line: `repo/path:line`. */
@@ -161,8 +166,11 @@ function ordered(ix: ArtifactIndex, present: ReadonlySet<string>): string[] {
  */
 export function viewScene(ix: ArtifactIndex, view: ArtifactView, focus: string | null): ArtifactScene {
   const kinds = new Set(view.relations ?? []);
-  const links = ix.graph.links.filter((l) => (!kinds.size || kinds.has(l.kind)) && ix.byId.has(l.source) && ix.byId.has(l.target));
   const flat = view.nest === "none";
+  // a flat view draws link ends as they are, so only ends of its own types; a tree view lifts ends to the drawn level
+  const types = new Set(view.types);
+  const ofView = (id: string) => !flat || !types.size || types.has(ix.byId.get(id)!.type);
+  const links = ix.graph.links.filter((l) => (!kinds.size || kinds.has(l.kind)) && ix.byId.has(l.source) && ix.byId.has(l.target) && ofView(l.source) && ofView(l.target));
   let at = flat ? null : focus && ix.byId.has(focus) ? focus : null;
 
   const level = (f: string | null) => {
@@ -215,12 +223,12 @@ export function viewScene(ix: ArtifactIndex, view: ArtifactView, focus: string |
   const nodes = [...deg.keys()].map((id) => gnode(ix, ix.byId.get(id)!, areaOf(ix.byId.get(id)!, view.color_by), deg.get(id)!, !flat && at !== null && !own.has(id)));
   const glinks: GLink[] = [...merged.values()].map((m) => ({ source: m.source, target: m.target, kind: "related", rel: m.kind, count: m.weight }));
   const present = new Set(nodes.map((n) => n.type));
-  const types = ordered(ix, present);
+  const order = ordered(ix, present);
   const drawn = new Set(deg.keys());
   return {
     model: { nodes, links: glinks, conceptLinks: [], kbs: [] },
-    schema: schemaFor(types),
-    types: new Set(types),
+    schema: schemaFor(order),
+    types: new Set(order),
     focus: at,
     crumbs: [{ id: null, name: "All" }, ...ancestry(ix, at).map((id) => ({ id, name: ix.byId.get(id)?.name || id }))],
     hidden: [...own].filter((id) => !drawn.has(id)).length,

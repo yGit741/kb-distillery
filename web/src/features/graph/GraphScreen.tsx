@@ -59,7 +59,7 @@ import { relationIndex } from "./relationGroups";
 import { TOOLS, toolOn, useVisibleTools, type GraphToolContext } from "./tools";
 import { useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
-import { LAYER_TYPES, type Layer } from "@/api/model";
+import { LAYER_TYPES, PAGE_LAYERS, type Layer } from "@/api/model";
 import "./tours";
 import { GraphShell } from "./shell/GraphShell";
 import { HeaderFold } from "./shell/HeaderFold";
@@ -223,9 +223,11 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const artKb = kbs.length === 1 ? kbs[0] : "";
   const artQ = useApiQuery(["artifacts", artKb], (d) => d.getArtifacts(artKb ? { kb: artKb } : undefined), { enabled: artFlag && kbs.length <= 1, staleTime: 60_000, retry: false });
   const ix = useMemo(() => {
-    if (!artFlag || kbs.length > 1 || !artQ.data?.nodes?.length) return null;
-    registerArtifactMarks(artQ.data.types ?? {});
-    return indexArtifacts(artQ.data);
+    const none = !artFlag || kbs.length > 1 || !artQ.data?.nodes?.length;
+    // like registerTypeMarks above: the marks follow the layer on the graph, and go when it does
+    registerArtifactMarks(none ? {} : (artQ.data!.types ?? {}));
+    if (none) return null;
+    return indexArtifacts(artQ.data!);
   }, [artQ.data, kbs.length, artFlag]);
   const code = ix && search.code ? search.code : null;
   const scene = useMemo((): ArtifactScene | null => {
@@ -611,7 +613,7 @@ function Loaded({
     homeViewTried.current = true;
     if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
-    if (search.layer && search.layer in LAYER_TYPES) {
+    if (search.layer && (PAGE_LAYERS as string[]).includes(search.layer)) {
       useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });
     }
     if (search.search) void showMentions(search.search);

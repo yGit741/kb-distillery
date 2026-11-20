@@ -81,4 +81,27 @@ describe("citations", () => {
   it("links an artifact to its line at its source host", () => {
     expect(permalink(graph, ix.byId.get("sym:X"))).toBe("https://git.example.com/octocat/r/blob/abc/a/x.cpp#L7");
   });
+
+  it("never makes a link of an address that is not http(s): the builder writes them and a share build publishes them", () => {
+    const bad: ArtifactGraph = { ...graph, repos: { r: { web: "javascript:alert(1)//" } } };
+    expect(permalink(bad, indexArtifacts(bad).byId.get("sym:X"))).toBeNull();
+    expect(permalink(graph, { id: "n", type: "File", name: "n", url: "data:text/html,x" })).toBeNull();
+    expect(permalink(graph, { id: "n", type: "File", name: "n", url: "https://code.example.com/n" })).toBe("https://code.example.com/n");
+  });
+});
+
+describe("a flat view", () => {
+  it("draws only link ends of its own types", () => {
+    const g: ArtifactGraph = {
+      ...graph,
+      links: [
+        { source: "r:a/x.cpp", target: "r:b/y.h", kind: "includes" },
+        { source: "sym:X", target: "r:b/y.h", kind: "includes" },
+      ],
+    };
+    const files: ArtifactView = { id: "files", name: "Files", types: ["File"], relations: ["includes"], nest: "none" };
+    const s = viewScene(indexArtifacts(g), files, null);
+    expect(s.model.nodes.map((n) => n.id).sort()).toEqual(["r:a/x.cpp", "r:b/y.h"]);
+    expect([...s.types]).toEqual(["File"]);
+  });
 });
