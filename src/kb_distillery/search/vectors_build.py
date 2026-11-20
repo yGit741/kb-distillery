@@ -36,6 +36,10 @@ MODELS = {
 DEFAULT_MODEL = "bge-small"
 
 
+class NothingToEmbed(RuntimeError):
+    """This kb has no wiki/ or no page with a description."""
+
+
 class EmbedderMissing(RuntimeError):
     """The optional embedding package is not installed."""
 
@@ -73,6 +77,8 @@ def _unit(v):
 def read_cards(root):
     """{slug: card text}, the cards folder synced with wiki/ first."""
     cards_dir = os.path.join(root, ".cache", "qmd-cards")
+    if not os.path.isdir(os.path.join(root, "wiki")):
+        raise NothingToEmbed(f"{root} has no wiki/ folder")
     cards.build(os.path.join(root, "wiki"), cards_dir)
     out = {}
     for f in sorted(os.listdir(cards_dir)):
@@ -88,7 +94,7 @@ def build(root, model=DEFAULT_MODEL, make=None):
     model_id = MODELS[model][1]
     texts = read_cards(root)
     if not texts:
-        raise SystemExit(f"vectors: no cards for {root} (no page has a description yet) — nothing to embed")
+        raise NothingToEmbed(f"no cards for {root} (no page has a description yet) — nothing to embed")
     os.makedirs(os.path.join(root, ".cache"), exist_ok=True)
     con = sqlite3.connect(os.path.join(root, ".cache", "vectors.sqlite"))
     try:
@@ -112,8 +118,13 @@ def build(root, model=DEFAULT_MODEL, make=None):
     return {"embedded": len(todo), "removed": len(gone), "unchanged": len(texts) - len(todo)}
 
 
-def status(root):
-    ok, line = vectors.status(os.path.join(root, ".cache", "vectors.sqlite"), os.path.join(root, ".cache", "qmd-cards"))
+def status(root, model=DEFAULT_MODEL):
+    db = os.path.join(root, ".cache", "vectors.sqlite")
+    ok, line = vectors.status(db, os.path.join(root, ".cache", "qmd-cards"))
+    if ok:
+        have = vectors.load(db).model
+        if have != MODELS[model][1]:
+            ok, line = False, f"{line}, built with {have}, not {MODELS[model][1]}"
     return ("ok      " if ok else "behind  ") + line
 
 
@@ -137,7 +148,7 @@ def main(argv=None):
         return 1
     if a.status:
         for name, root in found:
-            print(f"{name:30s} {status(root)}")
+            print(f"{name:30s} {status(root, a.model)}")
         return 0
     emb = []
 
@@ -146,14 +157,22 @@ def main(argv=None):
             emb.append(Embedder(key))
         return emb[0]
 
-    try:
-        for name, root in found:
+    failed = 0
+    for name, root in found:
+        try:
             r = build(root, a.model, make)
+        except EmbedderMissing as e:        # the same for every kb: stop
+            print(f"vectors-build: {e}", file=sys.stderr)
+            return 1
+        except NothingToEmbed as e:         # this kb only: go on with the others
+            print(f"{name:30s} skipped: {e}", file=sys.stderr)
+            failed += 1
+        except Exception as e:              # noqa: BLE001 - a model download or runtime failure: a clean line, not a traceback
+            print(f"vectors-build: {name}: {type(e).__name__}: {e}", file=sys.stderr)
+            return 1
+        else:
             print(f"{name:30s} embedded {r['embedded']}, removed {r['removed']}, unchanged {r['unchanged']}")
-    except EmbedderMissing as e:
-        print(f"vectors-build: {e}", file=sys.stderr)
-        return 1
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

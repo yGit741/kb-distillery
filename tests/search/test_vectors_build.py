@@ -76,8 +76,26 @@ def test_other_models_rows_are_rebuilt_not_mixed(tmp_path):
 
 def test_no_cards_refuses(tmp_path):
     root = _kb(tmp_path, {})
-    with pytest.raises(SystemExit, match="no cards"):
+    with pytest.raises(vectors_build.NothingToEmbed, match="no cards"):
         _build(root, Fake())
+
+
+def test_status_reports_a_store_built_with_another_model(tmp_path):
+    root = _kb(tmp_path, {"alpha": ("Alpha", "First.")})
+    _build(root, Fake())
+    assert vectors_build.status(root).startswith("ok")
+    assert vectors_build.status(root, "qwen3-0.6b").startswith("behind") and "Qwen3" in vectors_build.status(root, "qwen3-0.6b")
+
+
+def test_one_kb_without_pages_does_not_stop_the_others(tmp_path, monkeypatch, capsys):
+    (tmp_path / "empty").mkdir()
+    full = tmp_path / "full"
+    full.mkdir()
+    _kb(full, {"alpha": ("Alpha", "First.")})
+    monkeypatch.setattr(vectors_build.kbconfig, "discover", lambda: {"a-empty": str(tmp_path / "empty"), "b-full": str(full)})
+    monkeypatch.setattr(vectors_build, "Embedder", lambda key: Fake())
+    assert vectors_build.main(["--all"]) == 1
+    assert (full / ".cache" / "vectors.sqlite").exists() and "skipped" in capsys.readouterr().err
 
 
 def test_missing_model_package_names_the_extra(tmp_path, monkeypatch):
