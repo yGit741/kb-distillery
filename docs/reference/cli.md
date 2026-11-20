@@ -131,7 +131,7 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 ## ingest
 
 ```
-usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
+usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,scrap-wandb,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
 ```
 
 | Subcommand | Does | Model |
@@ -139,6 +139,7 @@ usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-dige
 | `scrap` | Download or copy to `raw/inbox/`. `--type`, `--force`. | none |
 | `scrap-wordpress` | Every post of a WordPress.com blog and its figures to `raw/inbox/`. | none |
 | `scrap-youtube` | A video to `raw/inbox/video-<name>/`: transcript and anchors. | none |
+| `scrap-wandb` | A Weights & Biases run, or a project's runs tagged `kb`, to `raw/inbox/run-<name>/`: config, summary, history and tables. `--tag`, `--max-rows`, `--max-mb`, `--force`. | none |
 | `video-digest` | Full or deep digest of a video page. | yes |
 | `scrap-mail` | Parse an `.mbox` or `.eml` export, or fetch by IMAP. | none |
 | `scrap-gdrive` | Pull a mounted Google Drive folder to `raw/inbox/`. | none |

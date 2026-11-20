@@ -33,6 +33,7 @@ distill ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
 distill ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
 distill ingest scrap-wordpress <site> --prefix <collection short> [--since YYYY-MM-DD] [--limit N] [--no-images] [--force]
 distill ingest scrap-youtube <url> [--force]   # transcript + anchors with thumbnails, 0 LLM
+distill ingest scrap-wandb <run-url | entity/project> [--tag kb] [--force]   # a W&B run → run-<name>/ bundle, 0 LLM
 ```
 
 Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`. Use `--force` only when intentional.

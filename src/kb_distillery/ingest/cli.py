@@ -180,6 +180,13 @@ def main(argv=None):
     sy.add_argument("url")
     sy.add_argument("--force", action="store_true", help="scrap again although the video is in the vault (refreshes its bundle)")
 
+    sx = sub.add_parser("scrap-wandb", help="a Weights & Biases run, or a project's tagged runs → raw/inbox/run-<name>/ bundles (0 LLM)")
+    sx.add_argument("source", help="a run URL, entity/project/run_id, or entity/project (every finished run with --tag)")
+    sx.add_argument("--tag", default="kb", help="project pull: only runs with this tag (default kb; '' for all)")
+    sx.add_argument("--max-rows", type=int, default=100_000, help="history rows kept per run")
+    sx.add_argument("--max-mb", type=int, default=50, help="artifacts above this size are listed, not read")
+    sx.add_argument("--force", action="store_true", help="pull again over this run's inbox bundle (a cataloged run is immutable)")
+
     vd = sub.add_parser("video-digest", help="full/deep digest of a video page: read the top anchors with Claude (LLM)")
     vd.add_argument("target", help="raw/videos/<name>/video.md or its video- page slug")
     vd.add_argument("--tier", choices=["full", "deep"], default="full", help="full ~15 frames/hour · deep ~30/hour")
@@ -356,6 +363,17 @@ def main(argv=None):
             return 1
         except Exception as e:                       # yt-dlp raises its own DownloadError
             print(f"scrap-youtube failed: {e}", file=sys.stderr)
+            return 1
+        return 0
+    if args.cmd == "scrap-wandb":
+        from kb_distillery.ingest.sources.experiments import wandb_pull
+        try:
+            wandb_pull.scrap_wandb(args.source, tag=args.tag, force=args.force, max_rows=args.max_rows,
+                                   max_mb=args.max_mb)
+        except resolve_mod.DuplicateBlocked:
+            return 1
+        except Exception as e:                       # wandb raises its own CommError / ValueError
+            print(f"scrap-wandb failed: {e}", file=sys.stderr)
             return 1
         return 0
     if args.cmd == "scrap-wordpress":

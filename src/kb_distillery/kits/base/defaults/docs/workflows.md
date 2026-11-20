@@ -30,6 +30,7 @@ python3 -m kb_distillery.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-..
 python3 -m kb_distillery.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
 python3 -m kb_distillery.ingest scrap-wordpress <site> --prefix <collection short>   # every post of a WordPress.com blog + figures → inbox
 python3 -m kb_distillery.ingest scrap-youtube <url>   # a lecture/video → inbox video-<name>/ bundle: transcript + anchors (0 LLM)
+python3 -m kb_distillery.ingest scrap-wandb <run-url | entity/project>   # a W&B run, or a project's runs tagged kb → inbox run-<name>/ bundles (0 LLM)
 python3 -m kb_distillery.ingest video-digest raw/videos/<name>/video.md --tier full|deep   # read the top anchors with Claude
 python3 -m kb_distillery.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- Source page at depth listed, papers only)
 python3 -m kb_distillery.ingest catalog <inbox-path> --collection <collection|person> [--format <folder>] [--title T]
