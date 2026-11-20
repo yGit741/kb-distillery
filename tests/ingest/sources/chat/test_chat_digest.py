@@ -213,7 +213,8 @@ class TestRun(ChatDigestCase):
     def test_reply_that_fails_twice_or_errors_writes_nothing(self):
         self.put("raw/llm-chats/a.md", clip(TURNS_A))
         self.put("raw/llm-chats/b.md", clip([("You", "Graph coloring?"), ("Gemini", "Assign colors.")]))
-        fake = FakeLLM(reply(description="too short"), {"error": "overloaded"}, reply(description="still short"))
+        fake = FakeLLM(reply(description="too short"), {"error": "overloaded"}, reply(description="still short"),
+                       reply(description="short again"))
         res = self.run_cd(fake)
         self.assertEqual((res["written"], len(res["failed"])), ([], 2))
         self.assertEqual([n for n in os.listdir(os.path.join(self.root, "wiki"))], [])
@@ -237,12 +238,29 @@ class TestRun(ChatDigestCase):
         self.assertEqual((fake.calls, len(res["failed"])), ([], 1))
 
 
+class TestExitCode(ChatDigestCase):
+    def test_partial_success_exits_zero_so_the_pages_get_committed(self):
+        self.put("raw/llm-chats/a.md", clip(TURNS_A))
+        self.put("raw/llm-chats/b.md", clip([("You", "Graph coloring?"), ("Gemini", "Assign colors.")]))
+        args = mock.Mock(dry_run=False, only=None, limit=None, backend=None, model="standard", max_usd=None,
+                         no_lint=True)
+        with mock.patch.object(llm, "run", FakeLLM(reply(), {"error": "overloaded"})):
+            self.assertEqual(cd.main(args, root=self.root), 0)          # one page written, one failed
+        self.put("raw/llm-chats/c.md", clip([("You", "Ramsey numbers?"), ("Gemini", "R(3,3)=6.")]))
+        with mock.patch.object(llm, "run", FakeLLM({"error": "down"}, {"error": "down"})):
+            self.assertEqual(cd.main(args, root=self.root), 1)          # nothing written: a real failure
+
+
 class TestReply(unittest.TestCase):
     def test_too_many_or_too_long_bullets_are_trimmed(self):
         vals, bad = cd.check_reply(json.loads(reply(positions=["p"] * 9, suggestions=["word " * 200])))
         self.assertEqual(bad, [])
         self.assertEqual(len(vals["positions"]), 6)
         self.assertLessEqual(len(vals["suggestions"][0]), cd.BULLET_MAX)
+
+    def test_a_slightly_long_title_is_kept(self):
+        self.assertEqual(cd.check_reply(json.loads(reply(title="T" * 80)))[1], [])
+        self.assertTrue(cd.check_reply(json.loads(reply(title="T" * 95)))[1])
 
     def test_placeholder_title_and_missing_positions_are_refused(self):
         _, bad = cd.check_reply(json.loads(reply(title="New notebook", positions=[])))
