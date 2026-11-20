@@ -76,3 +76,4 @@ class KbGraphSize(ApiModel):
 
 class KbGraphSizes(ApiModel):
     kbs: dict[str, KbGraphSize]     # by knowledge base id; one that does not load is absent
+    pending: list[str] = []         # ids being counted in the background (ask again while this is not empty)

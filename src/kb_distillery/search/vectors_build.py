@@ -89,6 +89,35 @@ def read_cards(root):
     return out
 
 
+def _corrupt(e: sqlite3.DatabaseError) -> bool:
+    """True for a damaged or non-sqlite file; False for a passing state such as a lock held by another build."""
+    if isinstance(e, sqlite3.OperationalError) and "locked" in str(e).lower():
+        return False
+    return not isinstance(e, sqlite3.OperationalError) or any(w in str(e).lower() for w in ("not a database", "malformed", "corrupt"))
+
+
+def _set_aside_if_unreadable(db):
+    """A store that fails sqlite's own check is a cache gone bad: keep it beside the new one as
+    `<db>.unreadable-<time>` and start fresh. A store that is only locked (another build) is left alone."""
+    if not os.path.exists(db):
+        return
+    try:
+        con = sqlite3.connect(db)
+        try:
+            ok = con.execute("PRAGMA quick_check").fetchone()
+        finally:
+            con.close()
+        bad = not ok or ok[0] != "ok"
+    except sqlite3.DatabaseError as e:
+        if not _corrupt(e):
+            raise
+        bad = True
+    if bad:
+        kept = f"{db}.unreadable-{time.strftime('%Y%m%dT%H%M%S', time.gmtime())}"
+        os.replace(db, kept)
+        print(f"note: {db} was not a readable vector store; kept it as {kept} and rebuilt", file=sys.stderr)
+
+
 def build(root, model=DEFAULT_MODEL, make=None):
     """Sync one kb's vector store with its cards -> {'embedded', 'removed', 'unchanged'}. `make(model_key)` builds the
     embedder on first need (default `Embedder`); a store already up to date never loads a model."""
@@ -97,7 +126,9 @@ def build(root, model=DEFAULT_MODEL, make=None):
     if not texts:
         raise NothingToEmbed(f"no cards for {root} (no page has a description yet) — nothing to embed")
     os.makedirs(os.path.join(root, ".cache"), exist_ok=True)
-    con = sqlite3.connect(os.path.join(root, ".cache", "vectors.sqlite"))
+    db = os.path.join(root, ".cache", "vectors.sqlite")
+    _set_aside_if_unreadable(db)
+    con = sqlite3.connect(db)
     try:
         con.execute(SCHEMA)
         con.execute("DELETE FROM vectors WHERE model != ?", (model_id,))
@@ -121,12 +152,21 @@ def build(root, model=DEFAULT_MODEL, make=None):
 
 def status(root, model=DEFAULT_MODEL):
     db = os.path.join(root, ".cache", "vectors.sqlite")
-    ok, line = vectors.status(db, os.path.join(root, ".cache", "qmd-cards"))
+    try:
+        ok, line = vectors.status(db, os.path.join(root, ".cache", "qmd-cards"))
+    except sqlite3.DatabaseError as e:  # a corrupt or non-sqlite file: say so, the next build replaces it
+        if not _corrupt(e):
+            return f"behind  {db} is busy ({e}): try again when the other build is done"
+        return f"behind  {db} is not a readable vector store ({e}): run vectors-build to rebuild it"
     if ok:
         try:
             have = vectors.load(db).model
         except ValueError as e:         # a half-rebuilt store that mixes models
             return "behind  " + str(e)
+        except sqlite3.DatabaseError as e:
+            if not _corrupt(e):
+                return f"behind  {db} is busy ({e}): try again when the other build is done"
+            return f"behind  {db} is not a readable vector store ({e}): run vectors-build to rebuild it"
         if have != MODELS[model][1]:
             ok, line = False, f"{line}, built with {have}, not {MODELS[model][1]}"
     return ("ok      " if ok else "behind  ") + line

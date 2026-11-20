@@ -147,3 +147,37 @@ def test_status_of_a_mixed_model_store_is_a_line_not_a_traceback(tmp_path):
     con.commit()
     con.close()
     assert "mixes models" in vectors_build.status(root)
+
+
+def test_a_corrupt_store_is_reported_then_set_aside_and_rebuilt(tmp_path):
+    root = _kb(tmp_path, {"alpha": ("Alpha", "First page.")})
+    db = tmp_path / ".cache" / "vectors.sqlite"
+    db.parent.mkdir()
+    db.write_bytes(b"this is not sqlite at all, just bytes" * 40)
+    line = vectors_build.status(root)
+    assert line.startswith("behind") and "not a readable vector store" in line
+    assert _build(root, Fake()) == {"embedded": 1, "removed": 0, "unchanged": 0}
+    assert list((tmp_path / ".cache").glob("vectors.sqlite.unreadable-*"))
+    assert vectors.load(str(db)).slugs == ["alpha"]
+
+
+def test_a_locked_store_is_not_taken_for_a_corrupt_one(tmp_path, monkeypatch):
+    import sqlite3
+    root = _kb(tmp_path, {"alpha": ("Alpha", "First page.")})
+    _build(root, Fake())
+    db = str(tmp_path / ".cache" / "vectors.sqlite")
+    real = sqlite3.connect
+
+    class Locked:
+        def execute(self, *_a):
+            raise sqlite3.OperationalError("database is locked")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(vectors_build.sqlite3, "connect", lambda path, *a, **k: Locked() if path == db else real(path, *a, **k))
+    with pytest.raises(sqlite3.OperationalError):
+        vectors_build._set_aside_if_unreadable(db)
+    monkeypatch.setattr(vectors_build.sqlite3, "connect", real)
+    assert not list((tmp_path / ".cache").glob("vectors.sqlite.unreadable*"))
+    assert vectors.load(db).slugs == ["alpha"]

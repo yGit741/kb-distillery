@@ -188,3 +188,19 @@ def test_kb_flag_without_a_folder_is_an_error():
     with pytest.raises(SystemExit):
         _take_kbs(["--kb"])
     assert _take_kbs(["--kb", "/a", "--kb=/b"]) == ["/a", "/b"]
+
+
+def test_an_index_symlinked_out_of_wiki_is_not_served(lib, tmp_path):
+    secret = tmp_path / "secret.md"
+    secret.write_text("outside the kb\n", encoding="utf-8")
+    index = tmp_path / "bases" / "alpha" / "wiki" / "index.md"
+    index.unlink()
+    index.symlink_to(secret)
+    with pytest.raises(KbMcpError):
+        lib.get_index("alpha")
+
+
+def test_an_empty_kb_value_is_an_error():
+    from kb_distillery.kb_mcp.__main__ import _take_kbs
+    with pytest.raises(SystemExit):
+        _take_kbs(["--kb="])

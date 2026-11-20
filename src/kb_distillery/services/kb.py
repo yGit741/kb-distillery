@@ -129,20 +129,82 @@ def listing():
             "think_root": paths.THINK_PATH, "active": paths.KB.id if paths.KB else None, "kbs": rows}
 
 
-def graph_sizes():
-    """{id: graph_stats} for every knowledge base whose graph this app can show; one that does not load is left out.
-    Each is the cached snapshot (graph/cache.py), so a repeat is cheap."""
-    from kb_distillery.graph.cache import cached_graph_snapshot
+# (kb id, folder) -> (signature of the folder when counted, graph_stats or None when its graph would not build)
+_SIZES: dict[tuple[str, str], tuple[str, dict | None]] = {}
+_SIZES_LOCK = threading.Lock()
+_PENDING: dict[tuple[str, str], None] = {}      # waiting for the worker, in order
+_COUNTING: set[tuple[str, str]] = set()          # the one the worker is counting now (never queued twice)
+_SIZES_WORKER: threading.Thread | None = None
+
+
+def _size_of(kb_id, root):
+    """(signature, graph_stats) of one knowledge base, built from its (cached) graph snapshot; stats None when its graph
+    does not build (remembered with the signature, so it is not retried until the folder changes)."""
+    from kb_distillery.graph.cache import cached_graph_snapshot, signature
     from kb_distillery.graph.stats import graph_stats
     from kb_distillery.services import kbview
-    out = {}
-    act = kbview.active_view()
-    for kb_id in [act.id, *kbconfig.discover()]:
-        if not kb_id or kb_id in out:
-            continue
+    sig = signature(root)
+    try:
+        v = kbview.view(kb_id)
+        return sig, graph_stats(cached_graph_snapshot(view=None if v.active else v))
+    except Exception:                # noqa: BLE001 — a broken knowledge base must not hide the others' sizes
+        return sig, None
+
+
+def _drain():
+    """The worker: count every queued knowledge base, including ones queued while it runs."""
+    while True:
+        with _SIZES_LOCK:
+            if not _PENDING:
+                return
+            key = next(iter(_PENDING))
+            del _PENDING[key]
+            _COUNTING.add(key)
         try:
-            v = kbview.view(kb_id)
-            out[kb_id] = graph_stats(cached_graph_snapshot(view=None if v.active else v))
-        except Exception:            # noqa: BLE001 — a broken knowledge base must not hide the others' sizes
+            got = _size_of(*key)
+        finally:
+            with _SIZES_LOCK:
+                _COUNTING.discard(key)
+        with _SIZES_LOCK:
+            _SIZES[key] = got
+
+
+def graph_sizes(wait=False):
+    """{"kbs": {id: graph_stats}, "pending": [id]} for every knowledge base whose graph this app can show.
+
+    A size is kept per knowledge base with the signature of its folder (graph/cache.py). One not counted yet, or
+    whose folder changed, is queued for one background thread and listed in `pending`; a changed one keeps its last
+    size meanwhile, so the menu never loses a row's count. One whose graph does not build is left out and not
+    retried until its folder changes. The request never builds a graph itself; the header menu asks again while
+    `pending` is not empty. `wait=True` drains the queue in the request (tests)."""
+    global _SIZES_WORKER
+    from kb_distillery.graph.cache import signature
+    from kb_distillery.services import kbview
+    act = kbview.active_view()
+    out, pending = {}, []
+    for kb_id in dict.fromkeys(k for k in [act.id, *kbconfig.discover()] if k):
+        try:
+            root = os.path.realpath(kbview.view(kb_id).root)
+            sig = signature(root)
+        except Exception:            # noqa: BLE001 — an id that no longer resolves
             continue
-    return {"kbs": out}
+        key = (kb_id, root)
+        with _SIZES_LOCK:
+            hit = _SIZES.get(key)
+            if hit is None or hit[0] != sig:
+                if key not in _COUNTING:
+                    _PENDING[key] = None
+                pending.append(kb_id)
+        if hit is not None and hit[1] is not None:
+            out[kb_id] = hit[1]               # the last size, also while a changed folder is counted again
+    if pending and wait:
+        if _SIZES_WORKER is not None:
+            _SIZES_WORKER.join()
+        _drain()
+        return graph_sizes()
+    if pending:
+        with _SIZES_LOCK:
+            if _SIZES_WORKER is None or not _SIZES_WORKER.is_alive():
+                _SIZES_WORKER = threading.Thread(target=_drain, name="kb-sizes", daemon=True)
+                _SIZES_WORKER.start()
+    return {"kbs": out, "pending": pending}

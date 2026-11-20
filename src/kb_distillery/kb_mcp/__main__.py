@@ -21,6 +21,8 @@ def _take_kbs(argv: list[str]) -> list[str]:
         if a == "--kb":
             raise SystemExit("distill mcp: --kb needs a folder")
         if a.startswith("--kb="):
+            if not a[len("--kb="):].strip():
+                raise SystemExit("distill mcp: --kb needs a folder")
             kbs.append(a[len("--kb="):])
         else:
             rest.append(a)

@@ -4452,6 +4452,11 @@ export interface components {
             kbs: {
                 [key: string]: components["schemas"]["KbGraphSize"];
             };
+            /**
+             * Pending
+             * @default []
+             */
+            pending: string[];
         } & {
             [key: string]: unknown;
         };

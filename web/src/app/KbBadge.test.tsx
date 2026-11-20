@@ -114,7 +114,7 @@ describe("header knowledge base menu (kb-view)", () => {
   it("rows sort by graph size, show it in small print, and a too-small one is red", () =>
     withFlag("kb-view", true, async () => {
       open("/graph", {
-        getKbStats: async () => ({ kbs: { alpha: { concepts: 3, sources: 1, edges: 1 }, beta: { concepts: 40, sources: 12, edges: 60 } } }),
+        getKbStats: async () => ({ kbs: { alpha: { concepts: 3, sources: 1, edges: 1 }, beta: { concepts: 40, sources: 12, edges: 60 } }, pending: [] }),
       });
       await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
       const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });

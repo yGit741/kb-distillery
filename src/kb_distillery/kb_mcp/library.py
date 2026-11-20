@@ -242,7 +242,7 @@ class Library:
                 raise KbMcpError(f"no index section {section!r} in {cfg.id}; the root index lists them")
             rel = f"{name}/index.md"
         path = os.path.join(self._wiki(cfg), rel)
-        if not os.path.isfile(path):
+        if not os.path.isfile(path) or not _inside(self._wiki(cfg), path):     # a symlink out of wiki/ is not an index
             raise KbMcpError(f"{cfg.id} has no wiki/{rel}")
         return f"<!-- kb: {cfg.id} | index: {rel} -->\n{_read(path)}"
 

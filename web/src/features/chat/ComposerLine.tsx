@@ -42,7 +42,6 @@ function Choice({ name, value, options, onPick }: { name: string; value: string;
       <button
         type="button"
         aria-label={name}
-        aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen((o) => !o)}
@@ -51,11 +50,12 @@ function Choice({ name, value, options, onPick }: { name: string; value: string;
         {current?.label ?? value}
       </button>
       {open && (
-        <ul id={id} role="listbox" aria-label={name} className="absolute bottom-full left-0 z-20 mb-1 min-w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-sm">
+        <ul id={id} role="group" aria-label={name} className="absolute bottom-full left-0 z-20 mb-1 min-w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-sm">
           {options.map((o) => (
-            <li key={o.value} role="option" aria-selected={o.value === value} aria-disabled={o.disabled || undefined} className="flex items-baseline gap-1">
+            <li key={o.value} className="flex items-baseline gap-1">
               <button
                 type="button"
+                aria-pressed={o.value === value}
                 title={o.hint}
                 disabled={o.disabled}
                 onClick={() => {

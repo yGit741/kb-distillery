@@ -100,7 +100,12 @@ function KbMenu({ title, active, activeName, readOnly }: { title: React.ReactNod
   const raw = onGraph ? (loc.search as Record<string, unknown>).kbs : undefined;
   const picked = parseKbs(typeof raw === "string" ? raw : undefined);
   const list = useApiQuery(["kb-list"], (d) => d.listKbs(), { staleTime: 30_000 });
-  const sizes = useApiQuery(["kb-stats"], (d) => d.getKbStats(), { staleTime: 60_000, retry: false });
+  // the server counts sizes in the background: ask again while the menu is open and it says some are pending
+  const sizes = useApiQuery(["kb-stats"], (d) => d.getKbStats(), {
+    staleTime: 60_000,
+    retry: false,
+    refetchInterval: (q) => (open && (q.state.data?.pending?.length ?? 0) > 0 && q.state.dataUpdateCount < 60 ? 2000 : false),
+  });
   const sizeOf = (r: MenuRow) => sizes.data?.kbs[r.id];
   const listed: MenuRow[] = (list.data?.kbs ?? []).map((r) => ({ ...r, listed: true }));
   // an app opened on a folder outside the bases dir (`--kb <path>`) is on the graph too: it gets its row, first
