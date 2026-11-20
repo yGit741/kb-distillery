@@ -296,7 +296,7 @@ export const ReachGraph = forwardRef<ReachGraphHandle, {
           />
         ))}
         <g className="text-foreground" strokeDasharray={center.isNew ? "4 3" : undefined}>
-          <NodeMarkG type="concept" x={0} y={0} r={14} color="currentColor" background="var(--card, #fff)" />
+          <NodeMarkG type="concept" x={0} y={0} r={14} color="currentColor" background="var(--card)" />
         </g>
         <text y={28} textAnchor="middle" className="fill-foreground text-[10px] font-medium">{center.title.length > 24 ? `${center.title.slice(0, 23)}…` : center.title}</text>
         {center.isNew && <text y={4} textAnchor="middle" className="fill-muted-foreground text-[8px] font-semibold">New</text>}
