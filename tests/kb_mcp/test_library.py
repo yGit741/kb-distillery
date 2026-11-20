@@ -172,3 +172,19 @@ def test_cli_table_lists_mcp_and_help_runs():
     assert p.returncode == 0 and "usage: distill mcp" in p.stdout
     from kb_distillery.config.commands import COMMANDS
     assert COMMANDS["mcp"].target == "kb_distillery.kb_mcp"
+
+
+def test_a_symlink_out_of_wiki_is_not_a_page(lib, tmp_path):
+    outside = tmp_path / "outside.md"
+    outside.write_text("# outside\n")
+    os.symlink(outside, tmp_path / "bases/alpha/wiki/link.md")
+    assert "link.md" not in [h["page"] for h in lib.search("outside", kb="alpha")["hits"]]
+    with pytest.raises(KbMcpError):
+        lib.get_page("alpha", "link.md")
+
+
+def test_kb_flag_without_a_folder_is_an_error():
+    from kb_distillery.kb_mcp.__main__ import _take_kbs
+    with pytest.raises(SystemExit):
+        _take_kbs(["--kb"])
+    assert _take_kbs(["--kb", "/a", "--kb=/b"]) == ["/a", "/b"]

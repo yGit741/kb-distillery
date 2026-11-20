@@ -18,6 +18,8 @@ def _take_kbs(argv: list[str]) -> list[str]:
             kbs.append(argv[i + 1])
             i += 2
             continue
+        if a == "--kb":
+            raise SystemExit("distill mcp: --kb needs a folder")
         if a.startswith("--kb="):
             kbs.append(a[len("--kb="):])
         else:

@@ -43,6 +43,12 @@ def _read(path: str, limit: int | None = None) -> str:
         return f.read(limit) if limit else f.read()
 
 
+def _inside(root: str, path: str) -> bool:
+    """True when `path` really lies under `root` (a symlink out of the folder does not)."""
+    root = os.path.realpath(root)
+    return os.path.commonpath([root, os.path.realpath(path)]) == root
+
+
 class Library:
     """The bases dir (`$KB_DISTILLERY_HOME`) plus any extra kb folders, looked up fresh on every call."""
 
@@ -94,13 +100,13 @@ class Library:
 
     def _page_files(self, cfg) -> list[str]:
         """Wiki-relative paths (`/` separated) of every content page: no index.md, no log.md."""
-        wiki, out = self._wiki(cfg), []
-        for dirpath, dirs, files in os.walk(wiki):
-            dirs[:] = sorted(d for d in dirs if not d.startswith("."))
-            for name in sorted(files):
-                if name.endswith(".md") and name not in RESERVED and not name.startswith("."):
-                    out.append(os.path.relpath(os.path.join(dirpath, name), wiki).replace(os.sep, "/"))
-        return out
+        wiki = self._wiki(cfg)
+        try:
+            names = sorted(os.listdir(wiki))          # a flat folder, as the search index sees it (sections hold only index.md)
+        except OSError:
+            return []
+        return [n for n in names if n.endswith(".md") and n not in RESERVED and not n.startswith(".")
+                and os.path.isfile(os.path.join(wiki, n)) and _inside(wiki, os.path.join(wiki, n))]
 
     def _meta(self, cfg, rel: str) -> tuple[dict, str, str]:
         text = _read(os.path.join(self._wiki(cfg), rel))
@@ -188,7 +194,7 @@ class Library:
                         if h["path"] not in best or h["score"] > best[h["path"]]["score"]:
                             best[h["path"]] = h
                 raw = sorted(best.values(), key=lambda h: -h["score"])
-        except (OSError, sqlite3.Error):
+        except (OSError, sqlite3.Error, ValueError):
             raw = self._scan_search(cfg, query)
         out, wiki_prefix, pages = [], WIKI_DIR + "/", set(self._page_files(cfg))
         for h in raw:

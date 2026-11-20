@@ -37,6 +37,8 @@ Changelog = "https://github.com/yGit741/kb-distillery/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 # The Google Drive connector reads the macOS Drive for desktop mount: no Python dependency, the extra names the feature.
 gdrive = []
+# `distill mcp`: the read-only MCP server over local kbs (kb_distillery.kb_mcp).
+mcp = ["mcp>=2,<3"]
 # PDF text, images, video frames and OCR. pypdfium2 (BSD / Apache) reads and renders PDFs; PyMuPDF was dropped for its AGPL licence.
 ingest-heavy = [
     "pypdfium2>=4",
