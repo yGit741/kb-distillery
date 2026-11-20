@@ -52,7 +52,8 @@ Reply with ONLY one JSON object:
 - title: a short informative name for the conversation, 3-70 characters, no "chat with" or model name.
 - slug: 2-6 lowercase English words joined by hyphens, naming the topic (e.g. "adamw-vs-muon").
 - description: one plain sentence of 80-300 characters: what the conversation is about and its main point.
-  No double quotes, no # characters, no backslashes, no links.
+  Plain words only: no math notation or LaTeX (write "A equals its transpose", not $A = A^T$), no double
+  quotes, no # characters, no backslashes, no links.
 - scope: one sentence listing the topics it covers.
 - positions: 1-6 bullets, what the owner asked, believed, proposed or pushed back on.
 - suggestions: 0-8 bullets, the model's main claims and suggestions, stated as claims (they are unverified).
@@ -310,6 +311,22 @@ def _cut(text, limit=BULLET_MAX):
     return text[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
 
 
+_LATEX_WRAP = re.compile(r"\\(?:mathbb|mathbf|mathrm|mathcal|text|textbf|operatorname)\{([^{}]*)\}")
+_LATEX_SYMBOL = {"top": "T", "intercal": "T", "cdot": "·", "times": "×", "le": "≤", "leq": "≤", "ge": "≥",
+                 "geq": "≥", "neq": "≠", "to": "→", "in": "∈", "infty": "∞", "sum": "Σ", "lambda": "λ",
+                 "sigma": "σ", "mu": "μ", "pi": "π", "langle": "⟨", "rangle": "⟩", "otimes": "⊗", "oplus": "⊕"}
+
+
+def plain_text(text):
+    """A one-line description without LaTeX (lint refuses backslashes there): $…$ and \\(…\\) drop their
+    delimiters, \\mathbb{R} → R, \\top → T, other \\commands → their name; braces go."""
+    t = text.replace("\\(", "").replace("\\)", "").replace("$", "")
+    t = _LATEX_WRAP.sub(r"\1", t)
+    t = re.sub(r"\\([A-Za-z]+)", lambda m: _LATEX_SYMBOL.get(m.group(1), m.group(1)), t)
+    t = t.replace("\\", "").replace("{", "").replace("}", "")
+    return " ".join(t.split())
+
+
 def slugify(text):
     words = re.findall(r"[a-z0-9]+", (text or "").lower())
     out = ""
@@ -331,7 +348,7 @@ def check_reply(vals):
     elif re.match(PLACEHOLDER_TITLE, title):
         bad.append(f"title: {title!r} is a clipper placeholder")
     out["title"] = title
-    desc = _one_line(vals.get("description"))
+    desc = plain_text(_one_line(vals.get("description")))
     bad += [f"description: {p}" for p in summary_lib.problems(desc)]
     out["description"] = desc
     out["scope"] = _one_line(vals.get("scope"))
