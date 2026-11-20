@@ -87,7 +87,7 @@ class CommandTableTests(unittest.TestCase):
     def test_the_commands_of_the_plan_are_there(self):
         self.assertEqual(
             set(tree.COMMANDS),
-            {"init", "doctor", "kb", "launch", "hooks", "hook", "ops", "ship", "ingest", "digest", "send", "lint", "llm", "parse", "search", "share", "propose"})
+            {"init", "doctor", "kb", "launch", "hooks", "hook", "ops", "ship", "ingest", "digest", "send", "lint", "llm", "parse", "search", "share", "propose", "code"})
         self.assertEqual(set(tree.COMMANDS["kb"].sub), {"list", "show", "takeaways", "import", "inbox", "open-example"})
         self.assertEqual(set(tree.COMMANDS["search"].sub), {"text"})
         self.assertEqual(set(tree.COMMANDS["hooks"].sub), {"install"})
