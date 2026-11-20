@@ -14,7 +14,7 @@ import { NeedsClaudeBadge } from "@/features/chat/NeedsClaudeBadge";
 import { parsePrompts } from "@/features/chat/prompts";
 import { quickSendOptions } from "@/features/chat/QuickAsk";
 import { STATUS_KEY } from "@/features/chat/SessionPanel";
-import { backendLabel, effectiveBackend, parseStatus } from "@/features/chat/status";
+import { backendLabel, effectiveBackend, parseStatus, billingDetails } from "@/features/chat/status";
 import { readJson, writeJson } from "@/features/chat/storage";
 import { chatTitle, type ChatMessage } from "@/features/chat/thread";
 import { useChatSession } from "@/features/chat/useChatSession";
@@ -455,6 +455,7 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
           {effectiveBackend(view) === "agent" ? (
             <ComposerLine
               account={view.authMode === "api_key" && view.keyLoaded ? "api" : "subscription"}
+              details={billingDetails(view)}
               models={view.models}
               model={model}
               onModel={(id) => {

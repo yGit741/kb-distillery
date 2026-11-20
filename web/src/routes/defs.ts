@@ -38,6 +38,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector.", runtimeFlag: "research-tools" },
   { id: "proposals", path: "/proposals", label: "Proposals", blurb: "Review agent changes to pages, hunk by hunk, and apply what you accept.", extraPaths: ["/proposals/$id"], runtimeFlag: "ui.proposals" },
   { id: "ingest", path: "/ingest", label: "Ingest", blurb: "Drop a paper or paste a link; the new pages arrive as a proposal to review.", runtimeFlag: "ui.ingest", nav: true },
+  { id: "review", path: "/review", label: "Review", blurb: "Every pending change as a card: accept, reject, or say what to change; /merge and /split; apply in one batch.", runtimeFlag: "ui.review-deck", nav: true },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];
 
