@@ -64,6 +64,12 @@ export const STATUS_COLORS = {
   open: "#f6c177",
   partial: "#e0af68",
   resolved: "#73daca",
+  sketch: "#565f89",
+  proved: "#9ece6a",
+  refuted: "#ff6b7a",
+  supports: "#9ece6a",
+  refutes: "#ff6b7a",
+  inconclusive: "#6c7086",
   review: "#e0af68",
   applied: "#73daca",
   archived: "#565f89",
@@ -103,6 +109,7 @@ export const PILE_COLORS = {
   "web-clips": "#4fd6be",
   images: "#7dcfff",
   videos: "#e0af68",
+  experiments: "#c3e88d",
 } as const;
 
 const lookup = (map: Readonly<Record<string, string>>, key: string | null | undefined): string =>
