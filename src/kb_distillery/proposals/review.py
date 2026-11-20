@@ -231,6 +231,10 @@ def rewrite(pid, hunk_id, instruction, backend=None, root=None, marks=None, page
         new_op = dict(op, text=after.rstrip() + "\n")
     ops = [{k: v for k, v in (new_op if o["id"] == op["id"] else o).items() if k != "id"} for o in rev["ops"]]
     old_ids = {x["id"] for x in rev["hunks"]} - {hunk_id}
+    # the model call can take minutes: a proposal revised, applied or rejected meanwhile is not overwritten
+    now = store.load(root, pid)
+    if now["current"] != p["current"] or now["status"] != p["status"]:
+        raise ProposalError(409, "the proposal changed while the model was writing: reload the deck and try again")
     out = service.revise(pid, ops, note=f"rewrite: {instruction[:200]}", root=root)
     new_ids = [x["id"] for x in out["hunks"]]
     fresh = [x for x in out["hunks"] if x["id"] not in old_ids]

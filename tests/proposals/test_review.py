@@ -154,4 +154,29 @@ class DeckTest(unittest.TestCase):
         self.assertEqual(out["titles"], ["Alpha details"])
         self.assertEqual(out["proposal"]["producer"]["kind"], "restructure")
 
+    def test_rewrite_of_the_second_card_lands_on_the_second_edit(self):
+        p = self.propose()
+        later = next(h for h in p["hunks"] if "careful" in h["after"])
+        answer = '{"reply": "Done.", "after": "Much more careful text here."}'
+        with mock.patch.object(self.review.llm, "ask", return_value=reply(answer)):
+            out = self.review.rewrite(p["id"], later["id"], "stronger wording", root=self.root)
+        afters = [h["after"] for h in out["proposal"]["hunks"]]
+        self.assertTrue(any("Much more careful text here." in a for a in afters))
+        self.assertTrue(any("The first claim is weaker." in a for a in afters))   # the first card is untouched
+        self.assertFalse(any("weaker" in a and "Much more" in a for a in afters))
+
+    def test_a_proposal_changed_during_the_model_call_is_not_overwritten(self):
+        from kb_distillery.proposals.model import ProposalError
+        p = self.propose()
+        weak = next(h for h in p["hunks"] if "weaker" in h["after"])
+
+        def meanwhile(*_a, **_k):
+            self.service.reject(p["id"], root=self.root)
+            return reply('{"reply": "Softened it.", "after": "The first claim is plausible."}')
+
+        with mock.patch.object(self.review.llm, "ask", side_effect=meanwhile), self.assertRaises(ProposalError) as e:
+            self.review.rewrite(p["id"], weak["id"], "make it softer", root=self.root)
+        self.assertEqual(e.exception.status, 409)
+        self.assertEqual(self.service.get(p["id"], root=self.root)["status"], "rejected")
+
 
