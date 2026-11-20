@@ -269,6 +269,14 @@ class TestReply(unittest.TestCase):
         self.assertTrue(any(b.startswith("title") for b in bad) and any(b.startswith("positions") for b in bad))
         self.assertEqual(cd.check_reply(None)[1], ["reply is not a JSON object"])
 
+    def test_latex_in_the_description_becomes_plain_text(self):
+        desc = ("The owner explores why a symmetric matrix $A = A^\\top$ over $\\mathbb{R}$ has orthogonal "
+                "eigenvectors, so it acts as a pure stretch along perpendicular axes, with a worked 2x2 example.")
+        vals, bad = cd.check_reply(json.loads(reply(description=desc)))
+        self.assertEqual(bad, [])
+        self.assertIn("A = A^T over R has", vals["description"])
+        self.assertEqual(cd.plain_text("\\(\\lambda \\le 1\\)"), "λ ≤ 1")
+
     def test_slug_is_sanitised(self):
         vals, _ = cd.check_reply(json.loads(reply(slug="Chat: AdamW vs. Muon!")))
         self.assertEqual(cd.unique_slug(vals["slug"], set()), "chat-adamw-vs-muon")
