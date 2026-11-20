@@ -56,7 +56,7 @@ forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
 | `distill ops …` / `ship …` | `kbd ops` / `ship` | knowledge operations / tooling PRs (`ship` only inside a checkout) |
 | `distill ingest …` / `digest easy\|full\|deep\|many` | `pixi run ingest` | scrap, catalog and digest sources |
 | `distill send <note> --to a,b` | `kbd distill` | send a think note into knowledge bases |
-| `distill code …` | | code to citable fact cards: `build`, `cards` (`docs/guides/code-kb.md`; package `src/kb_distillery/codekb/`) |
+| `distill code …` | | code to citable fact cards, `cite --check`, `check-cites` (`docs/guides/code-kb.md`; package `src/kb_distillery/codekb/`) |
 | `distill llm …` / `share …` / `propose …` | `pixi run llm` / `share` / graph.propose | the LLM door / the site / relation proposals |
 
 Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distillery/` (`config/userdir.py`). If only an
