@@ -1,0 +1,6 @@
+# Test fixture: a knowledge base with an artifact layer (artifacts/graph.json, as a code toolkit's export writes it).
+# tests/services/test_artifacts.py, tests/server/test_artifacts.py and tests/publish/test_bake_artifacts.py copy it.
+[kb]
+id = "code"
+name = "Code Fixture"
+schema_version = "1.5"

@@ -6,6 +6,8 @@ export const LAYER_TYPES = {
   source: ["paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"],
   collection: ["book", "notebook", "course", "series", "scope"], // scope is aux
   concept: ["idea", "topic", "question", "person", "distilled-think"], // distilled-think is aux
+  // the intermediate layer: a template's artifact types (artifacts/graph.json), never pages; none are built in
+  artifact: [],
 } as const;
 
 export type Layer = keyof typeof LAYER_TYPES;

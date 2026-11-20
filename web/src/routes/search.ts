@@ -18,7 +18,7 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 
 export type ChatSearch = { session?: string; scope?: string; q?: string };
 export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string; review?: string };
-export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string; tool?: string; chat?: string; ask?: string; preview?: string } & RelationsSearch & Pick<ScopesSearch, "draft">;
+export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string; tool?: string; chat?: string; ask?: string; preview?: string; code?: string; in?: string } & RelationsSearch & Pick<ScopesSearch, "draft">;
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
 export type SystemTab = "overview" | "backlog" | "pipeline" | "history" | "health" | "embedding" | "flags" | "variants" | "kbs" | "dev";
@@ -87,6 +87,9 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
       ask: str(r.ask),
       // flag ui.edit-preview: `?preview=sample` opens the edit preview sheet over the graph
       preview: str(r.preview),
+      // the artifact layer: `code` = a template view (or `evidence`), `in` = the artifact it is drilled into
+      code: str(r.code),
+      in: str(r.in),
       // the folded Relations and Scopes sheets keep their own params on the graph's URL
       min: str(r.min),
       max: str(r.max),

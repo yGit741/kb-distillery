@@ -36,6 +36,7 @@ This table is generated from the schema on `main`.
 | `GET /api/assets/vault` | An image a page embeds, resolved under `raw/`. |
 | `GET /api/assets/chat` | An extracted chat visualization. |
 | `GET /api/graph` | The wiki link graph. |
+| `GET /api/artifacts` | The artifact layer of a KB (`?kb=<id>`, default the active one): `artifacts/graph.json` (nodes, links, views, fact cards) as a builder wrote it, plus `cites`, the fact ids each page cites. 404 when the KB has none. |
 | `POST /api/graph/cypher` | Run a read-only Cypher query (supported subset). |
 | `POST /api/graph/shape` | Turn free text into a graph view: Cypher selection plus a style clause. |
 | `POST /api/graph/layers` | Turn a `>` sentence the rules parser could not read into layer objects (show, hide, style) through the shared LLM tool. |

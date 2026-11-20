@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The artifact layer a builder wrote (nodes, links, views, fact cards) with the pages' cited facts */
+        get: operations["get_artifacts_api_artifacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assets/chat": {
         parameters: {
             query?: never;
@@ -2096,6 +2113,159 @@ export interface components {
             commit: string | null;
             /** Kb Version */
             kb_version: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ArtifactCard
+         * @description A fact card: fact id (`F` + 5 hex digits) -> the artifact nodes it is about.
+         */
+        ArtifactCard: {
+            /** Facts */
+            facts?: {
+                [key: string]: string[];
+            } | null;
+            /** Nodes */
+            nodes?: string[] | null;
+            /** Repo */
+            repo?: string | null;
+            /** Title */
+            title?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactGraph */
+        ArtifactGraph: {
+            /** Cards */
+            cards?: {
+                [key: string]: components["schemas"]["ArtifactCard"];
+            } | null;
+            /**
+             * Cites
+             * @default {}
+             */
+            cites: {
+                [key: string]: string[];
+            };
+            /** Generator */
+            generator?: string | null;
+            /** Links */
+            links: components["schemas"]["ArtifactLink"][];
+            /** Nodes */
+            nodes: components["schemas"]["ArtifactNode"][];
+            /** Project */
+            project?: string | null;
+            /** Relations */
+            relations?: {
+                [key: string]: components["schemas"]["ArtifactRelation"];
+            } | null;
+            /** Repos */
+            repos?: {
+                [key: string]: components["schemas"]["ArtifactRepo"];
+            } | null;
+            /** Template */
+            template?: string | null;
+            /** Types */
+            types?: {
+                [key: string]: components["schemas"]["ArtifactType"];
+            } | null;
+            /** Version */
+            version?: number | null;
+            /** Views */
+            views?: components["schemas"]["ArtifactView"][] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactLink */
+        ArtifactLink: {
+            /** At */
+            at?: string | null;
+            /** Kind */
+            kind: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Weight */
+            weight?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactNode */
+        ArtifactNode: {
+            /** Commits */
+            commits?: number | null;
+            /** Id */
+            id: string;
+            /** Line */
+            line?: number | null;
+            /** Name */
+            name: string;
+            /** Parent */
+            parent?: string | null;
+            /** Path */
+            path?: string | null;
+            /** Repo */
+            repo?: string | null;
+            /** Stage */
+            stage?: string | null;
+            /** Type */
+            type: string;
+            /** Url */
+            url?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactRelation */
+        ArtifactRelation: {
+            /** Description */
+            description?: string | null;
+            /** Directed */
+            directed?: boolean | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactRepo */
+        ArtifactRepo: {
+            /** Sha */
+            sha?: string | null;
+            /** Web */
+            web?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ArtifactType */
+        ArtifactType: {
+            /** Description */
+            description?: string | null;
+            /** Mark */
+            mark?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ArtifactView
+         * @description A view the builder declares: which types and relations it draws.
+         */
+        ArtifactView: {
+            /** Builder */
+            builder?: string | null;
+            /** Color By */
+            color_by?: string | null;
+            /** Hint */
+            hint?: string | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Nest */
+            nest?: ("tree" | "none") | null;
+            /** Relations */
+            relations?: string[] | null;
+            /** Size By */
+            size_by?: string | null;
+            /** Types */
+            types: string[];
         } & {
             [key: string]: unknown;
         };
@@ -7663,6 +7833,44 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_artifacts_api_artifacts_get: {
+        parameters: {
+            query?: {
+                kb?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactGraph"];
+                };
+            };
+            /** @description unknown kb, or the kb has no artifact layer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     chat_asset_api_assets_chat_get: {
         parameters: {
             query?: {

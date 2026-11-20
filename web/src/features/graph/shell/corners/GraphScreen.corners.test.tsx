@@ -122,6 +122,63 @@ describe("graph-shell: the corner controls on the Graph screen", () => {
     }));
 });
 
+describe("graph-corners: the intermediate layer of the knowledge base on the graph", () => {
+  const artifacts = {
+    nodes: [
+      { id: "repo:r", type: "Repo", name: "r", repo: "r" },
+      { id: "r:a", type: "Folder", name: "a", parent: "repo:r", repo: "r", path: "a" },
+    ],
+    links: [],
+    views: [{ id: "structure", name: "Code structure", types: ["Repo", "Folder"], relations: [] }],
+  };
+  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")].map((b) => b.dataset.view);
+
+  it("on: a knowledge base picked in the header menu brings its artifact views; several on one canvas bring none", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("kb-view", true, () => withFlag("graph.artifacts", true, async () => {
+          vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ views: [], recent: [] }), { status: 200 })));
+          const getArtifacts = vi.fn(async (o?: { kb?: string }) => (o?.kb === "code-kb" ? artifacts : null));
+          const ds = { ...mockDataSource({ getGraph: async () => sampleSnapshot(), getArtifacts: getArtifacts as never }), kind: "http" } as DataSource;
+          const { unmount } = render(wrap(ds, <GraphScreen search={{ kbs: "code-kb" }} host={host} />));
+          await userEvent.click(await screen.findByRole("button", { name: "Pinned views" }));
+          await waitFor(() => expect(cards()).toContain("view:artifact:structure"));
+          expect(getArtifacts).toHaveBeenCalledWith({ kb: "code-kb" });
+          // one card per layer: the artifact views lie under Intermediate layers, and no placeholders close the loop
+          expect(cards()).toContain("view:intermediate");
+          expect(cards()).not.toContain("view:placeholder-v1");
+          unmount();
+          resetCorners();
+          getArtifacts.mockClear();
+          render(wrap(ds, <GraphScreen search={{ kbs: "code-kb,other" }} host={host} />));
+          await userEvent.click(await screen.findByRole("button", { name: "Pinned views" }));
+          await waitFor(() => expect(cards()).toContain("view:concepts"));
+          expect(cards()).not.toContain("view:artifact:structure");
+          expect(getArtifacts).not.toHaveBeenCalled();
+          vi.unstubAllGlobals();
+        })),
+      ),
+    ));
+
+  it("off: the graph asks for no artifact layer and the loop is as before (placeholders V1 to V3)", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("kb-view", true, () => withFlag("graph.artifacts", false, async () => {
+          vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ views: [], recent: [] }), { status: 200 })));
+          const getArtifacts = vi.fn(async () => artifacts);
+          const ds = { ...mockDataSource({ getGraph: async () => sampleSnapshot(), getArtifacts: getArtifacts as never }), kind: "http" } as DataSource;
+          render(wrap(ds, <GraphScreen search={{ kbs: "code-kb" }} host={host} />));
+          await userEvent.click(await screen.findByRole("button", { name: "Pinned views" }));
+          await waitFor(() => expect(cards()).toContain("view:placeholder-v1"));
+          expect(cards().some((c) => c?.startsWith("view:artifact:"))).toBe(false);
+          expect(cards()).not.toContain("view:intermediate");
+          expect(getArtifacts).not.toHaveBeenCalled();
+          vi.unstubAllGlobals();
+        })),
+      ),
+    ));
+});
+
 describe("graph-shell: opening a pinned view", () => {
   const pinned: PinnedView = { id: "all-types", name: "All types", created: new Date().toISOString(), spec: { v: 1, types: "all" } };
   afterEach(() => {

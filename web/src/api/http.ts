@@ -131,6 +131,15 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       ),
     getGraphNodes: async () => (await run(() => client.GET("/api/graph"), "/api/graph")).nodes,
     getCitations: () => run(() => client.GET("/api/citations"), "/api/citations"),
+    getArtifacts: async (opts) => {
+      // 404: the knowledge base has no artifact layer (or is unknown), which is no error for the graph
+      try {
+        return await run(() => client.GET("/api/artifacts", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/artifacts");
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) return null;
+        throw e;
+      }
+    },
     listGraphQueries: () => run(() => client.GET("/api/graph/queries"), "/api/graph/queries"),
     runCypher: (query) => run(() => client.POST("/api/graph/cypher", { body: { query, limit: 500 } }), "/api/graph/cypher"),
     runGraphQuery: (name, params) =>

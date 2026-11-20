@@ -14,6 +14,12 @@ interface CornersState {
   edit: Edit | null;
   /** the pinned view applied last (shown with a ring; what the "..." menu acts on) */
   activeView: string | null;
+  /** flag graph.artifacts: the card of the pin's loop whose pile of views is unfolded into a row (one at a time) */
+  pile: string | null;
+  /** flag graph.artifacts: the unfolded card whose "?" explanation is open */
+  about: string | null;
+  /** how far down from the graph area's top the unfolded cards reach, px (the loop reports it; the graph frames below it) */
+  pileReach: number;
 
   has: (l: Layer) => boolean;
   /** Pins close both fans; a fan closes the pins; the two fans may be open together. */
@@ -25,10 +31,13 @@ interface CornersState {
   startEdit: (e: Edit) => void;
   endEdit: () => void;
   setActive: (id: string | null) => void;
+  setPile: (key: string | null) => void;
+  setPileReach: (px: number) => void;
+  setAbout: (key: string | null) => void;
   /** flag graph-corners: open both legends, once per page load */
   openLegendsOnce: () => void;
-  /** Close the topmost layer (Esc). Returns what it closed, or null when nothing was open. */
-  closeTop: () => Layer | null;
+  /** Close the topmost layer (Esc). Returns what it closed, or null when nothing was open. An unfolded pile folds first. */
+  closeTop: () => Layer | "pile" | null;
   closeAll: () => void;
 }
 
@@ -79,6 +88,9 @@ export const useCorners = create<CornersState>((set, get) => ({
   menu: null,
   edit: null,
   activeView: null,
+  pile: null,
+  pileReach: 0,
+  about: null,
 
   has: (l) => get().order.includes(l),
   toggle: (l, opts) =>
@@ -94,13 +106,19 @@ export const useCorners = create<CornersState>((set, get) => ({
         if (l === "think") base = without(base, "legend");
         base = [...base, l];
       }
-      return settle(base, s.menu, s.edit);
+      // a pile only stays unfolded while the loop it belongs to is open
+      const open = base.includes("pins");
+      return { ...settle(base, s.menu, s.edit), pile: open ? s.pile : null, about: open ? s.about : null };
     }),
   openMenu: (owner, id) => set((s) => settle([...without(s.order, "menu"), "menu"], { owner, id }, s.edit)),
   closeMenu: () => set((s) => settle(without(s.order, "menu"), null, s.edit)),
   startEdit: (edit) => set((s) => settle([...without(s.order, "menu", "edit"), "edit"], null, edit)),
   endEdit: () => set((s) => settle(without(s.order, "edit"), s.menu, null)),
   setActive: (activeView) => set({ activeView }),
+  // an explanation belongs to a card of the row: it closes when the row folds or another one unfolds
+  setPile: (pile) => set({ pile, about: null }),
+  setAbout: (about) => set({ about }),
+  setPileReach: (pileReach) => set({ pileReach }),
   openLegendsOnce: () => {
     if (legendsReopened) return;
     legendsReopened = true;
@@ -112,10 +130,19 @@ export const useCorners = create<CornersState>((set, get) => ({
     // Esc closes fans, lists and menus; the legends close only with their own minus
     const top = [...order].reverse().find((l) => !LEGENDS.includes(l));
     if (!top) return null;
+    // an open explanation closes first, then the row folds, then the loop closes
+    if (top === "pins" && get().about) {
+      set({ about: null });
+      return "pile";
+    }
+    if (top === "pins" && get().pile) {
+      set({ pile: null });
+      return "pile";
+    }
     set(settle(without(order, top), top === "menu" ? null : menu, top === "edit" ? null : edit));
     return top;
   },
-  closeAll: () => set((s) => ({ order: keepLegends(s.order), menu: null, edit: null })),
+  closeAll: () => set((s) => ({ order: keepLegends(s.order), menu: null, edit: null, pile: null, about: null })),
 }));
 
-export const resetCorners = () => useCorners.setState({ order: [], menu: null, edit: null, activeView: null });
+export const resetCorners = () => useCorners.setState({ order: [], menu: null, edit: null, activeView: null, pile: null, pileReach: 0, about: null });

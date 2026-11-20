@@ -77,6 +77,11 @@ import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
 import { stackCurrent, useLayers } from "./layers/store";
 import { marker } from "./shell/shape";
 import { useEdgeSelect } from "./edgeSelect";
+import { registerArtifactMarks } from "./encoding/spec";
+import { EVIDENCE, citedByPage, drillable, evidenceScene, indexArtifacts, permalink, viewScene, type ArtifactIndex, type ArtifactScene } from "./artifacts/model";
+import { artifactInfo, enterArtifacts, inArtifacts, leaveArtifacts, useArtifactLayer } from "./artifacts/store";
+import { ArtifactBar } from "./artifacts/ArtifactBar";
+import { ArtifactCard } from "./artifacts/ArtifactCard";
 
 /** The right pane keeps at least 320px, and the chat (with its list) at least 480px. */
 const clampPane = (w: number, total: number) => Math.round(Math.max(320, Math.min(total - 480, w)));
@@ -211,6 +216,39 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
     if (shown && defaults.some((t) => !shown.has(t))) useGraphUi.setState({ shownTypes: new Set([...shown, ...defaults]) });
   }, [kbsKey, etag]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // the intermediate layer (a template's artifacts/graph.json) of the one knowledge base on the graph, the server's own
+  // or a picked one (several on one canvas have none): `?code=` draws a template view of it (or the Evidence view) in
+  // place of the pages, `?in=` the artifact drilled into. Flag graph.artifacts: off, nothing is asked and nothing changes
+  const artFlag = useFlag("graph.artifacts");
+  const artKb = kbs.length === 1 ? kbs[0] : "";
+  const artQ = useApiQuery(["artifacts", artKb], (d) => d.getArtifacts(artKb ? { kb: artKb } : undefined), { enabled: artFlag && kbs.length <= 1, staleTime: 60_000, retry: false });
+  const ix = useMemo(() => {
+    if (!artFlag || kbs.length > 1 || !artQ.data?.nodes?.length) return null;
+    registerArtifactMarks(artQ.data.types ?? {});
+    return indexArtifacts(artQ.data);
+  }, [artQ.data, kbs.length, artFlag]);
+  const code = ix && search.code ? search.code : null;
+  const scene = useMemo((): ArtifactScene | null => {
+    if (!ix || !code || !model) return null;
+    if (code === EVIDENCE) return evidenceScene(ix, model, schema);
+    const view = ix.views.find((v) => v.id === code);
+    return view ? viewScene(ix, view, search.in ?? null) : null;
+  }, [ix, code, search.in, model, schema]);
+  const goArtifacts = useCallback((to: string | null, at?: string | null) => host.setParams({ code: to ?? undefined, in: at ?? undefined, select: undefined, focus: undefined }), [host]);
+  const lastScene = useRef<ArtifactScene | null>(null);
+  useLayoutEffect(() => {
+    const was = lastScene.current;
+    lastScene.current = scene;
+    if (!scene && !was) return;
+    useKb.getState().clearSelection();
+    if (scene) enterArtifacts(scene.types, scene.colorBy);
+    else leaveArtifacts();
+    useGraphUi.getState().fit();
+  }, [scene]);
+  const artInfo = useMemo(() => (ix ? artifactInfo(ix.graph, ix.pageNodes.size) : null), [ix]);
+  useEffect(() => useArtifactLayer.getState().register(ix?.views ?? [], !!ix?.pageNodes.size, scene ? code : null, goArtifacts, artInfo), [ix, scene, code, goArtifacts, artInfo]);
+  useEffect(() => () => leaveArtifacts(), []);
+
   if (noneShown)
     return (
       <FullBleed>
@@ -237,8 +275,9 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   return (
     <FullBleed>
       <Loaded
-        model={drawn ?? model}
-        schema={schema}
+        model={scene?.model ?? drawn ?? model}
+        schema={scene?.schema ?? schema}
+        art={ix ? { ix, scene, code, go: goArtifacts, pages: model } : undefined}
         host={kbHost}
         search={search}
         generatedAt={snap.generated_at}
@@ -288,14 +327,17 @@ const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matche
 function Loaded({
   model,
   schema,
-  host,
+  host: pageHost,
   search,
   generatedAt,
   refreshing,
   onRefresh,
   dsKind,
+  art,
 }: {
   model: ReturnType<typeof toModel>;
+  /** the artifact layer, when the knowledge base has one; `scene` is set while a view of it is drawn */
+  art?: { ix: ArtifactIndex; scene: ArtifactScene | null; code: string | null; go: (code: string | null, at?: string | null) => void; pages: ReturnType<typeof toModel> };
   schema: ReturnType<typeof parseSchema>;
   host: GraphHost;
   search: GraphSearch;
@@ -304,6 +346,23 @@ function Loaded({
   onRefresh: () => void;
   dsKind: string;
 }) {
+  const scene = art?.scene ?? null;
+  // while artifacts are drawn, opening one goes to its code at its source host; a page (the Evidence view) opens as ever
+  const host = useMemo<GraphHost>(() => {
+    if (!art?.scene) return pageHost;
+    const ix = art.ix;
+    const arts = new Set(art.scene.model.nodes.filter((n) => n.layer === "artifact").map((n) => n.id));
+    const isArt = (id: string) => arts.has(id);
+    return {
+      ...pageHost,
+      openPage: (id, kb) => {
+        if (!isArt(id)) return pageHost.openPage(id, kb);
+        const href = permalink(ix.graph, ix.byId.get(id));
+        if (href) window.open(href, "_blank", "noreferrer");
+      },
+      pageHref: (id, kb) => (isArt(id) ? (permalink(ix.graph, ix.byId.get(id)) ?? "#") : pageHost.pageHref(id, kb)),
+    };
+  }, [pageHost, art]);
   const caps = useCapabilities();
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
@@ -366,13 +425,16 @@ function Loaded({
   // an effect) so the colour memos below already read it
   useMemo(() => assignSupport(sourceCounts(model.nodes, neighbors)), [model, neighbors]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
+  const relationCounts = useMemo(() => (model.relations ?? []).reduce((m, r) => m.set(r.kind, (m.get(r.kind) ?? 0) + 1), new Map<string, number>()), [model]);
+  const relationKinds = useMemo(() => new Set(relationCounts.keys()), [relationCounts]);
   const shownTypes = useMemo(() => {
+    if (scene) return scene.types;
     if (ui.shownTypes !== undefined) return ui.shownTypes;
     // a view that names layers (Map) draws those layers of this kb's own schema, whatever its kit
     const fromStory = storyTypes(storyById(ui.story), schema);
     if (fromStory) return fromStory;
     return defaultTypes(schema, model.nodes);
-  }, [ui.shownTypes, ui.story, schema, model]);
+  }, [ui.shownTypes, ui.story, schema, model, scene]);
   // flag knowledge-health (with graph-intent): concepts alone, coloured by source support, is the Health view
   const intentFlag = useFlag("graph-intent");
   // a `>` view that restricts the pages owns the screen: its chips under the line say what is drawn, so the view
@@ -590,6 +652,39 @@ function Loaded({
     useGraphUi.setState({ readerSlug: null, detailsOpen: false });
   }, []);
   const selected = useMemo(() => [...selection].map((id) => byId.get(id)).filter((n): n is GNode => !!n), [selection, byId]);
+  // ---- the artifact layer: a double click steps inside an artifact (or opens its code), a page opens as ever
+  const isArtifact = useCallback((id: string) => byId.get(id)?.layer === "artifact", [byId]);
+  const sceneView = scene && art?.code ? art.ix.views.find((v) => v.id === art.code) : undefined;
+  const canDrill = useCallback((id: string) => !!art && drillable(art.ix, sceneView, id), [sceneView, art]);
+  const openArtifact = useCallback(
+    (id: string) => {
+      if (canDrill(id)) return art?.go(art.code, id);
+      const href = art && permalink(art.ix.graph, art.ix.byId.get(id));
+      if (href) window.open(href, "_blank", "noreferrer");
+    },
+    [art, canDrill],
+  );
+  const pagesBySlug = useMemo(() => new Map((art?.pages.nodes ?? []).map((n) => [n.slug ?? n.id, n] as const)), [art?.pages]);
+  /** a page from an artifact card: on the concept graph, selected and in view */
+  const showPage = useCallback(
+    (slug: string) => {
+      const page = pagesBySlug.get(slug);
+      if (!page) return;
+      if (byId.has(page.id)) {
+        useKb.getState().setSelection([page.id]);
+        return focus(page.id);
+      }
+      leaveArtifacts();
+      art?.go(null);
+      window.setTimeout(() => {
+        useKb.getState().setSelection([page.id]);
+        focus(page.id);
+      }, 120);
+    },
+    [pagesBySlug, byId, art, focus],
+  );
+  const oneArtifact = selected.length === 1 && selected[0]!.layer === "artifact" ? selected[0]!.id : null;
+  const citesCode = !scene && art && selected.length === 1 ? citedByPage(art.ix, selected[0]!.slug ?? selected[0]!.id) : null;
   // flag edge-select: the edges kept on the canvas, whose pages are among the selected
   const keptLinks = useEdgeSelect((s) => s.shown);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -667,13 +762,16 @@ function Loaded({
         canvas.current?.zoomBy(1 / 1.25);
       } else if ((e.key === "e" || e.key === "E") && useKb.getState().selection.size === 1) {
         host.openPage([...useKb.getState().selection][0] as string);
+      } else if (e.key === "Backspace" && art?.scene && art.scene.crumbs.length > 2) {
+        // one step up the drilled path
+        art.go(art.code, art.scene.crumbs[art.scene.crumbs.length - 2]!.id);
       }
       const tool = TOOLS.find((t) => t.shortcut === e.key && toolOn(t, useExperiments.getState().on));
       if (tool) st.openFlyout(tool.id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [host]);
+  }, [host, art]);
 
   const toolContext = useMemo<GraphToolContext>(
     () => ({
@@ -713,7 +811,7 @@ function Loaded({
 
   const menuNode = menu ? byId.get(menu.id) : undefined;
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
-  const showDetails = ui.detailsOpen && selected.length > 0;
+  const showDetails = ui.detailsOpen && selected.length > 0 && !oneArtifact;
 
   const legend = (
     <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} quickHidden={filtered.size - visible.size} selected={selection.size} />
@@ -749,15 +847,15 @@ function Loaded({
         sourcesView={subjectOf(schema, shownTypes) === "sources"}
         imp={imp}
         className="absolute inset-0"
-        onOpenMenu={(id, x, y) => setMenu({ id, x, y })}
+        onOpenMenu={(id, x, y) => (isArtifact(id) ? undefined : setMenu({ id, x, y }))}
         onBackgroundContext={(x, y) => {
           closeMenu();
           closePanels();
           useKb.getState().clearSelection();
           setBgMenu({ x, y });
         }}
-        onClickNode={fullChat ? openReader : undefined}
-        onOpenReader={fullChat ? (id) => useChatFull.getState().mentionPage(id, byId.get(id)?.title || id) : openReader}
+        onClickNode={fullChat ? (id) => (isArtifact(id) ? undefined : openReader(id)) : undefined}
+        onOpenReader={(id) => (isArtifact(id) ? openArtifact(id) : fullChat ? useChatFull.getState().mentionPage(id, byId.get(id)?.title || id) : openReader(id))}
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       </div>
@@ -807,7 +905,7 @@ function Loaded({
             onPickView={pickView}
           />
           <EmbeddingLayer nodes={model.nodes} neighbors={neighbors} />
-          <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+          <Corners nodes={model.nodes} relationKinds={relationKinds} relationCounts={relationCounts} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
           <RimList byId={byId} colorBy={ui.colorBy} />
           {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} />}
         </div>
@@ -886,8 +984,15 @@ function Loaded({
           </button>
         </div>
       )}
-      {selected.length > 0 && !showDetails && !reader && (
-        <div data-tour="graph-selection" className="pointer-events-auto absolute bottom-14 left-1/2 [.gt-active_&]:bottom-24 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
+      {art && <ArtifactBar ix={art.ix} code={scene ? art.code : null} crumbs={scene?.crumbs ?? []} hidden={scene?.hidden ?? 0} onGo={(to, at) => {
+        if (!to && inArtifacts()) leaveArtifacts();
+        art.go(to, at);
+      }} />}
+      {art && oneArtifact && (
+        <ArtifactCard ix={art.ix} id={oneArtifact} pages={pagesBySlug} canDrill={canDrill(oneArtifact)} onDrill={(id) => art.go(art.code, id)} onPage={showPage} onClear={() => useKb.getState().clearSelection()} />
+      )}
+      {selected.length > 0 && !showDetails && !reader && !oneArtifact && (
+        <div data-tour="graph-selection" className={cn("pointer-events-auto absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]", art ? "bottom-32" : "bottom-14 [.gt-active_&]:bottom-24")}>
           <span>
             {selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}
             {keptLinks > 0 && ` · ${keptLinks} link${keptLinks === 1 ? "" : "s"}`}
@@ -898,6 +1003,20 @@ function Loaded({
           {caps.ask && (
             <Button size="sm" variant="ghost" onClick={() => useChatDock.getState().ask(askAbout(selected))}>
               Ask
+            </Button>
+          )}
+          {citesCode && citesCode.facts > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              title={`This page cites ${citesCode.facts} fact${citesCode.facts === 1 ? "" : "s"} about ${citesCode.nodes.length} artifact${citesCode.nodes.length === 1 ? "" : "s"}: see them in the Evidence view`}
+              onClick={() => {
+                const id = selected[0]!.id;
+                art?.go(EVIDENCE);
+                window.setTimeout(() => useKb.getState().setSelection([id]), 120);
+              }}
+            >
+              Code ({citesCode.facts})
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => useKb.getState().clearSelection()}>

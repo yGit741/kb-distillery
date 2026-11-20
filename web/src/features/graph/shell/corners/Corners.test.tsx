@@ -18,7 +18,9 @@ import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
-import { arcPlaces, loopSlots, loopSolid } from "./PinLoop";
+import { arcPlaces, loopSlots, loopSolid, LOOP_H, LOOP_TOP, LOOP_W, PinLoop, rowCount, rowPlaces, rowReach, ROW_OVERLAP, SUB_H, SUB_W } from "./PinLoop";
+import { SEARCH_LINE_H, SHELL_TOP_FOLDED } from "../layout";
+import { useArtifactLayer } from "../../artifacts/store";
 import { useTheme } from "@/theme/theme";
 
 const schema = parseSchema(sampleSnapshot().schema);
@@ -1084,7 +1086,7 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
 
   it("on: the loop reads the graph's views, the pinned ones, then the placeholders V1 to V3, which pick nothing", () =>
     withFlag("graph-corners", true, () =>
-      withFlag("graph-intent", true, async () => {
+      withFlag("graph-intent", true, () => withFlag("graph.artifacts", false, async () => {
         mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
         await userEvent.click(pins());
         const order = () =>
@@ -1106,7 +1108,37 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         expect(await screen.findByText(/V1 is a placeholder/)).toBeInTheDocument();
         // no embedding in this kb: no Semantics card
         expect(document.querySelector("[data-view='view:map']")).toBeNull();
-      }),
+      })),
+    ));
+
+  it("on: the Citations card is in the loop only when the graph has cites relations", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("graph-relations", true, () => withFlag("graph.artifacts", true, async () => {
+          const citations = () => document.querySelector("[data-view='view:citations']");
+          const { unmount } = mount(fakeServer(), { relationKinds: new Set(["mentions"]) }, { kind: "http" });
+          await userEvent.click(pins());
+          await waitFor(() => expect(document.querySelector("[data-view='view:concepts']")).not.toBeNull());
+          expect(citations()).toBeNull();
+          unmount();
+          mount(fakeServer(), { relationKinds: new Set(["mentions", "cites"]) }, { kind: "http" });
+          await userEvent.click(pins());
+          await waitFor(() => expect(citations()).not.toBeNull());
+        })),
+      ),
+    ));
+
+  it("graph.artifacts off: the Citations card is offered as before, cites relations or not", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("graph-relations", true, () => withFlag("graph.artifacts", false, async () => {
+          mount(fakeServer(), { relationKinds: new Set(["mentions"]) }, { kind: "http" });
+          await userEvent.click(pins());
+          await waitFor(() => expect(document.querySelector("[data-view='view:citations']")).not.toBeNull());
+          expect(document.querySelector("[data-view='view:intermediate']")).toBeNull();
+          expect(document.querySelectorAll("[data-unfold]")).toHaveLength(0);
+        })),
+      ),
     ));
 
   it("on: a pinned view on screen is the only one marked, not the built-in view it looks like", () =>
@@ -1146,6 +1178,261 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         expect(document.querySelector("[data-view^='view:']")).toBeNull();
       }),
     ));
+});
+
+describe("graph.artifacts: one card per layer, the layer's other views tucked under it", () => {
+  const go = vi.fn();
+  const views = [
+    { id: "dependencies", name: "Dependencies", types: ["Repo"] },
+    { id: "structure", name: "Code structure", types: ["Repo"] },
+    { id: "options", name: "Options", types: ["Repo"] },
+  ];
+  const CODE = "view:intermediate";
+  beforeEach(() => go.mockClear());
+  afterEach(() => act(() => useArtifactLayer.getState().register([], false, null, () => {})));
+  const names = () => onScreen().map((b) => b.getAttribute("aria-label"));
+  const piled = (key: string) => [...document.querySelectorAll<HTMLButtonElement>(`[data-pile='${key}'] [data-view]`)].map((b) => b.dataset.view);
+  const unfold = () => document.querySelector<HTMLButtonElement>(`[data-unfold='${CODE}']`)!;
+  const on = (fn: () => Promise<void>) => withFlag("graph-corners", true, () => withFlag("graph-intent", true, () => withFlag("graph.artifacts", true, fn)));
+
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const W = SUB_W;
+  // the box of a card turned about its top-left corner: its right, top and bottom edges
+  const right = (p: { x: number; deg: number }) => p.x + W * Math.cos(rad(p.deg));
+  const top = (p: { y: number; deg: number }) => p.y - Math.max(0, W * Math.sin(rad(-p.deg)));
+  const bottom = (p: { y: number; deg: number }) => p.y + SUB_H * Math.cos(rad(p.deg)) + Math.max(0, W * Math.sin(rad(p.deg)));
+
+  it("the unfolded cards are smaller than their card, run right of it in a row that sags a little, each partly over the one before, and close up before they leave their room", () => {
+    expect(rowPlaces(0)).toEqual([]);
+    // smaller than a card of the loop, the same shape
+    expect(SUB_W).toBeLessThan(LOOP_W * 0.85);
+    expect(SUB_W / SUB_H).toBeCloseTo(LOOP_W / LOOP_H, 1);
+    const row = rowPlaces(4);
+    expect(row[0]!.x).toBeGreaterThan(LOOP_W);
+    expect(row.every((p, k) => k === 0 || p.x > row[k - 1]!.x)).toBe(true);
+    // with all the room there is, a card still lies over the right edge of the one before, never over its name's side
+    for (let k = 1; k < 4; k++) {
+      const over = right(row[k - 1]!) - row[k]!.x;
+      expect(over).toBeGreaterThan(ROW_OVERLAP - 4);
+      expect(over).toBeLessThan(SUB_W / 4);
+    }
+    // first card down, last card up by as much
+    expect(row[0]!.deg).toBeGreaterThan(0);
+    expect(row[0]!.deg).toBeCloseTo(-row[3]!.deg);
+    // eight cards in 1150px: one row still, the steps closed up, the last card inside
+    const tight = rowPlaces(8, 1150);
+    expect(rowCount(8, 1150)).toBe(1);
+    expect(right(tight[7]!)).toBeLessThanOrEqual(1150);
+    expect(tight[1]!.x - tight[0]!.x).toBeLessThan(row[1]!.x - row[0]!.x);
+  });
+
+  it("a narrow graph area: the cards go on to a second row before any name is covered, every row inside its room", () => {
+    for (const room of [900, 760, 600]) {
+      const rows = rowCount(8, room);
+      expect(rows).toBeGreaterThan(1);
+      const places = rowPlaces(8, room);
+      expect(places).toHaveLength(8);
+      expect(Math.max(...places.map(right))).toBeLessThanOrEqual(room);
+      // the rows are even (4 + 4, or 3 + 3 + 2), each starts at the same left edge, and none touches the one above
+      const per = Math.ceil(8 / rows);
+      for (let r = 1; r < rows; r++) {
+        expect(places[r * per]!.x).toBe(places[0]!.x);
+        expect(Math.min(...places.slice(r * per, (r + 1) * per).map(top))).toBeGreaterThan(Math.max(...places.slice((r - 1) * per, r * per).map(bottom)));
+      }
+      // in a row no card covers more than a third of the one before
+      if (rows < 3) expect(places[1]!.x - places[0]!.x).toBeGreaterThanOrEqual(SUB_W * 0.66);
+    }
+  });
+
+  it("the cards lie under the search line and above their reach, where the graph is framed from", () => {
+    expect(rowReach(0)).toBe(0);
+    for (const room of [Infinity, 900, 620])
+      for (let n = 1; n <= 10; n++) {
+        const places = rowPlaces(n, room);
+        expect(LOOP_TOP + Math.min(...places.map(top))).toBeGreaterThan(SHELL_TOP_FOLDED + SEARCH_LINE_H + 6);
+        expect(LOOP_TOP + Math.max(...places.map(bottom))).toBeLessThanOrEqual(rowReach(rowCount(n, room)));
+      }
+    // a row count kept while the room shrinks (a wider legend): the cards close up and stay in one row, inside the room
+    const kept = rowPlaces(8, 1000, 1);
+    expect(new Set(kept.map((p) => Math.round(p.y / 60))).size).toBe(1);
+    expect(Math.max(...kept.map(right))).toBeLessThanOrEqual(1000);
+  });
+
+  it("on: Concepts, Sources and the intermediate layers, then the pinned views; no placeholders; the layer's other views unfold with the card's button", () =>
+    on(async () => {
+      act(() => useArtifactLayer.getState().register(views, true, null, go));
+      mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(names()).toContain("Alpha"));
+      expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers", "Alpha"]);
+      expect(document.querySelector("[data-view^='view:placeholder']")).toBeNull();
+      // every view of the layer lies under its card, the first one too: the card itself is no view
+      expect(piled(CODE)).toEqual(["view:artifact:dependencies", "view:artifact:structure", "view:artifact:options", "view:artifact:evidence"]);
+      // each tucked card has its own picture
+      const art = [...document.querySelectorAll(`[data-pile='${CODE}'] [data-view] svg`)].map((s) => s.innerHTML);
+      expect(new Set(art).size).toBe(art.length);
+      // nothing lies under Concepts or Sources here (no embedding, no cites): they have no button
+      expect(document.querySelectorAll("[data-unfold]")).toHaveLength(1);
+      // folded: the tucked cards cannot be pressed
+      expect(unfold()).toHaveAttribute("aria-expanded", "false");
+      expect(document.querySelector(`[data-pile='${CODE}']`)).toHaveAttribute("inert");
+      // a pile unfolds only from the top place: its card rises there, the others follow round the loop
+      const pos = (key: string) => document.querySelector(`[data-view='${key}']`)!.closest<HTMLElement>("[data-pos]")!.dataset.pos;
+      expect(pos(CODE)).toBe("2");
+      await userEvent.click(unfold());
+      expect(unfold()).toHaveAttribute("aria-expanded", "true");
+      expect(document.querySelector(`[data-pile='${CODE}']`)).not.toHaveAttribute("inert");
+      expect(pos(CODE)).toBe("0");
+      expect(names()).toEqual(["Intermediate layers", "Alpha", "Concepts", "Sources"]);
+      // the graph is told how far down the cards reach, and frames itself below them
+      expect(useCorners.getState().pileReach).toBe(rowReach(1));
+      // an unfolded card is smaller than its card
+      const optionsCard = document.querySelector<HTMLButtonElement>("[data-view='view:artifact:options']")!;
+      expect(parseFloat(optionsCard.style.width)).toBe(SUB_W);
+      expect(parseFloat(document.querySelector<HTMLButtonElement>(`[data-view='${CODE}']`)!.style.width)).toBe(LOOP_W);
+      await userEvent.click(optionsCard);
+      expect(go).toHaveBeenLastCalledWith("options", null);
+      // the row stays out after a pick; the card itself opens the layer's first view
+      expect(useCorners.getState().pile).toBe(CODE);
+      await userEvent.click(document.querySelector<HTMLButtonElement>(`[data-view='${CODE}']`)!);
+      expect(go).toHaveBeenLastCalledWith("dependencies", null);
+      // Esc folds the row first, then closes the loop
+      await userEvent.keyboard("{Escape}");
+      expect(useCorners.getState().pile).toBeNull();
+      expect(useCorners.getState().order).toContain("pins");
+      // folded, the card is back in its own place
+      expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers", "Alpha"]);
+      expect(useCorners.getState().pileReach).toBe(0);
+      await userEvent.keyboard("{Escape}");
+      expect(useCorners.getState().order).not.toContain("pins");
+    }));
+
+  it("on: the wheel turns a loop whose cards all fit, one card a notch, and folds a row that is out", () =>
+    on(async () => {
+      act(() => useArtifactLayer.getState().register(views, false, null, go));
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers"]));
+      const loop = document.querySelector<HTMLElement>("[data-corners=pin-loop]")!;
+      const now = vi.spyOn(performance, "now");
+      const wheel = (deltaY: number, at: number) => {
+        now.mockReturnValue(at);
+        fireEvent.wheel(loop, { deltaY });
+      };
+      const before = useGraphUi.getState().shownTypes;
+      wheel(100, 1000);
+      expect(names()).toEqual(["Sources", "Intermediate layers", "Concepts"]);
+      // the rest of the same notch (or of a trackpad swipe) moves nothing more
+      wheel(100, 1100);
+      expect(names()).toEqual(["Sources", "Intermediate layers", "Concepts"]);
+      wheel(-100, 2000);
+      expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers"]);
+      expect(useGraphUi.getState().shownTypes).toBe(before); // turning picks nothing
+      expect(go).not.toHaveBeenCalled();
+      // a row that is out folds, and the loop carries on from the card that was lifted
+      await userEvent.click(unfold());
+      expect(names()[0]).toBe("Intermediate layers");
+      wheel(100, 3000);
+      expect(useCorners.getState().pile).toBeNull();
+      expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers"]);
+      now.mockRestore();
+    }));
+
+  it("without the piles the wheel leaves a loop whose cards all fit as it is", () => {
+    const two = ["a", "b"].map((id) => ({ id, name: id.toUpperCase(), created: new Date().toISOString(), spec: {} }));
+    const loop = () => document.querySelector<HTMLElement>("[data-corners=pin-loop]")!;
+    const { rerender } = render(<PinLoop open views={two} active={null} areaHeight={800} onApply={vi.fn()} empty="" />);
+    expect(onScreen().map((b) => b.dataset.view)).toEqual(["b", "a"]);
+    fireEvent.wheel(loop(), { deltaY: 100 });
+    expect(onScreen().map((b) => b.dataset.view)).toEqual(["b", "a"]);
+    rerender(<PinLoop open views={two} active={null} areaHeight={800} onApply={vi.fn()} empty="" wheelTurns />);
+    fireEvent.wheel(loop(), { deltaY: 100 });
+    expect(onScreen().map((b) => b.dataset.view)).toEqual(["a", "b"]);
+  });
+
+  it("on: a folded card names the view of its pile that is on screen, and only that view is marked", () =>
+    on(async () => {
+      act(() => useArtifactLayer.getState().register(views, false, "structure", go));
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(document.querySelector(`[data-view='${CODE}']`)).not.toBeNull());
+      const code = document.querySelector<HTMLElement>(`[data-view='${CODE}']`)!;
+      expect(code).not.toHaveAttribute("aria-current");
+      expect(code).toHaveTextContent("Code structure");
+      expect(document.querySelector("[data-view='view:artifact:structure']")).toHaveAttribute("aria-current", "true");
+      expect(document.querySelectorAll("[data-corners=pin-loop] [aria-current=true]")).toHaveLength(1);
+    }));
+
+  it("on: Citations lies under Intermediate layers (a knowledge base with no artifact layer gets the card for it), not under Sources", () =>
+    on(() =>
+      withFlag("graph-relations", true, async () => {
+        mount(fakeServer(), { relationKinds: new Set(["cites"]), relationCounts: new Map([["cites", 94]]) }, { kind: "http" });
+        await userEvent.click(pins());
+        await waitFor(() => expect(piled(CODE)).toEqual(["view:citations"]));
+        expect(names()).toEqual(["Concepts", "Sources", "Intermediate layers"]);
+        expect(document.querySelector("[data-pile='view:sources']")).toBeNull();
+        // the card opens the first view under it
+        await userEvent.click(document.querySelector<HTMLButtonElement>(`[data-view='${CODE}']`)!);
+        expect(useGraphUi.getState().edgeStory).toBe("citations");
+      }),
+    ));
+
+  it("on: with an artifact layer Citations comes after its views, and opens from an artifact view in one press", () =>
+    on(() =>
+      withFlag("graph-relations", true, async () => {
+        act(() => useArtifactLayer.getState().register(views, true, "structure", go));
+        mount(fakeServer(), { relationKinds: new Set(["cites"]) }, { kind: "http" });
+        await userEvent.click(pins());
+        await waitFor(() => expect(piled(CODE).at(-1)).toBe("view:citations"));
+        expect(piled(CODE)).toHaveLength(5);
+        await userEvent.click(unfold());
+        await userEvent.click(document.querySelector<HTMLButtonElement>("[data-view='view:citations']")!);
+        expect(go).toHaveBeenLastCalledWith(null);
+        expect(useGraphUi.getState().edgeStory).toBe("citations");
+      }),
+    ));
+
+  it("on: the ? on an unfolded card says what its view is based on, counted from the data; Esc closes it, then the row, then the loop", () =>
+    on(async () => {
+      const info = { types: { Repo: 10, Folder: 131 }, relations: { imports: 833 }, relationWords: { imports: "file A includes file B" }, generator: "code-toolkit v1", project: "demo", template: "codebase", repos: 10, pages: 7, facts: 21 };
+      act(() => useArtifactLayer.getState().register([{ id: "dependencies", name: "Dependencies", hint: "Who imports whom", types: ["Repo", "Folder"], relations: ["imports"], color_by: "repo" }], true, null, go, info));
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(document.querySelector(`[data-unfold='${CODE}']`)).not.toBeNull());
+      const ask = (key: string) => document.querySelector<HTMLButtonElement>(`[data-about='${key}']`)!;
+      const panel = () => document.querySelector<HTMLElement>("[data-about-panel]");
+      expect(ask("view:artifact:dependencies")).toHaveAccessibleName("What is Dependencies based on?");
+      expect(panel()).toBeNull();
+      await userEvent.click(unfold());
+      await userEvent.click(ask("view:artifact:dependencies"));
+      expect(ask("view:artifact:dependencies")).toHaveAttribute("aria-expanded", "true");
+      expect(panel()).toHaveTextContent("Who imports whom");
+      expect(panel()).toHaveTextContent("10 Repo · 131 Folder");
+      expect(panel()).toHaveTextContent("imports (833): file A includes file B");
+      expect(panel()).toHaveTextContent("code-toolkit v1");
+      expect(panel()).toHaveTextContent("10 repositories of project demo");
+      expect(go).not.toHaveBeenCalled(); // asking opens nothing
+      // another card's ? takes its place
+      await userEvent.click(ask("view:artifact:evidence"));
+      expect(panel()).toHaveTextContent("7 pages whose text cites a fact");
+      expect(panel()).toHaveTextContent("21 fact ids cited");
+      expect(document.querySelectorAll("[data-about-panel]")).toHaveLength(1);
+      // the same ? closes it
+      await userEvent.click(ask("view:artifact:evidence"));
+      expect(panel()).toBeNull();
+      await userEvent.click(ask("view:artifact:evidence"));
+      await userEvent.keyboard("{Escape}");
+      expect(panel()).toBeNull();
+      expect(useCorners.getState().pile).toBe(CODE);
+      await userEvent.keyboard("{Escape}");
+      expect(useCorners.getState().pile).toBeNull();
+      expect(useCorners.getState().order).toContain("pins");
+      // folding the row closes an open explanation with it
+      await userEvent.click(unfold());
+      await userEvent.click(ask("view:artifact:dependencies"));
+      await userEvent.click(unfold());
+      expect(useCorners.getState().about).toBeNull();
+    }));
 });
 
 describe("graph-corners: the spark and the brain open quick lists", () => {

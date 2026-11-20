@@ -609,6 +609,18 @@ def bake_line_data(data, profile):
     return {"views": pinned, "readyViews": views_svc.ready_views()["views"], "favorites": marked}
 
 
+def bake_artifacts(data, root):
+    """The artifact layer (services.artifacts) of the kb at `root`, with the cited facts of the pages this build kept
+    only; {} when the kb has none."""
+    from kb_distillery.services import artifacts
+    art = artifacts.load(root)
+    if art is None:
+        return {}
+    pages = data.get("pages") or {}
+    art["cites"] = {slug: fids for slug, fids in art.get("cites", {}).items() if slug in pages}
+    return {"artifacts": art}
+
+
 def inner_build_app(args):
     """Inside the viewer checkout, KB_ROOT = content: the wiki data baked into the built app's page."""
     try:
@@ -630,6 +642,7 @@ def inner_build_app(args):
     data = apply_home(data, home, view=args.view)   # Home cards + tour from the share config `[home]`, --view
     data["rawCards"] = bake_raw_cards(data, raw_of, args.profile)
     data.update(bake_line_data(data, args.profile))
+    data.update(bake_artifacts(data, os.environ.get("KB_ROOT", ".")))
     cfg = kbconfig.current()
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields, title=(cfg.name if cfg else "") or DEFAULT_TITLE)
     out = Path(args.out)

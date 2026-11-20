@@ -437,3 +437,13 @@ expires = 2027-02-12
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "graph.artifacts"
+description = "Graph: the artifact layer, an optional intermediate layer between concepts and sources (<kb>/artifacts/graph.json, written by a builder: nodes, links, views and fact cards; pages cite facts by id). Its views are cards in the pin's loop next to the concept views, plus Evidence (the pages beside what their facts cite); a view drills in under a breadcrumb and gives the graph settings back on the way out; a selected page offers Code (N). The loop shows one card per layer (Concepts, Sources, Intermediate layers) and a layer's other views unfold from its card; a snapshot's pinned corner opens the same loop. Needs graph-corners and graph-intent for the loop. Tracked in round 390."
+owner = "maintainer"
+created = 2026-11-20
+expires = 2027-02-17
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }

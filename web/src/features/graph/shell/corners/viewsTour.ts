@@ -48,9 +48,10 @@ function restoreBar(): void {
 
 /**
  * The steps, for what this build draws: `health` when Sources opens Health (its dial of source kinds), `fold` when the
- * app bar folds under the graph's chevron. One idea per step, spotlight on the real element.
+ * app bar folds under the graph's chevron, `piles` when the loop shows one card per layer (flag graph.artifacts). One idea
+ * per step, spotlight on the real element.
  */
-export function viewsTourSteps({ health, fold }: { health: boolean; fold: boolean }): TourStep[] {
+export function viewsTourSteps({ health, fold, piles = false }: { health: boolean; fold: boolean; piles?: boolean }): TourStep[] {
   const steps: TourStep[] = [
     {
       go: "/graph",
@@ -65,7 +66,9 @@ export function viewsTourSteps({ health, fold }: { health: boolean; fold: boolea
       target: LOOP,
       kind: "focus",
       title: "Your views hang from the pin",
-      body: "Concepts and Sources come first, then Citations and **Semantics** when the knowledge base has them, your pinned views and the placeholders V1 to V3.",
+      body: piles
+        ? "One card per layer: Concepts, Sources and **Intermediate layers** when the knowledge base has them, then your pinned views. The round button on a card unfolds the layer's other views, each with a **?** that says what it is drawn from."
+        : "Concepts and Sources come first, then Citations and **Semantics** when the knowledge base has them, your pinned views and the placeholders V1 to V3.",
       before: openLayer("pins"),
       wait: 3000,
     },
@@ -73,8 +76,10 @@ export function viewsTourSteps({ health, fold }: { health: boolean; fold: boolea
       target: LOOP,
       kind: "focus",
       dim: 0.35,
-      title: "Both ends fade",
-      body: "Two cards fade out below and two tilt above the pin. Press a faded card, or use the **wheel**, to turn the loop.",
+      title: piles ? "The wheel turns the loop" : "Both ends fade",
+      body: piles
+        ? "The **wheel** brings the next card to the top. With many pinned views two cards fade out below and two tilt above the pin: press a faded card to turn to it."
+        : "Two cards fade out below and two tilt above the pin. Press a faded card, or use the **wheel**, to turn the loop.",
       before: openLayer("pins"),
     },
   ];
@@ -123,13 +128,13 @@ export function viewsTourSteps({ health, fold }: { health: boolean; fold: boolea
  * Called by the corner controls under flag graph-corners: registers the tour for the Tours menu while the graph is
  * open. It never starts by itself.
  */
-export function useViewsTour(on: boolean, health: boolean): void {
+export function useViewsTour(on: boolean, health: boolean, piles = false): void {
   const headerFold = useFlag("header-fold");
   const shell = useFlag("graph-shell");
   const fold = headerFold && shell;
   useEffect(() => {
     if (!on) return;
-    registerTour(VIEWS_TOUR, viewsTourSteps({ health, fold }), SUMMARY, { onEnd: restoreBar });
+    registerTour(VIEWS_TOUR, viewsTourSteps({ health, fold, piles }), SUMMARY, { onEnd: restoreBar });
     return () => unregisterTour(VIEWS_TOUR);
-  }, [on, health, fold]);
+  }, [on, health, fold, piles]);
 }
