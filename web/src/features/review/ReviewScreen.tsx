@@ -1,6 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, Clock, Inbox, Keyboard, Pencil, Undo2, X } from "lucide-react";
+import { MARK_HIGHLIGHT } from "@/theme/palette";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDataSource } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -436,7 +437,7 @@ export function ReviewScreen() {
       onDragLeave={() => setDropping(false)}
       onDrop={(e) => { const f = e.dataTransfer.files?.[0]; if (f) { e.preventDefault(); setDropped(f); setQueueOpen(true); } setDropping(false); }}
     >
-      <style>{`::highlight(${HIGHLIGHT}){background-color:rgb(254 243 199);color:inherit}`}</style>
+      <style>{`::highlight(${HIGHLIGHT}){background-color:${MARK_HIGHLIGHT};color:inherit}`}</style>
       <div className={cn("grid gap-6", wide ? "grid-cols-[280px_minmax(560px,720px)_300px] justify-center" : medium ? "grid-cols-[280px_minmax(0,1fr)_40px]" : "grid-cols-1")}>
       {medium && <aside className="sticky top-4 self-start" aria-label="What this card touches">{reachPanel}</aside>}
       <main className="flex min-w-0 flex-col gap-4">

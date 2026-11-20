@@ -1,6 +1,7 @@
 import { Search, X } from "lucide-react";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { fixedChannel, GraphLegend, NodeMarkG, registerTypeMarks, typeMarksRegistered } from "@/features/graph/encoding";
+import { REACH_COLORS } from "@/theme/palette";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import type { Reach, ReachPage, ReachRel } from "./api";
@@ -72,7 +73,7 @@ export function pagesFromRows(rows: unknown[][], titles: ReadonlyMap<string, str
 type Node = { slug: string; title: string; type?: string; rel: ReachRel | "found"; exists: boolean; x: number; y: number };
 
 /** Colour is the relation to the change (the mark stays the page's type); removed and missing pages are hollow. */
-const REL_COLOR: Record<ReachRel | "found", string> = { added: "#16a34a", removed: "#ef4444", in: "#64748b", out: "#94a3b8", found: "#f59e0b" };
+const REL_COLOR: Record<ReachRel | "found", string> = REACH_COLORS;
 const REL_LABEL: Record<ReachRel | "found", string> = { added: "link added", removed: "link removed", in: "links here", out: "linked from here", found: "found" };
 const relOf = (n: GNode) => (n as unknown as { rel: ReachRel | "found" }).rel;
 const RELATION = fixedChannel("reach", "link", relOf, (Object.keys(REL_COLOR) as (ReachRel | "found")[]).map((key) => ({ key, label: REL_LABEL[key], color: REL_COLOR[key] })));
