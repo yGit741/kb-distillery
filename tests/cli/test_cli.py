@@ -89,7 +89,7 @@ class CommandTableTests(unittest.TestCase):
             set(tree.COMMANDS),
             {"init", "doctor", "kb", "launch", "hooks", "hook", "ops", "ship", "ingest", "digest", "send", "lint", "llm", "parse", "search", "share", "propose"})
         self.assertEqual(set(tree.COMMANDS["kb"].sub), {"list", "show", "takeaways", "import", "inbox", "open-example"})
-        self.assertEqual(set(tree.COMMANDS["search"].sub), {"text"})
+        self.assertEqual(set(tree.COMMANDS["search"].sub), {"text", "vectors-build"})
         self.assertEqual(set(tree.COMMANDS["hooks"].sub), {"install"})
         self.assertEqual(set(tree.COMMANDS["hook"].sub), {"guard", "git-guard", "pre-commit", "commit-msg", "pre-push"})
 

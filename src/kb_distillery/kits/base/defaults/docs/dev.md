@@ -104,6 +104,7 @@ pixi run qmd-install               (once) install the qmd search service in scri
 pixi run qmd-serve                 run the qmd search service in the foreground (127.0.0.1:8766; KB_QMD_PORT to change)
 pixi run qmd-cards                 rewrite .cache/qmd-cards/ (title + summary per page) — lint does this in the main checkout
 pixi run vectors-build             our own copy of the card vectors → .cache/vectors.sqlite (same model as qmd; incremental)
+distill search vectors-build [--all]    the same store with a local model, no node (extra `vectors`; kb_distillery.search.vectors_build)
 pixi run vectors -- neighbours <slug>   pages closest in meaning (kb_distillery.search.vectors; also `status`)
 pixi run summarize -- plan|run|show|judge|apply   Sonnet page summaries → .cache/summaries, Fable judge, apply inside an ops session
 pixi run lint-strict               ingest-finalize checks
