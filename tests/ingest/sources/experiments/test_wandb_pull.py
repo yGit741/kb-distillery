@@ -49,7 +49,8 @@ class FakeRun:
         self.url = f"https://wandb.example.com/octocat/demo/runs/{run_id}"
         self.tags = ["kb", "gaussian"]
         self.config = {"N": 100, "n_grid": [20, 40], "_wandb": {"cli": "x"}, "features": {"_type": "gaussian", "std": 1},
-                       "hf_token": "s3cr3t", "nested": {"api_key": "s3cr3t", "password": ""}}
+                       "hf_token": "s3cr3t-s3cr3t-s3cr3t", "nested": {"api_key": "s3cr3t", "password": ""},
+                       "max_tokens": 512, "pad_token": "<pad>", "n_keys": 4, "key_dim": 8, "secret": 3}
         self.summary = {"peak_gamma": 1.0, "windows": {"_type": "table-file", "path": "p"}, "_wandb": {"runtime": 3},
                         "_step": 2, "_runtime": 3.5}
         self._steps = steps
@@ -115,7 +116,8 @@ def test_a_run_becomes_a_bundle(tmp_path):
     data = json.loads((d / "run.json").read_text())
     assert (data["id"], data["entity"], data["project"], data["name"]) == ("ab12cd34", "octocat", "demo", run.name)
     assert data["config"] == {"N": 100, "n_grid": [20, 40], "features": {"_type": "gaussian", "std": 1},
-                              "hf_token": "(redacted)", "nested": {"api_key": "(redacted)", "password": ""}}
+                              "hf_token": "(redacted)", "nested": {"api_key": "(redacted)", "password": ""},
+                              "max_tokens": 512, "pad_token": "<pad>", "n_keys": 4, "key_dim": 8, "secret": 3}
     assert "s3cr3t" not in (d / "run.json").read_text() + (d / "run.md").read_text()   # no W&B internals, no secrets
     assert data["summary"] == {"peak_gamma": 1.0, "windows": "(table-file)"}
     assert data["history"] == {"rows": 3, "columns": ["_step", "gamma", "lambda_min"], "truncated": False}
@@ -133,6 +135,23 @@ def test_a_run_becomes_a_bundle(tmp_path):
                  "- `source-demo:v0` (code, 1.0 kB): not copied, see the run",
                  "- `weights:v0` (model, 943.7 MB): not copied, see the run"):
         assert line in md, line
+    assert os.listdir(tmp_path / ".cache" / "wandb-build") == []
+
+
+def test_a_forced_pull_that_cannot_land_puts_the_old_bundle_back(tmp_path, monkeypatch):
+    root = str(tmp_path)
+    rel = wp.pull_run(FakeRun(), root=root)
+    real = wp.shutil.move
+
+    def half_move(src, dst):
+        if dst.endswith(rel) and ".old" not in src and "wandb-build" in src:
+            os.makedirs(dst)                                          # a partial copy, then the failure
+            raise OSError("disk full")
+        return real(src, dst)
+    monkeypatch.setattr(wp.shutil, "move", half_move)
+    with pytest.raises(OSError, match="disk full"):
+        wp.pull_run(FakeRun(name="renamed"), force=True, root=root)
+    assert json.loads((tmp_path / rel / "run.json").read_text())["name"] == "Ratio sweep | gaussian"
     assert os.listdir(tmp_path / ".cache" / "wandb-build") == []
 
 

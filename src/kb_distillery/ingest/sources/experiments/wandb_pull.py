@@ -26,7 +26,11 @@ INBOX_PREFIX = "run-"
 TABLE_SUFFIX = ".table.json"
 LISTED_ONLY = {"code", "job", "wandb-history"}     # artifact types never downloaded
 PROJECT_PAGES = {"workspace", "table", "overview", "sweeps", "reports", "artifacts", "jobs"}   # tabs of a project URL
-SECRET = re.compile(r"(key|token|secret|password|passwd|credential)", re.I)   # config keys whose value is not kept
+# Config keys whose string value is not kept. The name must end in the word, so `max_tokens`, `n_keys` and
+# `key_dim` stay; a `*_token` is a secret only when it is long (`pad_token: "<pad>"` stays).
+SECRET = re.compile(r"(?:^|[_.\-])(api[_-]?key|access[_-]?key|private[_-]?key|secret[_-]?key|secret|password|passwd|"
+                    r"credentials?|token)$", re.I)
+TOKEN_MIN = 16
 REDACTED = "(redacted)"
 CELL = 160                                          # longest value shown in a run.md table cell
 
@@ -83,13 +87,20 @@ def existing(entity, project, run_id, root=ROOT):
     return hits
 
 
+def _is_secret(key, value):
+    m = SECRET.search(key)
+    if not m or not isinstance(value, str) or not value:
+        return False
+    return len(value) >= TOKEN_MIN or m.group(1).lower() != "token"
+
+
 def _plain(value, media=False, redact=False):
     """A JSON-safe copy without W&B's internal keys. With `media`, a logged media object (a dict that
     carries `_type`) becomes its type name; with `redact`, the value of a secret-looking key is dropped."""
     if isinstance(value, dict):
         if media and "_type" in value:
             return f"({value['_type']})"
-        return {str(k): REDACTED if redact and SECRET.search(str(k)) and v not in (None, "") else _plain(v, media, redact)
+        return {str(k): REDACTED if redact and _is_secret(str(k), v) else _plain(v, media, redact)
                 for k, v in value.items() if not str(k).startswith("_wandb")}
     if isinstance(value, (list, tuple)):
         return [_plain(v, media, redact) for v in value]
@@ -184,7 +195,9 @@ def pull_artifacts(run, dest, scratch, max_mb):
             src = art.get_entry(path).download(root=folder)
             name = _free_name(dest, kebab(os.path.basename(path)[:-len(TABLE_SUFFIX)], 80), art.name)
             got = _table_csv(src, os.path.join(dest, name))
-            if got:
+            if not got:
+                print(f"warning: {art.name}/{path} is not a readable table, skipped", file=sys.stderr)
+            else:
                 tables.append({"file": name, "rows": got[0], "columns": got[1], "artifact": art.name})
                 entry["tables"].append(name)
     return arts, tables
@@ -279,8 +292,10 @@ def pull_run(run, force=False, max_rows=100_000, max_mb=50, root=ROOT, quiet=Fal
     try:
         shutil.move(dest, final)
     except BaseException:
-        if os.path.isdir(old) and not os.path.exists(final):
-            shutil.move(old, final)                                   # and comes back when the new one cannot land
+        shutil.rmtree(final, ignore_errors=True)                      # a move across devices may stop half way
+        if os.path.isdir(old):
+            shutil.move(old, final)                                   # the old bundle comes back
+        shutil.rmtree(dest, ignore_errors=True)
         raise
     shutil.rmtree(old, ignore_errors=True)
     print(f"scrap (wandb) → {rel}/ — {history[0]} history rows, {len(tables)} tables, {len(arts)} artifacts")
