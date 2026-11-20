@@ -1,10 +1,14 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Database, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import type { KbList } from "@/api/types";
 import { AddKnowledgeBase, useImportAdapter, type ImportAdapter } from "@/components/kb-import";
+import { KbSearch, KbSizeChip, StarredRows, StarToggle } from "@/components/kbPicker";
 import { useFlag } from "@/flags/useFlag";
-import { formatKbs, parseKbs } from "@/lib/kbSelection";
+import { formatKbs, matchesKb, parseKbs } from "@/lib/kbSelection";
+import { bySize, kbProblem, type KbSize } from "@/lib/kbSize";
 import { useApiQuery } from "@/lib/useApiQuery";
 
 /**
@@ -73,11 +77,22 @@ function WithAdd({ adapter, children }: { adapter: ImportAdapter; children: Reac
   );
 }
 
-/** The header menu: tick the knowledge bases the graph shows (none is allowed). */
+const unhealthy = (s: KbSize | undefined) => !!s && kbProblem(s) !== null;
+
+type MenuRow = { id: string; name: string; root: string; error: string; active: boolean; starred: boolean; listed: boolean };
+
+/**
+ * The header menu: tick the knowledge bases the graph shows (none is allowed). A search line filters the rows by name
+ * or id (Enter shows the first match alone); starred ones (kept by the server, so every browser sees them) lead the
+ * menu; the rest follow largest graph first, each with its size in small print, red when it is too small or unlinked.
+ */
 function KbMenu({ title, active, activeName }: { title: React.ReactNode; active: string | null; activeName: string }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const adapter = useImportAdapter();
+  const ds = useDataSource();
+  const qc = useQueryClient();
   const box = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const loc = useRouterState({ select: (s) => s.location });
@@ -85,14 +100,36 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
   const raw = onGraph ? (loc.search as Record<string, unknown>).kbs : undefined;
   const picked = parseKbs(typeof raw === "string" ? raw : undefined);
   const list = useApiQuery(["kb-list"], (d) => d.listKbs(), { staleTime: 30_000 });
-  const listed = list.data?.kbs ?? [];
+  const sizes = useApiQuery(["kb-stats"], (d) => d.getKbStats(), { staleTime: 60_000, retry: false });
+  const sizeOf = (r: MenuRow) => sizes.data?.kbs[r.id];
+  const listed: MenuRow[] = (list.data?.kbs ?? []).map((r) => ({ ...r, listed: true }));
   // an app opened on a folder outside the bases dir (`--kb <path>`) is on the graph too: it gets its row, first
-  const rows = active && list.data && !listed.some((r) => r.id === active) ? [{ id: active, name: activeName, root: "", error: "", active: true }, ...listed] : listed;
+  const rows = bySize(
+    active && list.data && !listed.some((r) => r.id === active)
+      ? [{ id: active, name: activeName, root: "", error: "", active: true, starred: false, listed: false }, ...listed]
+      : listed,
+    sizeOf,
+  );
   const shown = picked ?? (active ? [active] : []);
   const others = shown.filter((k) => k !== active).length;
+  const visible = rows.filter((r) => matchesKb(r, query));
+  const starredRows = visible.filter((r) => r.starred);
+  const restRows = visible.filter((r) => !r.starred);
+  const first = [...starredRows, ...restRows].find((r) => !r.error);
+
+  const star = useMutation({
+    mutationFn: (v: { id: string; starred: boolean }) => ds.starKb(v.id, v.starred),
+    onMutate: (v) =>
+      qc.setQueryData<KbList>(["kb-list"], (old) => old && { ...old, kbs: old.kbs.map((r) => (r.id === v.id ? { ...r, starred: v.starred } : r)) }),
+    onSuccess: (data) => qc.setQueryData(["kb-list"], data),
+    onError: () => void qc.invalidateQueries({ queryKey: ["kb-list"] }),
+  });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setQuery("");
+      return;
+    }
     const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("pointerdown", away);
@@ -117,6 +154,22 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
     });
   };
   const toggle = (kb: string) => show(shown.includes(kb) ? shown.filter((k) => k !== kb) : [...shown, kb]);
+  const only = (kb: string) => {
+    setOpen(false);
+    show([kb]);
+  };
+
+  const row = (r: MenuRow) => (
+    <div key={r.id} className={`flex items-center gap-1 rounded pr-1 ${r.error ? "" : "hover:bg-accent"}`}>
+      <label title={r.error || r.root} className={`flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1 ${r.error ? "opacity-50" : "cursor-pointer"}`}>
+        <input type="checkbox" disabled={!!r.error} checked={shown.includes(r.id)} onChange={() => toggle(r.id)} />
+        <span className={`min-w-0 flex-1 truncate ${unhealthy(sizeOf(r)) ? "text-destructive" : ""}`}>{r.name || r.id}</span>
+        <KbSizeChip size={sizeOf(r)} />
+        <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
+      </label>
+      {r.listed && <StarToggle name={r.name || r.id} on={r.starred} onToggle={() => star.mutate({ id: r.id, starred: !r.starred })} />}
+    </div>
+  );
 
   return (
     <div ref={box} className="relative shrink-0">
@@ -142,21 +195,17 @@ function KbMenu({ title, active, activeName }: { title: React.ReactNode; active:
           role="dialog"
           aria-label="Knowledge bases on the graph"
           data-tour="graph-kbs"
-          className="absolute left-0 top-full z-50 mt-1 w-80 rounded-lg border bg-card p-2 text-sm font-normal shadow-[var(--shadow)]"
+          className="absolute left-0 top-full z-50 mt-1 w-[28rem] max-w-[calc(100vw-1rem)] rounded-lg border bg-card p-2 text-sm font-normal shadow-[var(--shadow)]"
         >
           <p className="px-1.5 pb-1 text-xs text-muted-foreground">Shown on the graph. Other knowledge bases are view only.</p>
+          <KbSearch value={query} onChange={setQuery} onEnter={() => first && only(first.id)} autoFocus className="mb-1" />
           {list.isPending && <p className="px-1.5 py-1 text-muted-foreground">Loading…</p>}
-          {rows.map((r) => (
-            <label
-              key={r.id}
-              title={r.error || r.root}
-              className={`flex items-center gap-2 rounded px-1.5 py-1 ${r.error ? "opacity-50" : "cursor-pointer hover:bg-accent"}`}
-            >
-              <input type="checkbox" disabled={!!r.error} checked={shown.includes(r.id)} onChange={() => toggle(r.id)} />
-              <span className="min-w-0 flex-1 truncate">{r.name || r.id}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
-            </label>
-          ))}
+          <StarredRows
+            starred={starredRows}
+            rest={restRows}
+            row={row}
+            empty={list.data && <p className="px-1.5 py-1 text-muted-foreground">No knowledge base matches “{query.trim()}”.</p>}
+          />
           {adapter && (
             <button
               type="button"

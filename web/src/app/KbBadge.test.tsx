@@ -17,7 +17,7 @@ vi.mock("@/features/graph/GraphCanvas", async () => {
 });
 
 const git = { repo: true, branch: "main" } as KbList["kbs"][number]["git"];
-const row = (id: string, name: string, active = false) => ({ id, name, root: `/b/${id}`, schema_version: "1.3", error: "", active, git });
+const row = (id: string, name: string, active = false) => ({ id, name, root: `/b/${id}`, schema_version: "1.3", error: "", active, starred: false, git });
 const list = (extra: ReturnType<typeof row>[] = []): KbList => ({
   bases_dir: "/b", think_root: "/t", active: "alpha",
   kbs: [row("alpha", "Alpha", true), row("beta", "Beta"), ...extra],
@@ -85,6 +85,46 @@ describe("header knowledge base menu (kb-view)", () => {
       expect(within(menu).getAllByRole("checkbox")).toHaveLength(2);
       expect(within(menu).queryByLabelText(/Add a folder/)).toBeNull();
       expect(within(menu).queryByRole("button", { name: /^Add$/ })).toBeNull();
+    }));
+
+  it("the search line filters by name or id, and Enter shows the first match alone", () =>
+    withFlag("kb-view", true, async () => {
+      const { router } = open("/graph", { listKbs: async () => list([row("gamma", "Gamma notes")]) });
+      await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
+      const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });
+      await userEvent.type(within(menu).getByRole("searchbox", { name: "Search knowledge bases" }), "notes");
+      expect(within(menu).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual([expect.stringMatching(/Gamma notes/)]);
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(router.state.location.search).toMatchObject({ kbs: "gamma" }));
+    }));
+
+  it("starred knowledge bases lead the menu, and the star calls the server", () =>
+    withFlag("kb-view", true, async () => {
+      const starKb = vi.fn(async (id: string, starred: boolean) => ({ ...list(), kbs: list().kbs.map((r) => (r.id === id ? { ...r, starred } : r)) }));
+      open("/graph", { starKb });
+      await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
+      const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });
+      await userEvent.click(within(menu).getByRole("button", { name: "Star Beta" }));
+      expect(starKb).toHaveBeenCalledWith("beta", true);
+      const group = await within(menu).findByRole("group", { name: "Starred" });
+      expect(within(group).getByText("Beta")).toBeInTheDocument();
+      expect(within(menu).getByRole("button", { name: "Star Beta" })).toHaveAttribute("aria-pressed", "true");
+    }));
+
+  it("rows sort by graph size, show it in small print, and a too-small one is red", () =>
+    withFlag("kb-view", true, async () => {
+      open("/graph", {
+        getKbStats: async () => ({ kbs: { alpha: { concepts: 3, sources: 1, edges: 1 }, beta: { concepts: 40, sources: 12, edges: 60 } } }),
+      });
+      await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
+      const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });
+      await waitFor(() => expect(within(menu).getAllByTestId("kb-size")).toHaveLength(2));
+      const labels = within(menu).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent ?? "");
+      expect(labels[0]).toMatch(/Beta/);
+      const [big, small] = within(menu).getAllByTestId("kb-size");
+      expect(big).toHaveTextContent("40c · 12s · 60e");
+      expect(small).toHaveClass("text-destructive");
+      expect(small?.getAttribute("title")).toMatch(/only 3 concepts/);
     }));
 
   it("flag off: the title is the plain link to System → Knowledge bases", () =>

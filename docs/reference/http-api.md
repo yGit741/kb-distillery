@@ -28,7 +28,9 @@ This table is generated from the schema on `main`.
 | Method and path | Does |
 |---|---|
 | `GET /api/kb` | The active knowledge base: `kb.toml`, folder, git, types. |
-| `GET /api/kb/list` | Knowledge bases the app can load. |
+| `GET /api/kb/list` | Knowledge bases the app can load; each row says whether it is starred. |
+| `GET /api/kb/stats` | Graph size of each one: concepts, sources, concept-to-concept edges (the header menu sorts by it). |
+| `PUT /api/kb/{id}/star` | Star or unstar one (`{"starred": true}`); kept in `<bases dir>/.stars.json`, never inside a kb. |
 | `GET /api/pages` | Every page as a card, plus links and wanted pages. |
 | `GET /api/pages/{slug}` | One page: markdown, backlinks, suggestions. |
 | `GET /api/path` | Shortest undirected link paths between two pages. |

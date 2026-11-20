@@ -17,8 +17,8 @@ const detail = (kb: string, readOnly: boolean): PageDetail => ({
 const kbs: KbList = {
   bases_dir: "/b", think_root: "/t", active: "alpha",
   kbs: [
-    { id: "alpha", name: "Alpha", root: "/b/kb-alpha", schema_version: "1.3", error: "", active: true, git: { repo: false } as KbList["kbs"][number]["git"] },
-    { id: "beta", name: "Beta", root: "/b/kb-beta", schema_version: "1.3", error: "", active: false, git: { repo: false } as KbList["kbs"][number]["git"] },
+    { id: "alpha", name: "Alpha", root: "/b/kb-alpha", schema_version: "1.3", error: "", active: true, starred: false, git: { repo: false } as KbList["kbs"][number]["git"] },
+    { id: "beta", name: "Beta", root: "/b/kb-beta", schema_version: "1.3", error: "", active: false, starred: false, git: { repo: false } as KbList["kbs"][number]["git"] },
   ],
 };
 

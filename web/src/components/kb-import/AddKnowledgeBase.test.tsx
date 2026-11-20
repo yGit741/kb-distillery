@@ -12,7 +12,7 @@ import type { ImportAdapter } from "./adapter";
 import { AddKnowledgeBase } from "./AddKnowledgeBase";
 
 const git = { repo: true, branch: "main" } as KbList["kbs"][number]["git"];
-const list: KbList = { bases_dir: "/b", think_root: "/t", active: "alpha", kbs: [{ id: "alpha", name: "Alpha", root: "/b/alpha", schema_version: "1.3", error: "", active: true, git }] };
+const list: KbList = { bases_dir: "/b", think_root: "/t", active: "alpha", kbs: [{ id: "alpha", name: "Alpha", root: "/b/alpha", schema_version: "1.3", error: "", active: true, starred: false, git }] };
 const info = { id: "alpha", name: "Alpha", root: "/b/alpha", git, bases_dir: "/b", relaunch: "x", types: [], digest: [], areas: [], source_fields: [], meta_overrides: [], flags_registry: "kb", schema_version: "1.3", config: null, think_root: "/t", think_git: git } as unknown as KbInfo;
 
 const preview = (over: Partial<KbImportPreview> = {}): KbImportPreview => ({ id: "my-notes", name: "My notes", pages: 3, source: "my-notes.zip", errors: [], warnings: [], ref: "", commit: "", ok: true, ...over });

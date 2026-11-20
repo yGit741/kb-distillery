@@ -19,6 +19,10 @@ export interface DataSource {
   /** The knowledge base this app serves (kb.toml, folder, git, types) and the ones the explorer can load. */
   getKb(): Promise<T.KbInfo>;
   listKbs(): Promise<T.KbList>;
+  /** Local app only: the graph size (concepts, sources, concept-to-concept edges) of each knowledge base it can show. */
+  getKbStats(): Promise<T.KbGraphSizes>;
+  /** Local app only: star (or unstar) a knowledge base of the bases dir; answers with the fresh list. */
+  starKb(id: string, starred: boolean): Promise<T.KbList>;
   /** Local app only: dry run of importing an OKF bundle (.zip upload or git URL) as a new knowledge base. */
   previewKbImport(req: T.KbImportRequest): Promise<T.KbImportPreview>;
   /** Local app only: import it. */
