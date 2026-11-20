@@ -84,6 +84,8 @@ COMMANDS: dict[str, Cmd] = {
     "search": Cmd("search a knowledge base", "group", sub={
         "text": Cmd("full text over pages, think notes, chats and raw text: distill search text \"<query>\" [--rebuild]",
                     target="kb_distillery.search.fts", forward_help=True),
+        "vectors-build": Cmd("build .cache/vectors.sqlite (page vectors for the graph) with a local model: [--kb <id|path> | --all] [--model bge-small] [--status]",
+                             target="kb_distillery.search.vectors_build", forward_help=True),
     }),
     "share": Cmd("publish the wiki graph + explorer as a site (build, snapshot, status, …)", target="kb_distillery.publish.cloudflare",
                  forward_help=True),
