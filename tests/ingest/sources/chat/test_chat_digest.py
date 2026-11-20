@@ -248,7 +248,9 @@ class TestExitCode(ChatDigestCase):
             self.assertEqual(cd.main(args, root=self.root), 0)          # one page written, one failed
         self.put("raw/llm-chats/c.md", clip([("You", "Ramsey numbers?"), ("Gemini", "R(3,3)=6.")]))
         with mock.patch.object(llm, "run", FakeLLM({"error": "down"}, {"error": "down"})):
-            self.assertEqual(cd.main(args, root=self.root), 1)          # nothing written: a real failure
+            self.assertEqual(cd.main(args, root=self.root), 0)          # c's new tree is worth a commit
+        with mock.patch.object(llm, "run", FakeLLM({"error": "down"}, {"error": "down"})):
+            self.assertEqual(cd.main(args, root=self.root), 1)          # nothing changed at all: a real failure
 
 
 class TestReply(unittest.TestCase):

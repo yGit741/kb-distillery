@@ -27,7 +27,7 @@ from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault import frontmatter as fmlib
 from kb_distillery.vault import summary as summary_lib
 from kb_distillery.vault import wikiio
-from kb_distillery.vault.schema import PLACEHOLDER_TITLE, SLUG_PREFIX
+from kb_distillery.vault.schema import CHATS_DIR, PLACEHOLDER_TITLE, SLUG_PREFIX
 
 MODEL = "standard"                # a synthesis of a whole conversation, not a skim
 PRODUCER = "chat-digest"
@@ -327,7 +327,7 @@ def check_reply(vals):
     out, bad = {}, []
     title = _one_line(vals.get("title")).strip(" #")
     if not 3 <= len(title) <= TITLE_MAX:
-        bad.append(f"title: {len(title)} chars, want 3-70")
+        bad.append(f"title: {len(title)} chars, want 3-70 (at most {TITLE_MAX})")
     elif re.match(PLACEHOLDER_TITLE, title):
         bad.append(f"title: {title!r} is a clipper placeholder")
     out["title"] = title
@@ -474,8 +474,22 @@ def ask(todo, prompts, sys_prompt, backend, model, result, retries=2):
     return out
 
 
+def _tree_state(root):
+    """{file: sha1} of meta/chats/ — to tell whether rebuilding the trees changed anything on disk."""
+    import hashlib
+    base = os.path.join(root, CHATS_DIR)
+    out = {}
+    for dirpath, _, files in os.walk(base):
+        for name in files:
+            path = os.path.join(dirpath, name)
+            with open(path, "rb") as f:
+                out[os.path.relpath(path, base)] = hashlib.sha1(f.read()).hexdigest()
+    return out
+
+
 def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd=None, lint=True, root=ROOT):
     """→ {items, written, failed, usd, changed}."""
+    trees_before = _tree_state(root)
     if dry_run:
         convs, _ = chat_build.build(chat_build.clip_paths(root), root)
     else:
@@ -497,10 +511,11 @@ def run(dry_run=False, only=None, limit=None, backend=None, model=MODEL, max_usd
     if max_usd is not None and est > max_usd:
         print(f"refused: estimate ${est:.2f} is above --max-usd {max_usd}", file=sys.stderr)
         result["failed"] = [it["conv"] for it in todo]
-        return result
+        return result                                     # changed stays False: a refusal exits 1
 
     dupes = {c: k for it in items if it["action"] != "conflict" for c, k in it.get("dupes", {}).items()}
-    changed = bool(mark_dupes(dupes, root))
+    changed = _tree_state(root) != trees_before          # new or moved trees are worth a commit on their own
+    changed = bool(mark_dupes(dupes, root)) or changed
     if changed:
         print(f"  marked {len(dupes)} byte-identical clip(s) dupe in corpus.tsv")
     for it in items:
