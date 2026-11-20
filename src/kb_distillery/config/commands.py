@@ -87,6 +87,8 @@ COMMANDS: dict[str, Cmd] = {
     }),
     "share": Cmd("publish the wiki graph + explorer as a site (build, snapshot, status, …)", target="kb_distillery.publish.cloudflare",
                  forward_help=True),
+    "code": Cmd("code to citable fact cards: build, cards (C++ needs the `code` extra)",
+                target="kb_distillery.codekb", forward_help=True),
     "propose": Cmd("typed relation proposals between wiki pages: submit, collect, review, apply", target="kb_distillery.graph.propose",
                    forward_help=True),
 }
