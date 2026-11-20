@@ -10,6 +10,7 @@ export const FORMATS = [
   "web-clips",
   "images",
   "videos",
+  "experiments",
 ] as const;
 
 export const DRAFTS_KEY = "kb-scope-drafts";

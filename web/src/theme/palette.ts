@@ -19,16 +19,21 @@ export const TYPE_COLORS: Record<PageType, string> = {
   mail: "#73daca",
   "ai-chat": "#ff9e64",
   "blog-post": "#ff79c6",
+  run: "#c3e88d",
   // collection
   book: "#d16bd8",
   notebook: "#c099ff",
   course: "#2ac3de",
   series: "#7dcfff",
+  experiment: "#41a6b5",
   scope: "#e6c07b",
   // concept
   topic: "#9ece6a",
   idea: "#7aa2ff",
   question: "#f6c177",
+  conjecture: "#ff966c",
+  result: "#b4f9f8",
+  method: "#82aaff",
   person: "#bb9af7",
   "distilled-think": "#e0af68",
 };
@@ -59,6 +64,12 @@ export const STATUS_COLORS = {
   open: "#f6c177",
   partial: "#e0af68",
   resolved: "#73daca",
+  sketch: "#565f89",
+  proved: "#9ece6a",
+  refuted: "#ff6b7a",
+  supports: "#9ece6a",
+  refutes: "#ff6b7a",
+  inconclusive: "#6c7086",
   review: "#e0af68",
   applied: "#73daca",
   archived: "#565f89",
@@ -98,6 +109,7 @@ export const PILE_COLORS = {
   "web-clips": "#4fd6be",
   images: "#7dcfff",
   videos: "#e0af68",
+  experiments: "#c3e88d",
 } as const;
 
 const lookup = (map: Readonly<Record<string, string>>, key: string | null | undefined): string =>

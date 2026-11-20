@@ -16,7 +16,7 @@ from kb_distillery.vault import frontmatter
 from kb_distillery.vault.coherence import load_warnings
 from kb_distillery.lint.lint import collect_snapshot, collections_of, parse_frontmatter, raw_paths
 from kb_distillery.vault.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
-                    RAW_EMAILS, RAW_INBOX, RAW_VIDEOS, VIDEO_ITEM, RAW_PRINTED, CONTENTS_COLLECTIONS, WIKI_DIR)
+                    RAW_EMAILS, RAW_INBOX, RAW_VIDEOS, RAW_EXPERIMENTS, BUNDLE_ITEMS, RAW_PRINTED, CONTENTS_COLLECTIONS, WIKI_DIR)
 from kb_distillery.vault.schema import is_page_file
 
 ROOT = vault_root()  # KB_ROOT: share build
@@ -172,9 +172,9 @@ def _split_disposition(disp):
 
 
 def _unit(rel, kind):
-    """An email thread or a video bundle is one unit (its folder); every other file is one unit."""
+    """An email thread, a video bundle or an experiment run is one unit (its folder); every other file is one unit."""
     parts = rel.split("/")
-    return "/".join(parts[:3]) if kind in (RAW_EMAILS, RAW_VIDEOS) and len(parts) > 3 else rel
+    return "/".join(parts[:3]) if kind in (RAW_EMAILS, RAW_VIDEOS, RAW_EXPERIMENTS) and len(parts) > 3 else rel
 
 
 def _depth(slug, pages):
@@ -277,8 +277,8 @@ def _companion_of(rel, kind, status, target):
     parts = rel.split("/")
     if kind == RAW_EMAILS and len(parts) > 3 and parts[-1] != "thread.md":
         return "/".join(parts[:3]) + "/thread.md"
-    if kind == RAW_VIDEOS and len(parts) > 3 and parts[-1] != VIDEO_ITEM:
-        return "/".join(parts[:3]) + "/" + VIDEO_ITEM
+    if kind in BUNDLE_ITEMS and len(parts) > 3 and parts[-1] != BUNDLE_ITEMS[kind]:
+        return "/".join(parts[:3]) + "/" + BUNDLE_ITEMS[kind]        # a video's or a run's other files
     return ""
 
 

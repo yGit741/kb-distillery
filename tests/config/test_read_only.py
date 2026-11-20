@@ -17,7 +17,7 @@ MESSAGE = "this knowledge base is read-only (example kb)"
 def _kb(path, extra=""):
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write(f'[kb]\nid = "x"\nname = "X"\nschema_version = "1.5"\n{extra}')
+        f.write(f'[kb]\nid = "x"\nname = "X"\nschema_version = "1.6"\n{extra}')
     return str(path)
 
 

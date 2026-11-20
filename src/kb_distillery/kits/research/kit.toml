@@ -11,8 +11,9 @@ takeaways_heading = "Takeaways"
 focus_slugs = ["focus"]
 
 [types]
-order = ["topic", "idea", "question", "person", "course", "series", "book", "notebook",
-         "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail"]
+order = ["topic", "idea", "question", "conjecture", "result", "method", "person",
+         "course", "series", "experiment", "book", "notebook",
+         "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail", "run"]
 # No `areas` here on purpose: the `area:` whitelist is a kb's own choice of topics (each needs a theme-<area> page),
 # so a kb adds it under its own [types] (areas, deprecated_areas).
 # Extra frontmatter on source pages, beyond the explorer's common fields.
@@ -61,6 +62,11 @@ label = "Blog post"
 prefix = "blog-"
 color = "#ff79c6"
 
+[types.source.run]
+label = "Run"
+prefix = "run-"                # one experiment run: a frozen bundle under raw/experiments/<run>/
+color = "#c3e88d"
+
 # --- Collections: a table grouping sources ---------------------------------------------------------------
 [types.collection.book]
 label = "Book"
@@ -87,6 +93,12 @@ prefix = "series-"
 kind = "contents"
 color = "#7dcfff"
 
+[types.collection.experiment]
+label = "Experiment"
+prefix = "exp-"
+kind = "contents"             # its table lists the runs that executed the design
+color = "#41a6b5"
+
 # --- Concepts: knowledge across sources ------------------------------------------------------------------
 [types.concept.topic]
 label = "Topic"
@@ -104,6 +116,23 @@ prefix = "q-"
 status = ["open", "partial", "resolved"]
 color = "#f6c177"
 
+[types.concept.conjecture]
+label = "Conjecture"
+prefix = "conj-"
+status = ["sketch", "partial", "proved", "refuted"]
+color = "#ff966c"
+
+[types.concept.result]
+label = "Result"
+prefix = "result-"
+status = ["supports", "refutes", "inconclusive"]     # what the finding says about the claim it bears on
+color = "#b4f9f8"
+
+[types.concept.method]
+label = "Method"
+prefix = "method-"            # a model, learner or procedure that experiments use
+color = "#82aaff"
+
 [types.concept.person]
 label = "Person"
 prefix = ""
@@ -113,6 +142,7 @@ color = "#bb9af7"
 # --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------
 # Read by kb_distillery.graph.model.edge_config and checked by lint (check_relations). This table lives in the kit.
 [edges]
-types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of"]
+types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of",
+         "tests", "supports", "refutes"]
 symmetric = ["contradicts"]
 note_required = ["contradicts"]

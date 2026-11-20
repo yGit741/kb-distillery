@@ -10,17 +10,18 @@ raw/printed-docs/       typed: papers, books, course books, typed notes, blog po
 raw/handwritten/        by hand: reMarkable notebooks, handwritten summaries
 raw/presentations/      slide decks (pdf, pptx, key)
 raw/llm-chats/          LLM conversation exports (md)
-raw/emails/<YYYY-MM-DD-thread>/  thread.md + attachments + parsed.md sidecar — the only nested folder
+raw/emails/<YYYY-MM-DD-thread>/  thread.md + attachments + parsed.md sidecar — nested: one folder per thread
 raw/web-clips/          Web Clipper pages (md, html)
 raw/images/             screenshots, figures
 raw/videos/<name>/      video.md + video.json + transcript.vtt + info.json + a-<s>.jpg anchor thumbnails (scrap-youtube) — nests like emails/
+raw/experiments/<name>/ run.md + run.json + config, summary and history files of one experiment run — nests like emails/; a cataloged run is never replaced
 wiki/                   flat agent-owned notes; filename prefix = type
 think/                  human slow space (not linted)
 _quarantine/            staged for deletion, gitignored, not part of the vault
 ```
 
 `raw/` is split by **format** (how the bytes were produced), never by course or person, and is flat
-below the format folder (except `emails/` and `videos/`, one folder per thread / video). Split rule: typed → `printed-docs/` (even if annotated), by hand →
+below the format folder (except `emails/`, `videos/` and `experiments/`, one folder per thread / video / run). Split rule: typed → `printed-docs/` (even if annotated), by hand →
 `handwritten/` (catalog detects this from the PDF text layer), slides → `presentations/` whatever
 the extension. Membership lives in the corpus `collection` column — **a raw file never moves after
 catalog**; reclassifying it means editing that cell.
@@ -52,7 +53,7 @@ Course and series Contents tables: see [`collections.md`](collections.md).
 
 ## Naming
 
-Every format folder except `emails/` is flat; names are lowercase ASCII kebab, unique across the
+Every format folder except `emails/`, `videos/` and `experiments/` is flat; names are lowercase ASCII kebab, unique across the
 vault. Papers and books use **`<year>-<kebab-title>.pdf`** — sortable, greppable, and the year is
 metadata you would otherwise have to open the file to find.
 

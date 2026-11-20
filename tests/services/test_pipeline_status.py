@@ -34,6 +34,10 @@ class StatusTest(unittest.TestCase):
                                           "raw/presentations/a.pdf"), "raw/presentations/a.pdf")
         self.assertEqual(dd._companion_of("raw/emails/t/img.png", "emails", "queued", ""), "raw/emails/t/thread.md")
         self.assertEqual(dd._companion_of("raw/emails/t/thread.md", "emails", "queued", ""), "")
+        self.assertEqual(dd._companion_of("raw/experiments/r1/history.csv", "experiments", "queued", ""),
+                         "raw/experiments/r1/run.md")          # a run bundle works like a video bundle
+        self.assertEqual(dd._companion_of("raw/experiments/r1/run.md", "experiments", "queued", ""), "")
+        self.assertEqual(dd._unit("raw/experiments/r1/history.csv", "experiments"), "raw/experiments/r1")
         self.assertEqual(dd._companion_of("raw/printed-docs/a.pdf", "printed-docs", "queued", ""), "")
 
 

@@ -27,7 +27,7 @@ from kb_distillery.vault.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BL
                     INBOX_ERROR, INBOX_STALE_DAYS, INK_SUFFIX,
                     EQUATION_TYPES, MANIFEST, MANIFEST_COLS, META_DIR, NEEDS_RAW, SOURCE_TYPES, PARSED_FILENAME,
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
-                    RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
+                    RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, BUNDLE_ITEMS, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
                     TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, TYPE_LABEL, TYPE_ORDER, is_page_file, is_index_path,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
@@ -127,10 +127,12 @@ _ASSET_NAME = re.compile(ASSET_NAME, re.I)
 def asset_source(rel, on_disk):
     """`raw/images/<clip stem>-NN.png` -> `raw/web-clips/<clip stem>.md` when that clip exists:
     a figure scrap-wordpress downloaded with its post. Inside a video bundle every file but
-    video.md (transcript, data, frames) is an asset of video.md."""
+    video.md (transcript, data, frames) is an asset of video.md; a run bundle works the same way
+    around its run.md."""
     parts = rel.split('/')
-    if len(parts) == 4 and parts[1] == RAW_VIDEOS and parts[3] != VIDEO_ITEM:
-        item = f"raw/{RAW_VIDEOS}/{parts[2]}/{VIDEO_ITEM}"     # a video bundle's transcript, data, frames
+    if len(parts) == 4 and parts[1] in BUNDLE_ITEMS and parts[3] != BUNDLE_ITEMS[parts[1]]:
+        # a video bundle's transcript, data, frames; a run bundle's config, summary, history
+        item = f"raw/{parts[1]}/{parts[2]}/{BUNDLE_ITEMS[parts[1]]}"
         return item if item in on_disk else None
     if len(parts) != 3 or parts[1] != RAW_IMAGES:
         return None
@@ -1302,7 +1304,7 @@ def collect_snapshot(quiet=False):
         pages, rows, err_fn=err, warn_fn=warn, fresh=_ingest_strict_slugs())
 
     inbox = [r for r in raw_files if r.startswith(f"{RAW_DIR}/{RAW_INBOX}/")]
-    # a folder bundle (mail-<thread>/, video-<name>/) is one item to triage, however many files it holds
+    # a folder bundle (mail-<thread>/, video-<name>/, run-<name>/) is one item to triage, however many files it holds
     items = {"/".join(r.split("/")[:3]) for r in inbox}
     if len(items) >= INBOX_ERROR:
         err("raw/inbox", f"{len(items)} items — triage them, the inbox must drain")
@@ -1353,7 +1355,7 @@ def collect_snapshot(quiet=False):
         1 for _rel, fm, _t in pages.values()
         if fm.get("depth") == "listed"
         and fm.get("type") in ("paper", "part", "lecture", "article", "video", "mail",
-                               "ai-chat", "blog-post"))
+                               "ai-chat", "blog-post", "run"))
     return snapshot
 
 

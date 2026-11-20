@@ -52,21 +52,31 @@ class ResearchKit(unittest.TestCase):
 
     def test_types(self):
         t = kbtypes.load(self.cfg)
-        self.assertEqual(set(t.source_types), {"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"})
+        self.assertEqual(set(t.source_types), {"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post", "run"})
         self.assertEqual(set(t.partition_collections), {"book", "notebook"})
-        self.assertEqual(set(t.contents_collections), {"course", "series"})
-        self.assertEqual(set(t.concept_types), {"topic", "idea", "question", "person"})
-        self.assertEqual(len(t.type_order), 18)                              # 16 kb types + the two tool-owned
+        self.assertEqual(set(t.contents_collections), {"course", "series", "experiment"})
+        self.assertEqual(set(t.concept_types), {"topic", "idea", "question", "conjecture", "result", "method", "person"})
+        self.assertEqual(len(t.type_order), 23)                              # 21 kb types + the two tool-owned
+
+    def test_empirical_types(self):
+        """Schema 1.6: a conjecture and a result carry their own status words; a run is a source."""
+        t = kbtypes.load(self.cfg)
+        self.assertEqual(set(t.type_status["conjecture"]), {"sketch", "partial", "proved", "refuted"})
+        self.assertEqual(set(t.type_status["result"]), {"supports", "refutes", "inconclusive"})
+        self.assertEqual(t.slug_prefix["run"], "run-")
+        self.assertEqual(t.slug_prefix["experiment"], "exp-")
+        self.assertEqual(t.slug_prefix["conjecture"], "conj-")
 
     def test_areas_are_the_kbs_own(self):
         """Each area needs a theme-<area> page, so a kit that listed some would break lint for every kb."""
         self.assertEqual(set(kbtypes.load(self.cfg).areas), set())
         self.assertEqual(kbtypes.load(self.cfg).source_fields, ("authors", "venue", "arxiv-id"))
 
-    def test_the_eight_relation_types(self):
+    def test_the_relation_types(self):
         edges = edge_config(self.cfg)
         self.assertEqual(edges["types"], sorted(["extends", "uses", "contradicts", "example-of", "open-problem-in",
-                                                 "addresses", "discusses", "student-of"]))
+                                                 "addresses", "discusses", "student-of",
+                                                 "tests", "supports", "refutes"]))
         self.assertEqual(edges["note_required"], {"contradicts"})
         self.assertIn("CONTRADICTS", edges["symmetric"])
 

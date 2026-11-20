@@ -72,6 +72,8 @@ def _target(paths, pos):
         parts = p.split("/")
         if p.startswith(("raw/inbox/video-", "raw/videos/")) and len(parts) > 3:
             return parts[2].removeprefix("video-")           # a video bundle is named by its folder
+        if p.startswith(("raw/inbox/run-", "raw/experiments/")) and len(parts) > 3:
+            return parts[2].removeprefix("run-")             # so is an experiment run bundle
     for p in paths:
         if p.startswith("raw/"):
             return os.path.splitext(os.path.basename(p))[0]
@@ -113,8 +115,8 @@ def run(cli_main, argv=None, table=INGEST, begin_table=None):
         try:
             target = pos[1] if len(pos) > 1 else key[0]
             parts = target.replace(os.sep, "/").split("/")
-            # a video bundle's item is always video.md: name the session after its folder
-            name = parts[-2] if len(parts) > 3 and parts[:2] == ["raw", "videos"] else \
+            # a video bundle's item is always video.md (a run bundle's run.md): name the session after its folder
+            name = parts[-2] if len(parts) > 3 and parts[:2] in (["raw", "videos"], ["raw", "experiments"]) else \
                 os.path.splitext(os.path.basename(target))[0]
             # no summary: the subject becomes the page title, the tier goes in a KB-Tier trailer
             core.begin(begin_op, name, root=core.ROOT)

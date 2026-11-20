@@ -9,7 +9,7 @@ A kit is versioned and lives in the engine: `src/kb_distillery/kits/<name>/kit.t
 | Kit | Builds on | For |
 |---|---|---|
 | `base` | none | A small general knowledge base. Source types `article`, `notes`, `document`. Concept types `topic`, `idea`, `question`, `person`. Collection type `series`. Relations `extends`, `uses`. |
-| `research` | `base` | Academic reading. Adds `paper`, `lecture`, `video`, `blog-post`, `mail`, `ai-chat`, `part`, and the collections `book`, `notebook`, `course`. Adds the relations `contradicts`, `example-of`, `open-problem-in`, `addresses`, `discusses`, `student-of`. |
+| `research` | `base` | Academic reading. Adds `paper`, `lecture`, `video`, `blog-post`, `mail`, `ai-chat`, `part`, and the collections `book`, `notebook`, `course`. For empirical work: the source `run`, the collection `experiment` and the concepts `conjecture`, `result`, `method`. Adds the relations `contradicts`, `example-of`, `open-problem-in`, `addresses`, `discusses`, `student-of`, `tests`, `supports`, `refutes`. |
 
 `examples/demo` uses `base` and adds its own types, for example `company`, `role`, `interview` and `skill`. Read its `kb.toml` as a worked example of extension.
 

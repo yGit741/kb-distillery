@@ -290,7 +290,7 @@ class DispatchTests(TempHome):
             folder = os.path.join(bases, "kb-probe")
             os.makedirs(folder)
             with open(os.path.join(folder, "kb.toml"), "w") as f:
-                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.5"\n')
+                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.6"\n')
             cp = run_cli(["kb", "list"], self.home, {"KB_BASES_DIR": bases})
         self.assertEqual(cp.returncode, 0, cp.stderr)
         self.assertIn("probe", cp.stdout)

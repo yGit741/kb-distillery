@@ -11,7 +11,7 @@ relations:
   - {to: other-slug, kind: extends, note: "why it holds"}
 ```
 
-The kinds a knowledge base accepts are the `types` under `[edges]` in its kit or `kb.toml`. The `research` kit declares `extends`, `uses`, `contradicts`, `example-of`, `open-problem-in`, `addresses`, `discusses` and `student-of`. The `base` kit declares `extends` and `uses`.
+The kinds a knowledge base accepts are the `types` under `[edges]` in its kit or `kb.toml`. The `research` kit declares `extends`, `uses`, `contradicts`, `example-of`, `open-problem-in`, `addresses`, `discusses`, `student-of`, and for empirical work `tests`, `supports` and `refutes`. The `base` kit declares `extends` and `uses`.
 
 - A kind in `symmetric` (`contradicts`) is stored once.
 - A kind in `note_required` (`contradicts`) needs a one-sentence note.
