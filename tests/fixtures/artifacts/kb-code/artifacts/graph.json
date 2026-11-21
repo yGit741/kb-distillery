@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "template": "codebase",
+  "project": "demo",
+  "generator": "code-toolkit v1",
+  "repos": {"r": {"sha": "abc123", "web": "https://code.example.com/octocat/r/blob/abc123/"}},
+  "types": {
+    "Repo": {"description": "A repository", "mark": "repo"},
+    "Folder": {"description": "A folder", "mark": "ring"},
+    "File": {"description": "A source file", "mark": "dot"}
+  },
+  "relations": {"imports": {"description": "file A includes file B", "directed": true}},
+  "nodes": [
+    {"id": "repo:r", "type": "Repo", "name": "r", "repo": "r"},
+    {"id": "dir:r:src", "type": "Folder", "name": "src", "parent": "repo:r", "repo": "r", "path": "src"},
+    {"id": "file:r:src/copy.cpp", "type": "File", "name": "copy.cpp", "parent": "dir:r:src", "repo": "r", "path": "src/copy.cpp", "line": 12},
+    {"id": "file:r:src/size.h", "type": "File", "name": "size.h", "parent": "dir:r:src", "repo": "r", "path": "src/size.h", "doc": "a field a builder adds"}
+  ],
+  "links": [
+    {"source": "file:r:src/copy.cpp", "target": "file:r:src/size.h", "kind": "imports", "weight": 1, "at": "r:src/copy.cpp#L3"}
+  ],
+  "views": [
+    {"id": "dependencies", "name": "Dependencies", "hint": "Which file imports which", "types": ["Repo", "Folder", "File"], "relations": ["imports"], "color_by": "repo"}
+  ],
+  "cards": {
+    "copy": {"title": "Buffer copy", "repo": "r", "nodes": ["file:r:src/copy.cpp"], "facts": {"F0a1b2": ["file:r:src/copy.cpp"], "F3c4d5": ["file:r:src/size.h"]}}
+  }
+}

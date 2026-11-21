@@ -3,7 +3,7 @@ import { colorKey, colorOf, KEY_ORDER, NO_AREA, NO_TOPIC, ordinalOf, OTHER_AREAS
 import { presentTypes, type GraphSchema, type TypeInfo } from "./schema";
 import type { GNode } from "./types";
 
-export const LAYER_LABEL: Record<Layer, string> = { source: "Sources", collection: "Collections", concept: "Concepts" };
+export const LAYER_LABEL: Record<Layer, string> = { source: "Sources", collection: "Collections", concept: "Concepts", artifact: "Artifacts" };
 
 export interface TypeRow extends TypeInfo {
   total: number;

@@ -421,7 +421,7 @@ export function layeredRadii(nodes: readonly GNode[], o: SizeOptions): Map<strin
     else if (n.type === "person") r = Math.max(con.get(n.id) ?? 0, ideaMedian);
     else r = lift(con.get(n.id) ?? 0);
     const mark = markOf(n.type);
-    out.set(n.id, mark === "source" || mark === "person" ? r : r * RING_BOOST);
+    out.set(n.id, mark === "source" || mark === "person" || mark === "dot" ? r : r * RING_BOOST);
   }
   return out;
 }

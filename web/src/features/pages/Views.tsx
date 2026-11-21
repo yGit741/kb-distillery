@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { LAYER_TYPES } from "@/api/model";
+import { LAYER_TYPES, PAGE_LAYERS } from "@/api/model";
 import type { PageCard, PageIndex } from "@/api/types";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { Empty, ErrorState, Loading } from "@/components/states";
@@ -41,7 +41,7 @@ export function HomeView({ g, index }: { g: LinkGraph; index: PageIndex }) {
           {g.byId.size} pages · {index.links.length} links · {h.questions.length} open questions · {h.deep.length} read in depth
         </p>
         <div className="flex flex-col gap-1.5">
-          {(Object.keys(LAYER_TYPES) as (keyof typeof LAYER_TYPES)[]).map((layer) => (
+          {PAGE_LAYERS.map((layer) => (
             <div key={layer} className="flex flex-wrap items-center gap-1.5">
               <Link to={PAGES_TO} search={{ layer } as never} className="w-24 text-xs font-medium text-muted-foreground hover:underline">
                 {layer}

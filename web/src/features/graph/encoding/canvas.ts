@@ -1,5 +1,5 @@
 import { withAlpha } from "./theme";
-import { GEOMETRY as G, GLYPH_SVG, glyphOf, isConceptSymbol, markOf, STATE, symbolPath, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
+import { GEOMETRY as G, gitBranchPath, GLYPH_SVG, glyphOf, hexPath, isConceptSymbol, markOf, STATE, symbolPath, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
 
 /** A source glyph (`glyphOf(type)`) of a dot of radius r at (x, y), in `color` (white inside a coloured dot). */
 export function drawSourceGlyph(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, r: number, color = "#fff"): void {
@@ -131,6 +131,24 @@ export function drawMark(ctx: CanvasRenderingContext2D, mark: NodeMark, x: numbe
       ctx.stroke(path);
       ctx.lineCap = "butt";
     }
+  } else if (mark === "ring") {
+    ring(r);
+  } else if (mark === "repo") {
+    const hex = new Path2D(hexPath(x, y, r * 1.08));
+    ctx.fillStyle = bg;
+    ctx.fill(hex);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = sw;
+    ctx.lineJoin = "round";
+    ctx.stroke(hex);
+    ctx.lineJoin = "miter";
+    const git = gitBranchPath(x, y, r);
+    ctx.lineWidth = git.width;
+    ctx.lineCap = "round";
+    ctx.stroke(new Path2D(git.line));
+    ctx.lineCap = "butt";
+    ctx.fillStyle = col;
+    ctx.fill(new Path2D(git.dots));
   } else if (mark === "collection") {
     ctx.beginPath();
     ctx.arc(x, y, r * G.collectionOuter, 0, 2 * Math.PI);

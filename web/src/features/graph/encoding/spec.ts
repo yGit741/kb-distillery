@@ -5,7 +5,9 @@
  */
 
 /** One mark per type: sources and people solid (a person with initials), concepts a ring with one symbol inside, collections a ring inside a ring. */
-export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection" | ConceptSymbol;
+export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection" | ConceptSymbol | ArtifactMark;
+/** Marks of the artifact layer (a template's `mark:`): a repository is a hexagon, a container a plain ring, a leaf a plain dot. */
+export type ArtifactMark = "repo" | "ring" | "dot";
 /** Ring symbols handed to concept types the table does not name (a kit's own types), in this order. */
 export type ConceptSymbol = "equals" | "plus" | "triangle" | "diamond";
 const CONCEPT_POOL: readonly NodeMark[] = ["idea", "equals", "plus", "triangle", "diamond", "topic", "question"];
@@ -13,6 +15,9 @@ const CONCEPT_POOL: readonly NodeMark[] = ["idea", "equals", "plus", "triangle",
 const TOOL_TYPES: ReadonlySet<string> = new Set(["scope", "distilled-think"]);
 /** Marks given by `registerTypeMarks` to the types the table does not name. */
 let AUTO: Readonly<Record<string, NodeMark>> = {};
+/** Marks of the artifact types, from the template (`registerArtifactMarks`); they win over the concept pool. */
+let ARTIFACT: Readonly<Record<string, NodeMark>> = {};
+const ARTIFACT_MARKS: ReadonlySet<string> = new Set(["repo", "ring", "dot"]);
 
 const MARK: Readonly<Record<string, NodeMark>> = {
   person: "person",
@@ -25,8 +30,46 @@ const MARK: Readonly<Record<string, NodeMark>> = {
   part: "collection",
 };
 
-/** A type's mark: the table's, else the one `registerTypeMarks` gave it, else a source. */
-export const markOf = (type: string): NodeMark => MARK[type] ?? AUTO[type] ?? "source";
+/** A type's mark: the table's, else an artifact type's, else the one `registerTypeMarks` gave it, else a source. */
+export const markOf = (type: string): NodeMark => MARK[type] ?? ARTIFACT[type] ?? AUTO[type] ?? "source";
+
+/**
+ * The artifact layer's types and the mark each names (anything else: a plain dot); {} when the graph has no layer.
+ * A built-in type's mark never changes: the table wins over an artifact type of the same name.
+ */
+export function registerArtifactMarks(types: Readonly<Record<string, { mark?: string | null }>>): void {
+  ARTIFACT = Object.fromEntries(Object.entries(types).map(([id, t]) => [id, (ARTIFACT_MARKS.has(t.mark ?? "") ? t.mark : "dot") as NodeMark]));
+}
+export const isArtifactMark = (m: NodeMark): m is ArtifactMark => ARTIFACT_MARKS.has(m);
+
+/** A repository's hexagon (flat top) round (x, y), radius r, as one SVG path. */
+export function hexPath(x: number, y: number, r: number): string {
+  const pts = Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i;
+    return `${(x + r * Math.cos(a)).toFixed(3)} ${(y + r * Math.sin(a)).toFixed(3)}`;
+  });
+  return `M${pts.join("L")}Z`;
+}
+
+/**
+ * The git branch inside a repository's hexagon round (x, y), radius r: `dots` (the three commits, to fill) and `line`
+ * (the trunk and the branch joining it, to stroke `width` wide).
+ */
+export function gitBranchPath(x: number, y: number, r: number): { dots: string; line: string; width: number } {
+  const f = (v: number) => v.toFixed(3);
+  const dot = (cx: number, cy: number, rad: number) => `M${f(cx - rad)} ${f(cy)}a${f(rad)} ${f(rad)} 0 1 0 ${f(2 * rad)} 0a${f(rad)} ${f(rad)} 0 1 0 ${f(-2 * rad)} 0`;
+  const trunk = x - r * 0.26;
+  const top = y - r * 0.44;
+  const bottom = y + r * 0.44;
+  const tipX = x + r * 0.3;
+  const tipY = y - r * 0.18;
+  const rad = r * 0.17;
+  return {
+    dots: dot(trunk, top, rad) + dot(trunk, bottom, rad) + dot(tipX, tipY, rad),
+    line: `M${f(trunk)} ${f(top)}V${f(bottom)}M${f(tipX)} ${f(tipY)}C${f(tipX)} ${f(y + r * 0.12)} ${f(trunk)} ${f(y + r * 0.02)} ${f(trunk)} ${f(y + r * 0.3)}`,
+    width: r * 0.12,
+  };
+}
 
 /**
  * Give every concept-layer type the table does not name (a kit's or a bundle's own) a mark of its own, so two types
@@ -67,14 +110,14 @@ export const RING_BOOST = 1.15;
 /** A mark's drawn radius for a size r: hollow marks get `RING_BOOST`, so a ring reads as big as a dot of radius r. */
 export const inkRadius = (type: string, r: number): number => {
   const m = markOf(type);
-  return m === "source" || m === "person" ? r : r * RING_BOOST;
+  return m === "source" || m === "person" || m === "dot" ? r : r * RING_BOOST;
 };
 
 /** How far a mark of radius r reaches, stroke included (a collection's outer ring): labels keep clear of this. */
 export function outerRadius(type: string, r: number): number {
   const m = markOf(type);
   if (m === "collection") return r * (GEOMETRY.collectionOuter + GEOMETRY.collectionOuterStroke / 2);
-  return m === "source" || m === "person" ? r : r * (1 + GEOMETRY.ringStroke / 2);
+  return m === "source" || m === "person" || m === "dot" ? r : r * (1 + GEOMETRY.ringStroke / 2);
 }
 
 /**
@@ -177,7 +220,7 @@ export const GLYPH_SVG: Readonly<Record<SourceGlyph, { d: string; fill?: boolean
 };
 
 /** A mark's radius in a 16 px icon box, so every mark (stroke included) fills about the same square. */
-export const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6.6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2, equals: 5.8, plus: 5.8, triangle: 5.8, diamond: 5.8 };
+export const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6.6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2, equals: 5.8, plus: 5.8, triangle: 5.8, diamond: 5.8, repo: 6.2, ring: 5.8, dot: 6.6 };
 
 /** On-screen radius from which a source shows its type glyph (below it, a plain dot); a hovered source always does. */
 export const SOURCE_GLYPH_PX = 8;

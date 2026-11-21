@@ -43,14 +43,22 @@ import { useViewsTour } from "./viewsTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
 import { PinLoop, type LoopCard } from "./PinLoop";
+import { artifactThumb } from "./Thumb";
+import { aboutArtifactView, aboutCitations, aboutEvidence, aboutSemantics } from "./viewAbout";
 import { useChatDock } from "../../tools/chatDockStore";
 import { QuickList, type QuickRow } from "./QuickList";
 import { useSparkPanel } from "../sparkPanelStore";
 import { useLayers } from "../../layers/store";
 import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
+import { leaveArtifacts, useArtifactLayer } from "../../artifacts/store";
+import type { ArtifactView } from "../../artifacts/types";
 
 export interface CornersProps {
   nodes: readonly GNode[];
+  /** the typed relation kinds the graph has: a view drawn from one (Citations: `cites`) is offered only with it */
+  relationKinds?: ReadonlySet<string>;
+  /** how many relations of each kind the graph has (the "?" of a view drawn from one says so) */
+  relationCounts?: ReadonlyMap<string, number>;
   visible: ReadonlySet<string>;
   schema: GraphSchema;
   /** the types drawn (null = every type) */
@@ -76,7 +84,17 @@ const LEAD_VIEWS: readonly LoopCard[] = [
 ];
 /** flag graph-corners: three placeholder views after the pinned ones, keeping the loop's shape until more are pinned */
 const PLACEHOLDER_VIEWS: readonly LoopCard[] = ["V1", "V2", "V3"].map((name) => ({ id: `placeholder-${name.toLowerCase()}`, name, hint: `${name}: a placeholder for a view to come` }));
+/** flag graph.artifacts: the views tucked under a layer's card (Semantics is drawn on the concepts; Sources has none) */
+const PILE_OF: Readonly<Record<string, readonly string[]>> = { concepts: ["map"], sources: [] };
+/**
+ * flag graph.artifacts: the card of the intermediate layers, what is computed between the sources and the concepts: a
+ * template's artifact views, Evidence, and Citations (the papers' reference lists). It is not a view itself: it opens
+ * the first view under it.
+ */
+const INTERMEDIATE = "intermediate";
+const ARTIFACT_LAYER = "Intermediate layers";
 const NO_ROWS: readonly TypeRow[] = [];
+const NO_VIEWS: readonly ArtifactView[] = [];
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
 const BTN_ID = { pins: "corner-pins", think: "corner-think", agent: "corner-agent" } as const;
 const MORE = 6; // gap between a corner button and its "..."
@@ -88,7 +106,7 @@ const MORE = 6; // gap between a corner button and its "..."
  * Rules: the pinned list closes both fans and a fan closes the list; the two fans may be open together; Esc
  * closes the topmost layer; a click anywhere else closes all.
  */
-export function Corners({ nodes, visible, schema, shownTypes, stats, host, applyView, showPicked, fetchImpl }: CornersProps) {
+export function Corners({ nodes, relationKinds, relationCounts, visible, schema, shownTypes, stats, host, applyView, showPicked, fetchImpl }: CornersProps) {
   const f = fetchImpl ?? defaultFetch;
   const ds = useDataSource();
   const qc = useQueryClient();
@@ -103,6 +121,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
   const intent = useFlag("graph-intent");
+  // flag graph.artifacts: the artifact layer's views, the loop of one card per layer, the snapshot's view stack
+  const artFlag = useFlag("graph.artifacts");
   // flag knowledge-health: Health is a lens on concepts (typed "health"); the switch stays Concepts / Sources
   const health = useFlag("knowledge-health") && intent;
   const favSlugs = useFavorites((s) => s.slugs);
@@ -114,6 +134,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const menu = useCorners((s) => s.menu);
   const edit = useCorners((s) => s.edit);
   const activeView = useCorners((s) => s.activeView);
+  const pile = useCorners((s) => s.pile);
+  const about = useCorners((s) => s.about);
   const { toggle, openMenu, closeMenu, closeTop, closeAll, setActive } = useCorners.getState();
   const shellTop = useShellTop();
   const pinsOpen = order.includes("pins");
@@ -124,14 +146,20 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
   // ---- the screen's height: how many cards a fan may show, where the legend can sit
   const [areaHeight, setAreaHeight] = useState(() => (typeof window === "undefined" ? 800 : Math.max(320, window.innerHeight - 48)));
+  const [areaWidth, setAreaWidth] = useState(() => (typeof window === "undefined" ? 1280 : window.innerWidth));
   useEffect(() => {
     const el = root.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => el.clientHeight && setAreaHeight(el.clientHeight));
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight) setAreaHeight(el.clientHeight);
+      if (el.clientWidth) setAreaWidth(el.clientWidth);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
   const cap = fanCapacity(areaHeight);
+  // flag graph.artifacts: the colour legend stands on the right edge and is as wide as its names, so an unfolded row stops before it
+  const [legendWidth, setLegendWidth] = useState(0);
 
   // ---- data
   const views = useQuery({ queryKey: ["corners", "views"], queryFn: () => listViews(f), enabled: server && pinsOpen, staleTime: 0 });
@@ -378,10 +406,18 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       useGraphUi.setState({ spotIds: label ? new Set(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source") && colorKey(n, by) === label).map((n) => n.id)) : null }),
     [nodes, keyPool, by, sourcesOnly],
   );
+  const hasKey = key.length > 0;
+  useEffect(() => {
+    const el = root.current?.querySelector<HTMLElement>('[data-corners="legend"]');
+    if (!el || typeof ResizeObserver === "undefined") return setLegendWidth(0);
+    const ro = new ResizeObserver(() => setLegendWidth(el.offsetWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasKey, by]);
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const [concepts, sources] = useMemo((): [TypeRow[], TypeRow[]] => {
-    const c = groups.find((g: LayerGroup) => g.layer === "concept")?.rows ?? [];
+    const c = [...(groups.find((g: LayerGroup) => g.layer === "concept")?.rows ?? []), ...(groups.find((g) => g.layer === "artifact")?.rows ?? [])];
     const read = LAYER_ORDER.filter((l) => l !== "concept").flatMap((l) => groups.find((g) => g.layer === l)?.rows ?? []);
     return [c, read];
   }, [groups]);
@@ -395,8 +431,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     [intent, subject, sourcesDrawn, embedding],
   );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
-  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and a kb with an
-  // embedding adds Semantics (the meaning map) to them; three placeholders V1–V3 close the loop after the
+  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, and Citations when the graph has cites
+  // relations), and a kb with an embedding adds Semantics (the meaning map) to them; three placeholders V1–V3 close the loop after the
   // pinned ones (Topics and Missing links stay in the gallery). Which one is on: an embedding view, else the Citations
   // links, else what the drawn types say (Health is a lens on Concepts)
   const embedOn = useEmbedView((s) => s.view);
@@ -405,15 +441,70 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // one blue mark only: a pinned view on screen is the one marked, not the built-in view it happens to look like
   // flag knowledge-health: for now the Sources card is the way into Health (the concepts by source support, with
   // the dial of source kinds); without the flag it is the sources alone
-  const currentView: string = embedOn ?? (edgeOn === "citations" ? "citations" : subject === "health" || (subject === "sources" && shownTypes) ? "sources" : "concepts");
+  // a knowledge base with an artifact layer: its template's views close the loop in place of the placeholders
+  const artViews = useArtifactLayer((s) => (artFlag ? s.views : NO_VIEWS));
+  const artEvidence = useArtifactLayer((s) => artFlag && s.evidence);
+  const artCode = useArtifactLayer((s) => (artFlag ? s.code : null));
+  const artInfo = useArtifactLayer((s) => (artFlag ? s.info : null));
+  const embedAxes = useEmbedView((s) => s.axes);
+  const currentView: string = artCode ? `artifact:${artCode}` : embedOn ?? (edgeOn === "citations" ? "citations" : subject === "health" || (subject === "sources" && shownTypes) ? "sources" : "concepts");
   const markView = activeView ? null : currentView;
-  const leadCards = useMemo(
-    (): LoopCard[] =>
-      LEAD_VIEWS.filter((v) => (v.id === "citations" ? !!citationsStory && storyOffered(citationsStory) : v.id === "map" ? !!embedding : true)).map((v) => ({ ...v, on: v.id === markView })),
-    [citationsStory, embedding, markView],
+  // flag graph.artifacts: Citations only when the graph has the relations it draws (cites)
+  const citesDrawn = !!citationsStory && storyOffered(citationsStory) && (!artFlag || (citationsStory.edges ?? []).some((k) => relationKinds?.has(k)));
+  // flag graph.artifacts: one card per layer (Concepts, Sources, the intermediate layer); a layer's other views are tucked
+  // under its card and unfold into a row. No placeholders: the loop is as long as the knowledge base has layers.
+  const piles = artFlag && discs && intent;
+  const leadCards = useMemo((): LoopCard[] => {
+    const all = LEAD_VIEWS.filter((v) => (v.id === "citations" ? citesDrawn : v.id === "map" ? !!embedding : true)).map((v): LoopCard => ({ ...v, on: v.id === markView }));
+    if (!piles) return all;
+    // a tucked card: no small grey text, its own picture, and what the "?" on it says
+    const tucked = (id: string): LoopCard[] =>
+      all
+        .filter((c) => c.id === id)
+        .map(({ meta: _, ...c }): LoopCard =>
+          id === "citations"
+            ? { ...c, thumb: "arcs", about: aboutCitations({ papers: nodes.filter((n) => (citationsStory?.types ?? ["paper"]).includes(n.type)).length, cites: relationCounts?.get("cites") }) }
+            : id === "map"
+              ? { ...c, about: aboutSemantics(embedding ?? undefined, embedAxes) }
+              : c,
+        );
+    const layers = all.filter((v) => v.id in PILE_OF).map((v): LoopCard => ({ ...v, subs: PILE_OF[v.id]!.flatMap(tucked) }));
+    const inter: LoopCard[] = [
+      ...artViews.map((v): LoopCard => ({ id: `artifact:${v.id}`, name: v.name, hint: v.hint || v.name, thumb: artifactThumb(v), on: markView === `artifact:${v.id}`, about: aboutArtifactView(v, artInfo) })),
+      ...(artEvidence ? [{ id: "artifact:evidence", name: "Evidence", hint: "Pages beside the code their facts cite", thumb: "facts" as const, on: markView === "artifact:evidence", about: aboutEvidence(artInfo) }] : []),
+      ...tucked("citations"),
+    ];
+    if (!inter.length) return layers;
+    return [...layers, { id: INTERMEDIATE, name: ARTIFACT_LAYER, hint: `${ARTIFACT_LAYER}: opens ${inter[0]!.name}`, thumb: "layers", subs: inter }];
+  }, [citesDrawn, embedding, embedAxes, markView, piles, artViews, artEvidence, artInfo, nodes, citationsStory, relationCounts]);
+  const tailCards = useMemo(
+    (): readonly LoopCard[] =>
+      piles
+        ? []
+        : artViews.length
+          ? [
+              ...artViews.map((v): LoopCard => ({ id: `artifact:${v.id}`, name: v.name, hint: v.hint || v.name, meta: "Code", thumb: v.nest === "none" ? "flow" : "code", on: markView === `artifact:${v.id}` })),
+              ...(artEvidence ? [{ id: "artifact:evidence", name: "Evidence", hint: "Pages beside the code their facts cite", thumb: "evidence" as const, on: markView === "artifact:evidence" }] : []),
+            ]
+          : PLACEHOLDER_VIEWS,
+    [piles, artViews, artEvidence, markView],
   );
-  const tailCards = PLACEHOLDER_VIEWS;
-  const pickView = (v: string) => {
+  const pickView = (v: string): void => {
+    // the layer's card opens the first view under it
+    if (v === INTERMEDIATE) return pickView(artViews[0] ? `artifact:${artViews[0].id}` : "citations");
+    if (v.startsWith("artifact:")) {
+      setActive(null);
+      return useArtifactLayer.getState().go(v.slice("artifact:".length), null);
+    }
+    // leaving the artifacts puts the concept view back as it was; another graph view is one more pick from there
+    if (artCode) {
+      setActive(null);
+      leaveArtifacts();
+      useArtifactLayer.getState().go(null);
+      // flag graph.artifacts: Citations lies in the same row as the artifact views, so it opens in the same press
+      if (piles && v === "citations") useGraphUi.getState().applyStory("citations");
+      return;
+    }
     const placeholder = PLACEHOLDER_VIEWS.find((p) => p.id === v);
     if (placeholder) return setNotice(`${placeholder.name} is a placeholder for a view to come`);
     setActive(null);
@@ -431,7 +522,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // hiding a colour or changing the colouring must never change which types are drawn.
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
   useShellTour(`${server}|${allTypes.length > 0}`);
-  useViewsTour(discs, health);
+  useViewsTour(discs, health, piles);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
   // a double click on a type name puts the drawn types, and the story they belonged to, back exactly as they were
   const keepTypes = useCallback(() => {
@@ -470,6 +561,13 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                 views={views.data ?? []}
                 active={activeView}
                 areaHeight={areaHeight}
+                areaWidth={areaWidth - legendWidth}
+                pile={pile}
+                onPile={useCorners.getState().setPile}
+                about={about}
+                onAbout={useCorners.getState().setAbout}
+                onReach={useCorners.getState().setPileReach}
+                wheelTurns={piles}
                 empty={views.isLoading ? "Loading pinned views" : "Nothing pinned yet. Type /pin in the search line to pin this view."}
                 onApply={(id) => {
                   const v = views.data?.find((x) => x.id === id);
@@ -700,7 +798,39 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         </>
       )}
 
-      {readOnlyPins && (
+      {readOnlyPins && discs && artFlag && (
+        <>
+          <PinLoop
+            open={pinsOpen}
+            lead={intent ? leadCards : undefined}
+            tail={intent ? tailCards : undefined}
+            onPick={pickView}
+            views={sharedViews.data?.views ?? []}
+            active={activeView}
+            areaHeight={areaHeight}
+            areaWidth={areaWidth - legendWidth}
+            pile={pile}
+            onPile={useCorners.getState().setPile}
+            about={about}
+            onAbout={useCorners.getState().setAbout}
+            onReach={useCorners.getState().setPileReach}
+            wheelTurns={piles}
+            empty={sharedViews.isLoading ? "Loading saved views" : "No saved views in this snapshot."}
+            onApply={(id) => {
+              const v = sharedViews.data?.views.find((x) => x.id === id);
+              if (!v) return;
+              setActive(v.id);
+              if (!applySpec(v.spec, deps, { name: v.name })) setNotice("Nothing in this view can be restored here");
+            }}
+          />
+          {!chatOpen && (
+            <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} disc={discs} className="z-[17]" style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+              <LinePin />
+            </CornerButton>
+          )}
+        </>
+      )}
+      {readOnlyPins && !(discs && artFlag) && (
         <>
           <PinList
             readOnly

@@ -6,6 +6,8 @@ export const LAYER_TYPES = {
   source: ["paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"],
   collection: ["book", "notebook", "course", "series", "scope"], // scope is aux
   concept: ["idea", "topic", "question", "person", "distilled-think"], // distilled-think is aux
+  // the intermediate layer: a template's artifact types (artifacts/graph.json), never pages; none are built in
+  artifact: [],
 } as const;
 
 export type Layer = keyof typeof LAYER_TYPES;
@@ -16,6 +18,8 @@ export type ConceptType = PageTypeOf<"concept">;
 export type PageType = SourceType | CollectionType | ConceptType;
 
 export const LAYERS = Object.keys(LAYER_TYPES) as Layer[];
+/** The layers pages live in: every layer but the artifact one (artifacts are never pages; flag graph.artifacts draws them). */
+export const PAGE_LAYERS = LAYERS.filter((l) => l !== "artifact");
 
 /** Sources only, ordered: listed = cataloged, not read yet. */
 export const DEPTHS = ["listed", "easy", "full", "deep"] as const;

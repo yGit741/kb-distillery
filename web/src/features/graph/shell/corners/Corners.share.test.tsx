@@ -70,3 +70,33 @@ describe("the pin corner on the shared site (graph-intent on)", () => {
     });
   });
 });
+
+describe("the pin corner on the shared site with the corners (graph-corners and graph-intent on)", () => {
+  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")].map((b) => b.dataset.view);
+
+  it("graph.artifacts on: the saved views hang from the pin in the same loop as the local app, after Concepts and Sources", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("graph.artifacts", true, async () => {
+          mount();
+          await userEvent.click(screen.getByRole("button", { name: "Saved views" }));
+          expect(await screen.findByText("My orphans")).toBeInTheDocument();
+          expect(cards().slice(0, 2)).toEqual(["view:concepts", "view:sources"]);
+          expect(cards()).toContain("mine");
+          expect(screen.queryByRole("button", { name: "Pin this view" })).toBeNull();
+        }),
+      ),
+    ));
+
+  it("graph.artifacts off: the saved views are a plain list, as before", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("graph-intent", true, () =>
+        withFlag("graph.artifacts", false, async () => {
+          mount();
+          await userEvent.click(screen.getByRole("button", { name: "Saved views" }));
+          expect(await screen.findByText("My orphans")).toBeInTheDocument();
+          expect(document.querySelector("[data-corners=pin-loop]")).toBeNull();
+        }),
+      ),
+    ));
+});

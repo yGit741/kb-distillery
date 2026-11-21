@@ -1,5 +1,6 @@
 import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, PinnedView, RawCard, ReadyView } from "@/api/types";
 import type { GraphSnapshot } from "@/api/types";
+import type { ArtifactGraph } from "@/api/artifacts";
 
 /** What the share builder (backend kb_distillery.publish.site.build) bakes into `<script id="kb-data">`. */
 export interface ShareMeta {
@@ -28,6 +29,8 @@ export interface ShareBlob {
   /** Home cards and the tour id from share.toml `[home]` (kb_distillery.publish.site.home); `view` = the graph view a
    *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
   home?: { cards?: unknown[]; tour?: string | null; view?: string | null };
+  /** The KB's artifact layer (artifacts/graph.json with the cited facts of the baked pages), when a builder wrote one. */
+  artifacts?: ArtifactGraph;
 }
 
 /** Parse the baked blob out of the document; null when the page has none (plain app, tests). */

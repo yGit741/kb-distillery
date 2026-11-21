@@ -43,6 +43,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     getGraph: absent,
     getGraphNodes: absent,
     getCitations: absent,
+    getArtifacts: async () => null,
     listGraphQueries: absent,
     runCypher: absent,
     runGraphQuery: absent,
@@ -143,6 +144,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     ...base,
     getGraph: async () => data.graph,
     getGraphNodes: async () => data.graph.nodes,
+    getArtifacts: async () => data.artifacts ?? null,
     listPages: async () => data.index,
     getPage: async (slug) => {
       const page = data.pages[slug];

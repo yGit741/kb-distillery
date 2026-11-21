@@ -1,5 +1,16 @@
 import { cn } from "@/lib/utils";
-import { GEOMETRY as G, glyphOf, GLYPH_SVG, ICON_R, isConceptSymbol, markOf, symbolPath, type NodeMark } from "./spec";
+import { GEOMETRY as G, gitBranchPath, glyphOf, GLYPH_SVG, hexPath, ICON_R, isConceptSymbol, markOf, symbolPath, type NodeMark } from "./spec";
+
+/** The git branch a repository's hexagon carries (the canvas draws the same `gitBranchPath`). */
+function GitBranch({ x, y, r, color }: { x: number; y: number; r: number; color: string }) {
+  const git = gitBranchPath(x, y, r);
+  return (
+    <>
+      <path d={git.line} fill="none" stroke={color} strokeWidth={git.width} strokeLinecap="round" />
+      <path d={git.dots} fill={color} />
+    </>
+  );
+}
 
 
 /**
@@ -17,7 +28,14 @@ export function ShapeIcon({ shape, initials = "GK", className = "size-3.5" }: { 
   const line = (i: number) => `M${8 - r * G.topicLineHalf} ${8 + i * r * G.topicLineGap}h${2 * r * G.topicLineHalf}`;
   return (
     <svg viewBox="0 0 16 16" className={cn(className, "shrink-0")} aria-hidden data-mark={shape}>
-      {shape === "source" && <circle cx="8" cy="8" r={r} fill="currentColor" />}
+      {(shape === "source" || shape === "dot") && <circle cx="8" cy="8" r={r} fill="currentColor" />}
+      {shape === "ring" && ring}
+      {shape === "repo" && (
+        <>
+          <path d={hexPath(8, 8, r * 1.08)} fill="none" stroke="currentColor" strokeWidth={r * G.ringStroke} strokeLinejoin="round" />
+          <GitBranch x={8} y={8} r={r} color="currentColor" />
+        </>
+      )}
       {shape === "person" && (
         <>
           <circle cx="8" cy="8" r={r} fill="currentColor" />
@@ -144,6 +162,14 @@ export function NodeMarkG({
       </g>
     );
   }
+  if (mark === "ring") return <g data-mark={mark}>{ring}</g>;
+  if (mark === "repo")
+    return (
+      <g data-mark={mark}>
+        <path d={hexPath(x, y, r * 1.08)} fill={background} stroke={color} strokeWidth={r * G.ringStroke} strokeLinejoin="round" />
+        <GitBranch x={x} y={y} r={r} color={color} />
+      </g>
+    );
   if (mark === "collection")
     return (
       <g data-mark={mark}>

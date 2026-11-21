@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { cardNode } from "@/features/pages/lib";
-import { NodeMarkG, NodeSwatch } from "./NodeMarkSvg";
-import { GEOMETRY, GLYPH_SVG, markOf } from "./spec";
+import { NodeMarkG, NodeSwatch, ShapeIcon } from "./NodeMarkSvg";
+import { GEOMETRY, gitBranchPath, GLYPH_SVG, hexPath, ICON_R, markOf } from "./spec";
 
 const TYPES = ["paper", "ai-chat", "lecture", "idea", "topic", "question", "person", "course"];
 
@@ -13,6 +13,13 @@ describe("NodeMarkG / NodeSwatch (SVG nodes)", () => {
       expect(container.querySelector("svg")?.getAttribute("data-swatch"), t).toBe(markOf(t));
       expect(container.querySelector("[data-mark]")?.getAttribute("data-mark"), t).toBe(markOf(t));
     }
+  });
+
+  it("draws a repository as a hexagon with the git branch inside, in the canvas' shared paths", () => {
+    const { container } = render(<ShapeIcon shape="repo" />);
+    const r = ICON_R.repo;
+    const git = gitBranchPath(8, 8, r);
+    expect([...container.querySelectorAll("path")].map((p) => p.getAttribute("d"))).toEqual([hexPath(8, 8, r * 1.08), git.line, git.dots]);
   });
 
   it("puts a source's glyph inside its dot, in the shared path", () => {

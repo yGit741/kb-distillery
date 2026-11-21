@@ -1,3 +1,4 @@
+import type { ArtifactGraph } from "./artifacts";
 import type * as T from "./types";
 
 /** Everything a screen may ask for. Screens depend on this interface only, never on fetch or globals. */
@@ -47,6 +48,8 @@ export interface DataSource {
   /** Vault nodes: layer, type, depth, status, areas. */
   getGraphNodes(): Promise<T.GraphNode[]>;
   getCitations(): Promise<T.CitationGraph>;
+  /** The artifact layer (a builder's artifacts/graph.json plus which page cites which fact); null: the KB has none. */
+  getArtifacts(opts?: { kb?: string }): Promise<ArtifactGraph | null>;
   /** Read-only graph queries (local app only): the named ones, a Cypher query (supported subset), a named one. */
   listGraphQueries(): Promise<T.NamedQuery[]>;
   runCypher(query: string): Promise<T.QueryTable>;

@@ -83,10 +83,19 @@ describe("graph-views tour", () => {
       "One fold, everywhere",
       "Light or dark",
     ]);
+    // flag graph.artifacts: the loop is one card per layer, so the two loop steps say that
+    expect(viewsTourSteps({ health: false, fold: false, piles: true }).map((s) => s.title)).toEqual([
+      "The graph opens on Concepts",
+      "Your views hang from the pin",
+      "The wheel turns the loop",
+      "One fold, everywhere",
+      "Light or dark",
+    ]);
+    expect(viewsTourSteps({ health: false, fold: false, piles: true })[1]!.body).not.toMatch(/V1|placeholder/);
   });
 
   it("each step is one idea in two sentences at most, and every [n] has its mark", () => {
-    for (const s of viewsTourSteps({ health: true, fold: true })) {
+    for (const s of [...viewsTourSteps({ health: true, fold: true }), ...viewsTourSteps({ health: true, fold: true, piles: true })]) {
       expect(s.body.split(/(?<=[.!?])\s+(?=[A-Z])/).length).toBeLessThanOrEqual(2);
       expect(s.body).not.toMatch(/\p{Extended_Pictographic}/u);
       for (const [, n] of s.body.matchAll(/\[(\d)\]/g)) expect(s.marks?.[Number(n) - 1]).toBeDefined();

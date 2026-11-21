@@ -240,6 +240,10 @@ function drawCandidates(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[]
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
 
+/** flag graph.artifacts: air between an unfolded row of view cards and the topmost page framed under it (its mark and name) */
+const ROW_FIT_AIR = 26;
+/** how far down the unfolded view cards reach, 0 when none is out */
+const rowReachOf = (c: { pile: string | null; pileReach: number }): number => (c.pile ? c.pileReach : 0);
 const DOUBLE_MS = 380;
 /** px of air beside the docked chat panel: a page's title is centred on its dot and would run under the panel */
 const PANEL_LABEL_AIR = 40;
@@ -288,6 +292,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const fades = useRef(new Map<string, FadeState>());
   const frame = useRef({ last: 0, churn: 0, hudAt: 0, raf: 0 });
   const pendingFit = useRef(true);
+  // flag graph.artifacts: the camera as it was before a row of view cards unfolded (null: no row out, or the reader moved it)
+  const rowCamera = useRef<{ x: number; y: number; k: number; sig: number } | null>(null);
+  /** counts the changes of what is drawn: a camera saved under another set of pages is not put back */
+  const rowSig = useRef(0);
+  const rowWas = useRef(false);
   // the page-type strip's box, measured on change (./typesStrip), never per frame
   const stripRef = useRef<ReturnType<typeof trackTypesStrip> | null>(null);
   useEffect(() => {
@@ -963,6 +972,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // Panning or zooming in between cancels the settled fit, so it never takes the view away from the user.
   useEffect(() => {
     pendingFit.current = true;
+    rowSig.current += 1;
     const t = window.setTimeout(() => {
       if (pendingFit.current) fitRef.current();
     }, 1600);
@@ -972,11 +982,17 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const el = wrap.current;
     if (!el) return;
     const mine = () => (pendingFit.current = false);
+    // a zoom or a drag while a row of view cards is out: the camera is the reader's now, folding the row leaves it
+    const moved = (e: Event) => (e.type === "wheel" || (e as PointerEvent).buttons > 0) && (rowCamera.current = null);
     el.addEventListener("wheel", mine, { passive: true });
     el.addEventListener("pointerdown", mine);
+    el.addEventListener("wheel", moved, { passive: true });
+    el.addEventListener("pointermove", moved);
     return () => {
       el.removeEventListener("wheel", mine);
       el.removeEventListener("pointerdown", mine);
+      el.removeEventListener("wheel", moved);
+      el.removeEventListener("pointermove", moved);
     };
   }, []);
 
@@ -1002,17 +1018,23 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
     const left = chatLeft();
     const right = legendRight();
-    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, 96, MAP_FIT_BOTTOM, right);
+    // flag graph.artifacts: a row of view cards unfolded from the pin's top card lies over the top of the canvas;
+    // every frame keeps the pages below it
+    const reach = rowReachOf(useCorners.getState());
+    const under = (top: number) => (reach ? Math.max(top, reach + ROW_FIT_AIR) : top);
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, under(96), MAP_FIT_BOTTOM, right);
     // a shortest path (flag graph-algos) carries each page's full title over its dot: the top one keeps clear of the
     // search line and the chip row under it
-    const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM, right);
+    const routed = !mapped && pathRef.current.links.length > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, 72, under(shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40), PATH_FIT_BOTTOM, right);
     // a view a "show" layer picked (a pressed source kind, "show only") has its chip row under the search line:
     // every page of it is framed, the lone ones too, with the top title clear of that row. A search or a style-only
     // stack keeps the usual fit
-    const layered = !mapped && !routed && !multiKb.current && !rimRef.current && live.current.ui.view?.kind === "picked" && useLayers.getState().stack.layers.some((l) => l.kind === "show" && l.target === "nodes") && !!fg.current?.fitIn(() => true, left, ms, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40, PATH_FIT_BOTTOM, right);
+    const layered = !mapped && !routed && !multiKb.current && !rimRef.current && live.current.ui.view?.kind === "picked" && useLayers.getState().stack.layers.some((l) => l.kind === "show" && l.target === "nodes") && !!fg.current?.fitIn(() => true, left, ms, 72, under(shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR + 40), PATH_FIT_BOTTOM, right);
     // beside the docked chat the whole graph is framed right of the panel, clear of the legend
-    const docked = !mapped && !routed && !layered && left > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, DOCKED_FIT_PAD, shellTopRef.current + SEARCH_LINE_H + 8, DOCKED_FIT_BOTTOM, right);
-    if (!mapped && !routed && !layered && !docked) fg.current?.fit(pick, ms);
+    const docked = !mapped && !routed && !layered && left > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, DOCKED_FIT_PAD, under(shellTopRef.current + SEARCH_LINE_H + 8), DOCKED_FIT_BOTTOM, right);
+    // a row out: the whole drawn set framed below it (the plain fit knows nothing of the cards)
+    const rowed = !mapped && !routed && !layered && !docked && reach > 0 && !!fg.current?.fitIn(pick ?? (() => true), left, ms, DOCKED_FIT_PAD, reach + ROW_FIT_AIR, DOCKED_FIT_BOTTOM, right);
+    if (!mapped && !routed && !layered && !docked && !rowed) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
@@ -1025,6 +1047,34 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     if (ui.fitTick > 0) fit();
   }, [ui.fitTick, fit]);
+
+  // flag graph.artifacts: unfolding a row of view cards frames the graph in the area below it, so the cards hide no page;
+  // folding it puts the camera back where it was, unless the reader moved it or changed the view meanwhile
+  const rowReach = useCorners(rowReachOf);
+  useEffect(() => {
+    const g = fg.current;
+    if (rowReach > 0) {
+      if (!g || !framed.current) return;
+      // out for the first time: keep the camera to put back; a row that only changed height keeps the first one
+      if (!rowWas.current) rowCamera.current = { ...g.center(), k: g.zoom(), sig: rowSig.current };
+      else if (!rowCamera.current) return;
+      rowWas.current = true;
+      pendingFit.current = false;
+      fitRef.current(450);
+      return;
+    }
+    const was = rowCamera.current;
+    rowCamera.current = null;
+    rowWas.current = false;
+    if (!g || !was) return;
+    if (was.sig === rowSig.current) g.centerOn(was.x, was.y, was.k, 450);
+    else fitRef.current(450);
+    const t = window.setTimeout(() => {
+      k.current = fg.current?.zoom() ?? 1;
+      recompute();
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [rowReach, recompute]);
 
   // a new answer (or a chat opened) frames the cited pages in the area right of the chat panel; nothing else re-frames
   useEffect(() => {

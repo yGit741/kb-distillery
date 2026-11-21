@@ -38,6 +38,7 @@ export const LAYER_COLORS: Record<Layer, string> = {
   source: TYPE_COLORS.paper,
   collection: TYPE_COLORS.book,
   concept: TYPE_COLORS.idea,
+  artifact: "#9aa5b1",
 };
 
 /** Depth of a source, listed -> deep (the old to-read / reading / digested / resolved colours). */
